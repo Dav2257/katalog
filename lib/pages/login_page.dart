@@ -5,7 +5,7 @@ import '../services/auth_service.dart';
 import '../services/user_service.dart';
 
 class LoginPage extends StatefulWidget {
-  final void Function({bool isAdmin})? onLoginSuccess;
+  final void Function({bool isAdmin, String? phone, String? email})? onLoginSuccess;
 
   const LoginPage({super.key, this.onLoginSuccess});
 
@@ -45,8 +45,10 @@ class _LoginPageState extends State<LoginPage> {
 
     setState(() => _isLoading = true);
 
-    // 1. Cek kecocokan di database lokal UserService (User Private terdaftar)
-    final registeredUser = UserService.instance.findUser(identifier, password);
+    // 1. Cek kecocokan di database lokal UserService atau langsung di Supabase
+    var registeredUser = UserService.instance.findUser(identifier, password);
+    registeredUser ??= await UserService.instance.findUserInSupabase(identifier, password);
+
     if (registeredUser != null) {
       AuthService.instance.login(
         isAdmin: false,
@@ -54,14 +56,24 @@ class _LoginPageState extends State<LoginPage> {
         email: registeredUser.email,
       );
       if (mounted) {
+        final displayName = registeredUser.phone.isNotEmpty ? registeredUser.phone : registeredUser.email;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Selamat datang kembali, ${registeredUser.phone}!'),
+            content: Text('Selamat datang kembali, $displayName!'),
             backgroundColor: Colors.green,
           ),
         );
-        widget.onLoginSuccess?.call(isAdmin: false);
-        Navigator.pop(context, {'isLoggedIn': true, 'isAdmin': false});
+        widget.onLoginSuccess?.call(
+          isAdmin: false,
+          phone: registeredUser.phone,
+          email: registeredUser.email,
+        );
+        Navigator.pop(context, {
+          'isLoggedIn': true,
+          'isAdmin': false,
+          'phone': registeredUser.phone,
+          'email': registeredUser.email,
+        });
       }
       setState(() => _isLoading = false);
       return;
@@ -77,8 +89,12 @@ class _LoginPageState extends State<LoginPage> {
             backgroundColor: Colors.green,
           ),
         );
-        widget.onLoginSuccess?.call(isAdmin: true);
-        Navigator.pop(context, {'isLoggedIn': true, 'isAdmin': true});
+        widget.onLoginSuccess?.call(isAdmin: true, email: identifier);
+        Navigator.pop(context, {
+          'isLoggedIn': true,
+          'isAdmin': true,
+          'email': identifier,
+        });
       }
       setState(() => _isLoading = false);
       return;
@@ -136,17 +152,27 @@ class _LoginPageState extends State<LoginPage> {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
-    if (phone.isEmpty || password.isEmpty) {
+    if (phone.isEmpty && email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Nomor telepon dan password wajib diisi untuk registrasi.'),
+          content: Text('Nomor telepon atau email wajib diisi untuk registrasi.'),
           backgroundColor: Colors.redAccent,
         ),
       );
       return;
     }
 
-    if (phone.length < 8) {
+    if (password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Password wajib diisi untuk registrasi.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
+    if (phone.isNotEmpty && phone.length < 8) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Nomor telepon minimal 8 digit.'),
@@ -159,8 +185,8 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _isLoading = true);
 
     try {
-      // 1. Simpan user baru ke UserService (langsung muncul di Dashboard Admin User Private)
-      final newUser = UserService.instance.registerUser(
+      // 1. Simpan user baru ke UserService (tersimpan langsung ke Supabase)
+      final newUser = await UserService.instance.registerUser(
         phone: phone,
         password: password,
         email: email,
@@ -185,14 +211,24 @@ class _LoginPageState extends State<LoginPage> {
       );
 
       if (mounted) {
+        final displayName = newUser.phone.isNotEmpty ? newUser.phone : newUser.email;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Registrasi berhasil! Selamat datang, ${newUser.phone}.'),
+            content: Text('Registrasi berhasil! Selamat datang, $displayName.'),
             backgroundColor: Colors.green,
           ),
         );
-        widget.onLoginSuccess?.call(isAdmin: false);
-        Navigator.pop(context, {'isLoggedIn': true, 'isAdmin': false});
+        widget.onLoginSuccess?.call(
+          isAdmin: false,
+          phone: newUser.phone,
+          email: newUser.email,
+        );
+        Navigator.pop(context, {
+          'isLoggedIn': true,
+          'isAdmin': false,
+          'phone': newUser.phone,
+          'email': newUser.email,
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -210,28 +246,20 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  void _handleDemoLogin() {
-    AuthService.instance.login(isAdmin: false, phone: '085732257048');
-    widget.onLoginSuccess?.call(isAdmin: false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Berhasil masuk (Mode Demo Pengguna)'),
-        backgroundColor: Colors.green,
-      ),
-    );
-    Navigator.pop(context, {'isLoggedIn': true, 'isAdmin': false});
-  }
-
   void _handleDemoAdminLogin() {
     AuthService.instance.login(isAdmin: true, email: 'admin@gmail.com');
-    widget.onLoginSuccess?.call(isAdmin: true);
+    widget.onLoginSuccess?.call(isAdmin: true, email: 'admin@gmail.com');
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Berhasil masuk sebagai Administrator (Mode Demo)'),
         backgroundColor: Colors.green,
       ),
     );
-    Navigator.pop(context, {'isLoggedIn': true, 'isAdmin': true});
+    Navigator.pop(context, {
+      'isLoggedIn': true,
+      'isAdmin': true,
+      'email': 'admin@gmail.com',
+    });
   }
 
   Widget _buildBackButton() {
@@ -673,22 +701,7 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ),
 
-          const SizedBox(height: 4),
-
-          // Tombol Demo Cepat Pengguna
-          Center(
-            child: TextButton(
-              onPressed: _handleDemoLogin,
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.white70,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              ),
-              child: const Text(
-                'Masuk Cepat (Mode Demo)',
-                style: TextStyle(fontSize: 12, color: Colors.white70),
-              ),
-            ),
-          ),
+          const SizedBox(height: 6),
 
           // Tombol Demo Khusus Admin
           Center(
@@ -696,7 +709,7 @@ class _LoginPageState extends State<LoginPage> {
               onPressed: _handleDemoAdminLogin,
               icon: const Icon(Icons.admin_panel_settings_rounded, size: 14, color: Color(0xFFFFD900)),
               label: const Text(
-                'Masuk sebagai Admin (Mode Demo)',
+                'Masuk sebagai Admin (Demo)',
                 style: TextStyle(fontSize: 12, color: Color(0xFFFFD900), fontWeight: FontWeight.bold),
               ),
               style: TextButton.styleFrom(

@@ -21,7 +21,13 @@ class CageOption {
 class ProductDetailPage extends StatefulWidget {
   final Product product;
   final void Function(List<CartItem> items)? onAddItemsToCart;
-  final void Function(Product product, {String? cageSummary, String? note, int totalQuantity})? onAddCustomToCart;
+  final void Function(
+    Product product, {
+    String? cageSummary,
+    String? note,
+    int totalQuantity,
+  })?
+  onAddCustomToCart;
   final void Function(Product product)? onAddToCart;
   final int cartItemCount;
   final int Function()? getCartItemCount;
@@ -73,8 +79,10 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     // Jika produk memiliki selectedCage dari pembuatan custom logo
     if (widget.product.selectedCage != null &&
         widget.product.selectedCage!.isNotEmpty) {
-      final matchIndex = _cages.indexWhere((c) =>
-          c.name.toLowerCase() == widget.product.selectedCage!.toLowerCase());
+      final matchIndex = _cages.indexWhere(
+        (c) =>
+            c.name.toLowerCase() == widget.product.selectedCage!.toLowerCase(),
+      );
       if (matchIndex >= 0) {
         _selectedCageIndex = matchIndex;
       }
@@ -86,8 +94,9 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         widget.product.customNote!.trim().isNotEmpty) {
       if (_selectedCageIndex < _cages.length) {
         final note = widget.product.customNote!.trim();
-        _cages[_selectedCageIndex].note =
-            note.length > 100 ? note.substring(0, 100) : note;
+        _cages[_selectedCageIndex].note = note.length > 100
+            ? note.substring(0, 100)
+            : note;
       }
     }
 
@@ -97,9 +106,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   }
 
   void _loadCagesFromService() {
-    final Map<String, CageOption> existing = {
-      for (final c in _cages) c.id: c,
-    };
+    final Map<String, CageOption> existing = {for (final c in _cages) c.id: c};
 
     final List<CageOption> updated = [];
 
@@ -108,19 +115,18 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
       for (final cv in widget.product.cageVariations!) {
         if (existing.containsKey(cv.id)) {
           final prev = existing[cv.id]!;
-          updated.add(CageOption(
-            id: cv.id,
-            name: cv.name,
-            quantity: prev.quantity,
-            note: prev.note,
-          ));
+          updated.add(
+            CageOption(
+              id: cv.id,
+              name: cv.name,
+              quantity: prev.quantity,
+              note: prev.note,
+            ),
+          );
         } else {
-          updated.add(CageOption(
-            id: cv.id,
-            name: cv.name,
-            quantity: 0,
-            note: '',
-          ));
+          updated.add(
+            CageOption(id: cv.id, name: cv.name, quantity: 0, note: ''),
+          );
         }
       }
     } else {
@@ -128,19 +134,18 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
       for (final sc in serviceCages) {
         if (existing.containsKey(sc.id)) {
           final prev = existing[sc.id]!;
-          updated.add(CageOption(
-            id: sc.id,
-            name: sc.name,
-            quantity: prev.quantity,
-            note: prev.note,
-          ));
+          updated.add(
+            CageOption(
+              id: sc.id,
+              name: sc.name,
+              quantity: prev.quantity,
+              note: prev.note,
+            ),
+          );
         } else {
-          updated.add(CageOption(
-            id: sc.id,
-            name: sc.name,
-            quantity: 0,
-            note: '',
-          ));
+          updated.add(
+            CageOption(id: sc.id, name: sc.name, quantity: 0, note: ''),
+          );
         }
       }
     }
@@ -235,8 +240,9 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
 
   int get _charCount => _noteController.text.length;
 
-  int get _currentCartCount =>
-      widget.getCartItemCount != null ? widget.getCartItemCount!() : widget.cartItemCount;
+  int get _currentCartCount => widget.getCartItemCount != null
+      ? widget.getCartItemCount!()
+      : widget.cartItemCount;
 
   int get _totalQuantity => _cages.fold(0, (sum, cage) => sum + cage.quantity);
 
@@ -336,7 +342,9 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${widget.product.name} [$summaryText] berhasil ditambahkan terpisah ke keranjang!'),
+        content: Text(
+          '${widget.product.name} [$summaryText] berhasil ditambahkan terpisah ke keranjang!',
+        ),
         backgroundColor: Colors.green.shade800,
         duration: const Duration(seconds: 2),
       ),
@@ -377,7 +385,10 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
             final isWide = constraints.maxWidth >= 780;
 
             return SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24.0,
+                vertical: 16.0,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -391,16 +402,10 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Kolom Kiri: Gambar Utama Besar & Pilihan Sangkar dengan Quantity
-                        Expanded(
-                          flex: 6,
-                          child: _buildLeftSection(),
-                        ),
+                        Expanded(flex: 6, child: _buildLeftSection()),
                         const SizedBox(width: 36),
                         // Kolom Kanan: Nama Desain, Tombol Keranjang, dan Note Produk
-                        Expanded(
-                          flex: 5,
-                          child: _buildRightSection(),
-                        ),
+                        Expanded(flex: 5, child: _buildRightSection()),
                       ],
                     )
                   else
@@ -440,10 +445,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
             ),
           ),
         ),
-        const Text(
-          '  /  ',
-          style: TextStyle(color: Colors.grey, fontSize: 16),
-        ),
+        const Text('  /  ', style: TextStyle(color: Colors.grey, fontSize: 16)),
         const Text(
           'Detail Produk',
           style: TextStyle(
@@ -548,7 +550,10 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                 onTap: () {
                   if (_cageScrollController.hasClients) {
                     _cageScrollController.animateTo(
-                      (_cageScrollController.offset - 120).clamp(0.0, _cageScrollController.position.maxScrollExtent),
+                      (_cageScrollController.offset - 120).clamp(
+                        0.0,
+                        _cageScrollController.position.maxScrollExtent,
+                      ),
                       duration: const Duration(milliseconds: 250),
                       curve: Curves.easeInOut,
                     );
@@ -570,7 +575,11 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                     ],
                     border: Border.all(color: Colors.grey.shade300, width: 1),
                   ),
-                  child: const Icon(Icons.arrow_back_ios_new_rounded, size: 14, color: Colors.black87),
+                  child: const Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    size: 14,
+                    color: Colors.black87,
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -604,10 +613,17 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                                     duration: const Duration(milliseconds: 200),
                                     height: 102,
                                     decoration: BoxDecoration(
-                                      color: isSelected ? const Color(0xFF6E7173) : const Color(0xFFB5B7B9),
+                                      color: isSelected
+                                          ? const Color(0xFF6E7173)
+                                          : const Color(0xFFB5B7B9),
                                       borderRadius: BorderRadius.circular(16),
                                       border: isSelected
-                                          ? Border.all(color: Theme.of(context).colorScheme.primary, width: 2.5)
+                                          ? Border.all(
+                                              color: Theme.of(
+                                                context,
+                                              ).colorScheme.primary,
+                                              width: 2.5,
+                                            )
                                           : null,
                                     ),
                                     child: Stack(
@@ -616,12 +632,26 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                                         Center(
                                           child: Builder(
                                             builder: (context) {
-                                              final sc = CageService.instance.cages
-                                                  .where((c) => c.name.toLowerCase() == cage.name.toLowerCase() || c.id == cage.id)
+                                              final sc = CageService
+                                                  .instance
+                                                  .cages
+                                                  .where(
+                                                    (c) =>
+                                                        c.name.toLowerCase() ==
+                                                            cage.name
+                                                                .toLowerCase() ||
+                                                        c.id == cage.id,
+                                                  )
                                                   .firstOrNull;
-                                              if (sc != null && (sc.imageBytes != null || (sc.imageUrl != null && sc.imageUrl!.isNotEmpty))) {
+                                              if (sc != null &&
+                                                  (sc.imageBytes != null ||
+                                                      (sc.imageUrl != null &&
+                                                          sc
+                                                              .imageUrl!
+                                                              .isNotEmpty))) {
                                                 return ClipRRect(
-                                                  borderRadius: BorderRadius.circular(14),
+                                                  borderRadius:
+                                                      BorderRadius.circular(14),
                                                   child: sc.buildImage(
                                                     width: double.infinity,
                                                     height: double.infinity,
@@ -631,7 +661,9 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                                               }
                                               return Icon(
                                                 Icons.grid_view_rounded,
-                                                color: isSelected ? Colors.white : Colors.white70,
+                                                color: isSelected
+                                                    ? Colors.white
+                                                    : Colors.white70,
                                                 size: 36,
                                               );
                                             },
@@ -660,10 +692,14 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                                             top: 3,
                                             left: 3,
                                             child: InkWell(
-                                              onTap: () => _confirmRemoveCage(cage),
-                                              borderRadius: BorderRadius.circular(10),
+                                              onTap: () =>
+                                                  _confirmRemoveCage(cage),
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
                                               child: Container(
-                                                padding: const EdgeInsets.all(2),
+                                                padding: const EdgeInsets.all(
+                                                  2,
+                                                ),
                                                 decoration: BoxDecoration(
                                                   color: Colors.red.shade600,
                                                   shape: BoxShape.circle,
@@ -684,8 +720,12 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                                     cage.name,
                                     style: TextStyle(
                                       fontSize: 12,
-                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                                      color: isSelected ? Colors.black87 : Colors.grey.shade700,
+                                      fontWeight: isSelected
+                                          ? FontWeight.bold
+                                          : FontWeight.w500,
+                                      color: isSelected
+                                          ? Colors.black87
+                                          : Colors.grey.shade700,
                                     ),
                                   ),
                                 ],
@@ -712,7 +752,11 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                                       shape: BoxShape.circle,
                                       color: Colors.grey.shade400,
                                     ),
-                                    child: const Icon(Icons.add, size: 14, color: Colors.white),
+                                    child: const Icon(
+                                      Icons.add,
+                                      size: 14,
+                                      color: Colors.white,
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(width: 4),
@@ -723,7 +767,10 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                                   height: 24,
                                   alignment: Alignment.center,
                                   decoration: BoxDecoration(
-                                    border: Border.all(color: Colors.grey.shade400, width: 1),
+                                    border: Border.all(
+                                      color: Colors.grey.shade400,
+                                      width: 1,
+                                    ),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
@@ -750,7 +797,11 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                                       shape: BoxShape.circle,
                                       color: Colors.grey.shade400,
                                     ),
-                                    child: const Icon(Icons.remove, size: 14, color: Colors.white),
+                                    child: const Icon(
+                                      Icons.remove,
+                                      size: 14,
+                                      color: Colors.white,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -782,8 +833,11 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                                   ),
                                 ),
                                 child: const Center(
-                                  child: Icon(Icons.add_circle_outline_rounded,
-                                      size: 36, color: Colors.black54),
+                                  child: Icon(
+                                    Icons.add_circle_outline_rounded,
+                                    size: 36,
+                                    color: Colors.black54,
+                                  ),
                                 ),
                               ),
                               const SizedBox(height: 6),
@@ -811,7 +865,10 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                 onTap: () {
                   if (_cageScrollController.hasClients) {
                     _cageScrollController.animateTo(
-                      (_cageScrollController.offset + 120).clamp(0.0, _cageScrollController.position.maxScrollExtent),
+                      (_cageScrollController.offset + 120).clamp(
+                        0.0,
+                        _cageScrollController.position.maxScrollExtent,
+                      ),
                       duration: const Duration(milliseconds: 250),
                       curve: Curves.easeInOut,
                     );
@@ -833,7 +890,11 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                     ],
                     border: Border.all(color: Colors.grey.shade300, width: 1),
                   ),
-                  child: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.black87),
+                  child: const Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 14,
+                    color: Colors.black87,
+                  ),
                 ),
               ),
             ],
@@ -875,10 +936,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           ),
           child: const Text(
             'Keranjang',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
           ),
         ),
 
@@ -914,12 +972,19 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               TextField(
                 controller: _noteController,
                 maxLength: 100,
-                buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
+                buildCounter:
+                    (
+                      context, {
+                      required currentLength,
+                      required isFocused,
+                      maxLength,
+                    }) => null,
                 maxLines: 7,
                 minLines: 5,
                 onChanged: _handleNoteChanged,
                 decoration: InputDecoration(
-                  hintText: 'Tambahkan catatan khusus untuk ${selectedCage.name} (contoh: ukiran tokoh, motif, finishing warna)...',
+                  hintText:
+                      'Tambahkan catatan khusus untuk ${selectedCage.name} (contoh: ukiran tokoh, motif, finishing warna)...',
                   hintStyle: TextStyle(
                     fontSize: 13,
                     color: Colors.grey.shade600,
@@ -939,8 +1004,12 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                   '$_charCount / 100',
                   style: TextStyle(
                     fontSize: 13,
-                    color: _charCount >= 100 ? Colors.red : Colors.grey.shade600,
-                    fontWeight: _charCount >= 100 ? FontWeight.bold : FontWeight.normal,
+                    color: _charCount >= 100
+                        ? Colors.red
+                        : Colors.grey.shade600,
+                    fontWeight: _charCount >= 100
+                        ? FontWeight.bold
+                        : FontWeight.normal,
                   ),
                 ),
               ),

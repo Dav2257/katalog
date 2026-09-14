@@ -228,7 +228,11 @@ class _CartPageState extends State<CartPage> {
 
     final selectedList = _selectedItems.toList();
     final phoneController = TextEditingController(
-      text: AuthService.instance.isLoggedIn ? AuthService.instance.userPhone : '085113123142',
+      text: AuthService.instance.userPhone.trim().isNotEmpty
+          ? AuthService.instance.userPhone.trim()
+          : (AuthService.instance.userEmail.trim().isNotEmpty
+              ? AuthService.instance.userEmail.trim()
+              : '085113123142'),
     );
 
     showDialog(
@@ -329,9 +333,15 @@ class _CartPageState extends State<CartPage> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);
-              final customerPhone = phoneController.text.trim().isNotEmpty
-                  ? phoneController.text.trim()
-                  : (AuthService.instance.isLoggedIn ? AuthService.instance.userPhone : '085113123142');
+              final inputVal = phoneController.text.trim();
+              final customerPhone = inputVal.isNotEmpty
+                  ? inputVal
+                  : (AuthService.instance.userPhone.trim().isNotEmpty
+                      ? AuthService.instance.userPhone.trim()
+                      : (AuthService.instance.userEmail.trim().isNotEmpty
+                          ? AuthService.instance.userEmail.trim()
+                          : '085113123142'));
+              final customerEmail = AuthService.instance.userEmail.trim();
 
               final itemsToRemove = selectedList.toList();
               for (final it in itemsToRemove) {
@@ -348,6 +358,7 @@ class _CartPageState extends State<CartPage> {
                     currentStep: 1,
                     imageUrl: it.product.imageUrl,
                     phone: customerPhone,
+                    email: customerEmail,
                   ),
                 );
               }
@@ -364,9 +375,9 @@ class _CartPageState extends State<CartPage> {
                 final cageStr = it.cageType != null ? ' [${it.cageType}]' : '';
                 final noteStr = (it.note != null && it.note!.trim().isNotEmpty) ? '\n   Catatan: ${it.note}' : '';
 
-                // Cari URL foto produk atau foto variasi sangkar
-                String imgUrl = '';
-                if (it.cageType != null && it.product.cageVariations != null) {
+                // Gunakan URL foto logo produk utama
+                String imgUrl = it.product.imageUrl.trim();
+                if (imgUrl.isEmpty && it.cageType != null && it.product.cageVariations != null) {
                   for (final v in it.product.cageVariations!) {
                     if (v.name.trim().toLowerCase() == it.cageType!.trim().toLowerCase() &&
                         v.imageUrl.trim().isNotEmpty) {
@@ -375,12 +386,9 @@ class _CartPageState extends State<CartPage> {
                     }
                   }
                 }
-                if (imgUrl.isEmpty) {
-                  imgUrl = it.product.imageUrl.trim();
-                }
 
                 final imgStr = (imgUrl.isNotEmpty && (imgUrl.startsWith('http://') || imgUrl.startsWith('https://')))
-                    ? '\n   📸 Foto Produk: $imgUrl'
+                    ? '\n   📸 Foto Logo: $imgUrl'
                     : '';
 
                 return '${it.product.name}$cageStr x${it.quantity}$imgStr$noteStr';
@@ -447,11 +455,21 @@ class _CartPageState extends State<CartPage> {
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
+        titleSpacing: 0,
         title: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              'Keranjang Belanja',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+            const Flexible(
+              child: Text(
+                'Keranjang Belanja',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 17,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
             const SizedBox(width: 8),
             if (widget.cartItems.isNotEmpty)

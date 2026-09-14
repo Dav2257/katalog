@@ -7,7 +7,9 @@ import 'pages/login_page.dart';
 import 'pages/product_detail_page.dart';
 import 'pages/user_home_page.dart';
 import 'services/auth_service.dart';
+import 'services/order_service.dart';
 import 'services/product_service.dart';
+import 'services/user_service.dart';
 import 'supabase_config.dart';
 import 'widgets/hero_banner.dart';
 import 'widgets/top_navbar.dart';
@@ -92,10 +94,14 @@ class _MyHomePageState extends State<MyHomePage> {
   final List<CartItem> _guestCart = [];
   final List<CartItem> _userCart = [];
 
-  // Koleksi Katalog Logo Custom Khusus Member Login
-  final List<Product> _userCustomLogos = List<Product>.from(
-    sampleUserCustomLogos,
-  );
+  // Mendapatkan produk custom pribadi khusus milik user yang sedang login
+  List<Product> get _currentUserCustomLogos {
+    final currentPhone = AuthService.instance.userPhone;
+    final currentEmail = AuthService.instance.userEmail;
+    final identifier = currentPhone.isNotEmpty ? currentPhone : currentEmail;
+    if (identifier.isEmpty) return [];
+    return UserService.instance.getUserCustomProducts(identifier);
+  }
 
   // Status Tampilan Katalog Standar untuk Member (Toggle jika ingin lihat produk umum)
   bool _showStandardCatalogForUser = false;
@@ -109,8 +115,11 @@ class _MyHomePageState extends State<MyHomePage> {
     super.initState();
     AuthService.instance.addListener(_handleAuthUpdate);
     ProductService.instance.addListener(_handleProductUpdate);
+    UserService.instance.addListener(_handleUserUpdate);
     _syncAuthFromService();
     ProductService.instance.fetchProducts();
+    UserService.instance.fetchUsers();
+    OrderService.instance.fetchOrders();
   }
 
   void _syncAuthFromService() {
@@ -129,10 +138,15 @@ class _MyHomePageState extends State<MyHomePage> {
     if (mounted) setState(() {});
   }
 
+  void _handleUserUpdate() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void dispose() {
     AuthService.instance.removeListener(_handleAuthUpdate);
     ProductService.instance.removeListener(_handleProductUpdate);
+    UserService.instance.removeListener(_handleUserUpdate);
     _searchController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -197,8 +211,8 @@ class _MyHomePageState extends State<MyHomePage> {
       context,
       MaterialPageRoute(
         builder: (context) => LoginPage(
-          onLoginSuccess: ({isAdmin = false}) {
-            AuthService.instance.login(isAdmin: isAdmin);
+          onLoginSuccess: ({isAdmin = false, phone, email}) {
+            AuthService.instance.login(isAdmin: isAdmin, phone: phone, email: email);
             setState(() {
               _isLoggedIn = true;
               _isAdmin = isAdmin;
@@ -348,10 +362,12 @@ class _MyHomePageState extends State<MyHomePage> {
               p.hashtags!.toLowerCase().contains(_searchQuery.toLowerCase()));
     }).toList();
 
-    final filteredCustomLogos = _userCustomLogos.where((p) {
+    final filteredCustomLogos = _currentUserCustomLogos.where((p) {
       if (_searchQuery.isEmpty) return true;
       return p.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          p.category.toLowerCase().contains(_searchQuery.toLowerCase());
+          p.category.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          (p.code != null &&
+              p.code!.toLowerCase().contains(_searchQuery.toLowerCase()));
     }).toList();
 
     return Scaffold(
@@ -395,8 +411,13 @@ class _MyHomePageState extends State<MyHomePage> {
               UserHomePage(
                 customLogos: filteredCustomLogos,
                 onAddCustomLogo: (newCustomProduct) {
+                  final currentPhone = AuthService.instance.userPhone;
+                  final currentEmail = AuthService.instance.userEmail;
+                  final identifier = currentPhone.isNotEmpty ? currentPhone : currentEmail;
+
+                  UserService.instance.addCustomProductToUser(identifier, newCustomProduct);
+
                   setState(() {
-                    _userCustomLogos.insert(0, newCustomProduct);
                     _activeCart.add(
                       CartItem(
                         product: newCustomProduct,
@@ -429,10 +450,10 @@ class _MyHomePageState extends State<MyHomePage> {
                     horizontal: 16,
                     vertical: 10,
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isCompact = constraints.maxWidth < 560;
+                      final infoText = Text(
                         _isAdmin
                             ? 'Mode Preview: Katalog Sangkar Umum (Admin)'
                             : 'Menampilkan Katalog Sangkar Standar',
@@ -441,8 +462,11 @@ class _MyHomePageState extends State<MyHomePage> {
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                         ),
-                      ),
-                      TextButton.icon(
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      );
+
+                      final backBtn = TextButton.icon(
                         onPressed: () {
                           setState(() {
                             _showStandardCatalogForUser = false;
@@ -463,8 +487,29 @@ class _MyHomePageState extends State<MyHomePage> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ),
-                    ],
+                      );
+
+                      if (isCompact) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            infoText,
+                            const SizedBox(height: 4),
+                            backBtn,
+                          ],
+                        );
+                      }
+
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(child: infoText),
+                          const SizedBox(width: 8),
+                          backBtn,
+                        ],
+                      );
+                    },
                   ),
                 )
               else
@@ -483,14 +528,16 @@ class _MyHomePageState extends State<MyHomePage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          _searchQuery.isEmpty
-                              ? 'Katalog Produk Pilihan'
-                              : 'Hasil Pencarian (${filteredProducts.length})',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
+                        Expanded(
+                          child: Text(
+                            _searchQuery.isEmpty
+                                ? 'Katalog Produk Pilihan'
+                                : 'Hasil Pencarian (${filteredProducts.length})',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
                           ),
                         ),
                         if (_searchQuery.isNotEmpty)

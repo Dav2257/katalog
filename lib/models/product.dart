@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
@@ -66,12 +67,12 @@ class ProductCageVariation {
     }
 
     if (imageUrl.isNotEmpty) {
-      return Image.network(
+      return Product.buildImageFromSource(
         imageUrl,
         width: width,
         height: height,
         fit: fit,
-        errorBuilder: (context, error, stackTrace) => defaultPlaceholder,
+        placeholder: defaultPlaceholder,
       );
     }
 
@@ -213,6 +214,61 @@ class Product {
       }
     }
     return 'Rp ${buffer.toString().split('').reversed.join('')}';
+  }
+
+  Widget buildImage({
+    double? width,
+    double? height,
+    BoxFit fit = BoxFit.cover,
+    Widget? placeholder,
+  }) {
+    return buildImageFromSource(
+      imageUrl,
+      width: width,
+      height: height,
+      fit: fit,
+      placeholder: placeholder,
+    );
+  }
+
+  static Widget buildImageFromSource(
+    String src, {
+    double? width,
+    double? height,
+    BoxFit fit = BoxFit.cover,
+    Widget? placeholder,
+  }) {
+    final defaultPlaceholder = placeholder ??
+        const Center(
+          child: Icon(Icons.image_outlined, color: Colors.grey, size: 28),
+        );
+
+    final clean = src.trim();
+    if (clean.isEmpty) return defaultPlaceholder;
+
+    if (clean.startsWith('data:image')) {
+      try {
+        final commaIdx = clean.indexOf(',');
+        final rawB64 = commaIdx != -1 ? clean.substring(commaIdx + 1) : clean;
+        return Image.memory(
+          base64Decode(rawB64),
+          width: width,
+          height: height,
+          fit: fit,
+          errorBuilder: (ctx, err, stack) => defaultPlaceholder,
+        );
+      } catch (_) {
+        return defaultPlaceholder;
+      }
+    }
+
+    return Image.network(
+      clean,
+      width: width,
+      height: height,
+      fit: fit,
+      errorBuilder: (ctx, err, stack) => defaultPlaceholder,
+    );
   }
 }
 

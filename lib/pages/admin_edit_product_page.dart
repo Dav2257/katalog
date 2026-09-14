@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -5,15 +6,24 @@ import '../models/product.dart';
 import '../services/auth_service.dart';
 import '../services/cage_service.dart';
 import '../services/product_service.dart';
+import '../services/user_service.dart';
 
 class AdminEditProductPage extends StatefulWidget {
   final Product? product;
   final AdminPublicProduct? adminProduct;
+  final String? userPhone;
+  final bool isUserCustomProduct;
+  final void Function(Product updated)? onSaveCustomProduct;
+  final void Function(String id)? onDeleteCustomProduct;
 
   const AdminEditProductPage({
     super.key,
     this.product,
     this.adminProduct,
+    this.userPhone,
+    this.isUserCustomProduct = false,
+    this.onSaveCustomProduct,
+    this.onDeleteCustomProduct,
   });
 
   @override
@@ -130,6 +140,58 @@ class _AdminEditProductPageState extends State<AdminEditProductPage> {
 
     final today = _getTodayFormatted();
 
+    // Jika ini adalah Produk Custom Pribadi milik User
+    if (widget.isUserCustomProduct) {
+      final updatedProduct = (widget.product ??
+              Product(
+                id: _productId.isNotEmpty
+                    ? _productId
+                    : 'custom_${DateTime.now().millisecondsSinceEpoch}',
+                name: newName,
+                price: 0,
+                description: 'Desain logo custom pribadi',
+                imageUrl: _mainImageUrl,
+                category: '#LogoCustomPribadi',
+                isUserCustom: true,
+              ))
+          .copyWith(
+        id: _productId.isNotEmpty
+            ? _productId
+            : 'custom_${DateTime.now().millisecondsSinceEpoch}',
+        code: newCode.isNotEmpty ? newCode : 'A01',
+        name: newName,
+        imageUrl: _mainImageUrl,
+        cageVariations: List.from(_cages),
+        lastEditedDate: today,
+        isUserCustom: true,
+      );
+
+      if (widget.userPhone != null && widget.userPhone!.isNotEmpty) {
+        UserService.instance.updateCustomProductForUser(
+          widget.userPhone!,
+          updatedProduct,
+        );
+      }
+      widget.onSaveCustomProduct?.call(updatedProduct);
+
+      setState(() {
+        _lastEditedDate = today;
+        _isLoading = false;
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Produk custom "$newName" berhasil disimpan!'),
+          backgroundColor: const Color(0xFF2E7D32),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      Navigator.pop(context, updatedProduct);
+      return;
+    }
+
+    // Jika ini adalah Produk Katalog Umum Admin (disimpan ke Supabase)
     try {
       await ProductService.instance.updateProduct(
         id: _productId,
@@ -176,8 +238,10 @@ class _AdminEditProductPageState extends State<AdminEditProductPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Hapus Produk?'),
-        content: Text('Apakah Anda yakin ingin menghapus produk "${_nameController.text.trim()}" dari database Supabase?'),
+        title: Text(widget.isUserCustomProduct ? 'Hapus Produk Custom?' : 'Hapus Produk?'),
+        content: Text(widget.isUserCustomProduct
+            ? 'Apakah Anda yakin ingin menghapus "${_nameController.text.trim()}" dari katalog custom user ini?'
+            : 'Apakah Anda yakin ingin menghapus produk "${_nameController.text.trim()}" dari database Supabase?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -200,6 +264,23 @@ class _AdminEditProductPageState extends State<AdminEditProductPage> {
     setState(() {
       _isLoading = true;
     });
+
+    if (widget.isUserCustomProduct) {
+      if (widget.userPhone != null && widget.userPhone!.isNotEmpty) {
+        UserService.instance.deleteCustomProductForUser(widget.userPhone!, _productId);
+      }
+      widget.onDeleteCustomProduct?.call(_productId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Produk custom berhasil dihapus.'),
+            backgroundColor: Color(0xFF7A4B29),
+          ),
+        );
+        Navigator.pop(context);
+      }
+      return;
+    }
 
     try {
       await ProductService.instance.deleteProduct(_productId);
@@ -308,99 +389,352 @@ class _AdminEditProductPageState extends State<AdminEditProductPage> {
   }
 
   void _showEditPhotoDialog({bool isCage = false, int? cageIndex}) {
-    final urlController = TextEditingController(
-      text: isCage && cageIndex != null
-          ? _cages[cageIndex].imageUrl
-          : _mainImageUrl,
-    );
+    final initialUrl = isCage && cageIndex != null
+        ? _cages[cageIndex].imageUrl
+        : _mainImageUrl;
+    final urlController = TextEditingController(text: initialUrl);
+    Uint8List? uploadedImageBytes = isCage && cageIndex != null
+        ? _cages[cageIndex].imageBytes
+        : null;
+    String? uploadedFileName;
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        title: Text(
-          isCage ? 'Ubah Foto ${cageIndex != null ? _cages[cageIndex].name : "Sangkar"}' : 'Ubah Foto Produk',
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-        ),
-        content: SizedBox(
-          width: 380,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Masukkan URL foto baru atau pilih contoh foto di bawah:',
-                style: TextStyle(fontSize: 13, color: Color(0xFF555555)),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: urlController,
-                decoration: InputDecoration(
-                  labelText: 'URL Gambar',
-                  hintText: 'https://...',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final hasImage = (uploadedImageBytes != null && uploadedImageBytes!.isNotEmpty) ||
+              urlController.text.trim().isNotEmpty;
+
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Row(
+              children: [
+                const Icon(Icons.add_photo_alternate_rounded, color: Color(0xFF7A4B29)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    isCage
+                        ? 'Ubah Foto ${cageIndex != null ? _cages[cageIndex].name : "Sangkar"}'
+                        : 'Ubah Foto Produk',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 14),
-              const Text(
-                'Pilih Contoh Foto Sangkar Jati:',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF6E6E6E)),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: List.generate(samplePhotos.length, (idx) {
-                  final photo = samplePhotos[idx];
-                  return InkWell(
-                    onTap: () {
-                      urlController.text = photo;
-                    },
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
-                      width: 55,
-                      height: 55,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.grey.shade300),
-                        image: DecorationImage(
-                          image: NetworkImage(photo),
-                          fit: BoxFit.cover,
+              ],
+            ),
+            content: SizedBox(
+              width: 420,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Preview Foto Terpilih Saat Ini
+                    Center(
+                      child: Stack(
+                        alignment: Alignment.topRight,
+                        children: [
+                          Container(
+                            width: 180,
+                            height: 130,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEEEEEE),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFDCDCDC)),
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: (uploadedImageBytes != null && uploadedImageBytes!.isNotEmpty)
+                                ? Image.memory(
+                                    uploadedImageBytes!,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (c, e, s) => const Center(
+                                      child: Icon(Icons.broken_image_rounded, color: Colors.grey, size: 36),
+                                    ),
+                                  )
+                                : urlController.text.trim().isNotEmpty
+                                    ? Product.buildImageFromSource(
+                                        urlController.text.trim(),
+                                        fit: BoxFit.cover,
+                                        placeholder: const Center(
+                                          child: Icon(Icons.image_rounded, color: Colors.grey, size: 36),
+                                        ),
+                                      )
+                                    : const Center(
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.add_photo_alternate_outlined, color: Colors.grey, size: 40),
+                                            SizedBox(height: 6),
+                                            Text(
+                                              'Belum ada foto',
+                                              style: TextStyle(fontSize: 11, color: Colors.grey),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                          ),
+                          if (hasImage)
+                            Positioned(
+                              top: 4,
+                              right: 4,
+                              child: InkWell(
+                                onTap: () {
+                                  setDialogState(() {
+                                    uploadedImageBytes = null;
+                                    uploadedFileName = null;
+                                    urlController.clear();
+                                  });
+                                },
+                                borderRadius: BorderRadius.circular(14),
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.65),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.close_rounded, color: Colors.white, size: 14),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Tombol Upload dari Galeri / Folder File
+                    InkWell(
+                      onTap: () async {
+                        try {
+                          final picker = ImagePicker();
+                          final picked = await picker.pickImage(
+                            source: ImageSource.gallery,
+                            maxWidth: 1600,
+                            maxHeight: 1600,
+                            imageQuality: 85,
+                          );
+                          if (picked != null) {
+                            final bytes = await picked.readAsBytes();
+                            final ext = picked.name.toLowerCase().endsWith('.png') ? 'png' : 'jpeg';
+                            final base64String = 'data:image/$ext;base64,${base64Encode(bytes)}';
+                            setDialogState(() {
+                              uploadedImageBytes = bytes;
+                              uploadedFileName = picked.name;
+                              urlController.text = base64String;
+                            });
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Upload dari file terkendala: $e.\nAnda dapat menempelkan URL atau memilih contoh foto.'),
+                                backgroundColor: const Color(0xFF7A4B29),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: uploadedImageBytes != null
+                              ? const Color(0xFFE8F5E9)
+                              : const Color(0xFFFBF6F2),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: uploadedImageBytes != null
+                                ? const Color(0xFF4CAF50)
+                                : const Color(0xFF7A4B29).withValues(alpha: 0.5),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              uploadedImageBytes != null
+                                  ? Icons.check_circle_rounded
+                                  : Icons.upload_file_rounded,
+                              color: uploadedImageBytes != null
+                                  ? const Color(0xFF2E7D32)
+                                  : const Color(0xFF7A4B29),
+                              size: 24,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    uploadedImageBytes != null
+                                        ? 'Foto Terpilih dari Folder:'
+                                        : 'Upload Foto dari Galeri / Folder',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: uploadedImageBytes != null
+                                          ? const Color(0xFF2E7D32)
+                                          : const Color(0xFF7A4B29),
+                                    ),
+                                  ),
+                                  Text(
+                                    uploadedImageBytes != null
+                                        ? (uploadedFileName ?? 'File gambar dipilih')
+                                        : 'Pilih file JPG/PNG dari komputer atau perangkat',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: uploadedImageBytes != null
+                                          ? const Color(0xFF2E7D32)
+                                          : Colors.grey.shade600,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (uploadedImageBytes != null)
+                              TextButton(
+                                onPressed: () {
+                                  setDialogState(() {
+                                    uploadedImageBytes = null;
+                                    uploadedFileName = null;
+                                    urlController.clear();
+                                  });
+                                },
+                                style: TextButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                child: const Text('Ganti', style: TextStyle(color: Color(0xFF2E7D32), fontSize: 12, fontWeight: FontWeight.bold)),
+                              ),
+                          ],
                         ),
                       ),
                     ),
-                  );
-                }),
+                    const SizedBox(height: 14),
+
+                    // Pemisah ATAU
+                    Row(
+                      children: [
+                        Expanded(child: Divider(color: Colors.grey.shade300)),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          child: Text(
+                            'ATAU GUNAKAN LINK URL',
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey.shade500),
+                          ),
+                        ),
+                        Expanded(child: Divider(color: Colors.grey.shade300)),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+
+                    TextField(
+                      controller: urlController,
+                      onChanged: (val) {
+                        setDialogState(() {
+                          if (uploadedImageBytes != null) {
+                            uploadedImageBytes = null;
+                            uploadedFileName = null;
+                          }
+                        });
+                      },
+                      decoration: InputDecoration(
+                        labelText: 'URL Gambar / Link Web',
+                        hintText: 'https://...',
+                        prefixIcon: const Icon(Icons.link_rounded, size: 20, color: Color(0xFF7A4B29)),
+                        suffixIcon: urlController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear, size: 18),
+                                onPressed: () {
+                                  setDialogState(() {
+                                    uploadedImageBytes = null;
+                                    uploadedFileName = null;
+                                    urlController.clear();
+                                  });
+                                },
+                              )
+                            : null,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Contoh Foto
+                    const Text(
+                      'Atau Pilih Contoh Foto Sangkar:',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF6E6E6E)),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: List.generate(samplePhotos.length, (idx) {
+                        final photo = samplePhotos[idx];
+                        final isChosen = urlController.text == photo && uploadedImageBytes == null;
+                        return InkWell(
+                          onTap: () {
+                            setDialogState(() {
+                              uploadedImageBytes = null;
+                              uploadedFileName = null;
+                              urlController.text = photo;
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            width: 55,
+                            height: 55,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: isChosen ? const Color(0xFF7A4B29) : Colors.grey.shade300,
+                                width: isChosen ? 2.5 : 1,
+                              ),
+                              image: DecorationImage(
+                                image: NetworkImage(photo),
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  final newUrl = urlController.text.trim();
+                  setState(() {
+                    if (isCage && cageIndex != null) {
+                      _cages[cageIndex] = _cages[cageIndex].copyWith(
+                        imageUrl: newUrl,
+                        imageBytes: uploadedImageBytes,
+                      );
+                      CageService.instance.updateCageImageByName(_cages[cageIndex].name, newUrl);
+                    } else {
+                      _mainImageUrl = newUrl;
+                    }
+                  });
+                  Navigator.pop(ctx);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF7A4B29),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                child: const Text('Terapkan Foto'),
               ),
             ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final newUrl = urlController.text.trim();
-              setState(() {
-                if (isCage && cageIndex != null) {
-                  _cages[cageIndex] = _cages[cageIndex].copyWith(imageUrl: newUrl);
-                  CageService.instance.updateCageImageByName(_cages[cageIndex].name, newUrl);
-                } else {
-                  _mainImageUrl = newUrl;
-                }
-              });
-              Navigator.pop(ctx);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF7A4B29),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: const Text('Terapkan Foto'),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -927,10 +1261,10 @@ class _AdminEditProductPageState extends State<AdminEditProductPage> {
                     ? Stack(
                         fit: StackFit.expand,
                         children: [
-                          Image.network(
+                          Product.buildImageFromSource(
                             _mainImageUrl,
                             fit: BoxFit.cover,
-                            errorBuilder: (ctx, err, stack) => _buildPlaceholderIcon(),
+                            placeholder: _buildPlaceholderIcon(),
                           ),
                           Positioned(
                             right: 14,
@@ -1200,40 +1534,41 @@ class _AdminEditProductPageState extends State<AdminEditProductPage> {
             ),
           ),
         ),
-        const SizedBox(height: 14),
-
-        // Input Field Hashtag / Kategori Produk (Sesuai Permintaan User)
-        SizedBox(
-          width: double.infinity,
-          height: 38,
-          child: TextField(
-            key: const Key('admin_edit_hashtag_field'),
-            controller: _hashtagController,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF4A4A4A),
-            ),
-            decoration: InputDecoration(
-              hintText: '#hashtag (Contoh: #sangkar #jati #jepara)',
-              hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF9E9E9E)),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(6),
-                borderSide: const BorderSide(color: Color(0xFFAAAAAA)),
+        if (!widget.isUserCustomProduct) ...[
+          const SizedBox(height: 14),
+          // Input Field Hashtag / Kategori Produk (Hanya untuk katalog umum)
+          SizedBox(
+            width: double.infinity,
+            height: 38,
+            child: TextField(
+              key: const Key('admin_edit_hashtag_field'),
+              controller: _hashtagController,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF4A4A4A),
               ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(6),
-                borderSide: const BorderSide(color: Color(0xFFAAAAAA)),
+              decoration: InputDecoration(
+                hintText: '#hashtag (Contoh: #sangkar #jati #jepara)',
+                hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF9E9E9E)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(6),
+                  borderSide: const BorderSide(color: Color(0xFFAAAAAA)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(6),
+                  borderSide: const BorderSide(color: Color(0xFFAAAAAA)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(6),
+                  borderSide: const BorderSide(color: Color(0xFF7A4B29), width: 1.5),
+                ),
+                isDense: true,
               ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(6),
-                borderSide: const BorderSide(color: Color(0xFF7A4B29), width: 1.5),
-              ),
-              isDense: true,
             ),
           ),
-        ),
+        ],
         const SizedBox(height: 18),
 
         // Tombol Simpan & Hapus

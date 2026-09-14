@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../models/product.dart';
 import '../services/cage_service.dart';
 import '../services/auth_service.dart';
@@ -31,9 +33,29 @@ class _UserHomePageState extends State<UserHomePage> {
     final imageController = TextEditingController();
     final noteController = TextEditingController();
     String imageUrl = '';
+    String? uploadedFileName;
     String selectedCage = CageService.instance.cages.isNotEmpty
         ? CageService.instance.cages.first.name
         : 'Sangkar 1';
+
+    Future<void> pickImageFromFile(StateSetter setModalState) async {
+      try {
+        final picker = ImagePicker();
+        final picked = await picker.pickImage(source: ImageSource.gallery);
+        if (picked != null) {
+          final bytes = await picked.readAsBytes();
+          final ext = picked.name.toLowerCase().endsWith('.png') ? 'png' : 'jpeg';
+          final base64String = 'data:image/$ext;base64,${base64Encode(bytes)}';
+          setModalState(() {
+            uploadedFileName = picked.name;
+            imageUrl = base64String;
+            imageController.text = picked.name;
+          });
+        }
+      } catch (e) {
+        debugPrint('Gagal memilih file gambar dari folder: $e');
+      }
+    }
 
     showModalBottomSheet(
       context: context,
@@ -298,7 +320,7 @@ class _UserHomePageState extends State<UserHomePage> {
                     ),
                     const SizedBox(height: 14),
 
-                    // 4. Insert Gambar (Menggantikan Kategori Pengerjaan & Motif)
+                    // 4. Insert Gambar (Pilih File dari Folder Komputer / HP)
                     const Text(
                       'Insert Gambar Logo / Desain',
                       style: TextStyle(
@@ -317,139 +339,168 @@ class _UserHomePageState extends State<UserHomePage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          TextField(
-                            controller: imageController,
-                            style: const TextStyle(fontSize: 13),
-                            onChanged: (val) {
-                              setModalState(() {
-                                imageUrl = val.trim();
-                              });
-                            },
-                            decoration: InputDecoration(
-                              hintText:
-                                  'Paste tautan / link gambar logo yang diinginkan',
-                              hintStyle: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade400,
-                              ),
-                              prefixIcon: const Icon(
-                                Icons.link_rounded,
-                                size: 20,
-                              ),
-                              suffixIcon: imageUrl.isNotEmpty
-                                  ? IconButton(
-                                      icon: const Icon(Icons.clear, size: 16),
-                                      onPressed: () {
-                                        imageController.clear();
-                                        setModalState(() {
-                                          imageUrl = '';
-                                        });
-                                      },
-                                    )
-                                  : null,
-                              filled: true,
-                              fillColor: Colors.white,
-                              isDense: true,
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 10,
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(
-                                  color: Colors.grey.shade300,
-                                ),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(
-                                  color: Colors.grey.shade300,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-
-                          // Area Pratinjau Gambar yang Diinsert
-                          if (imageUrl.isNotEmpty)
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Container(
-                                width: double.infinity,
-                                height: 130,
-                                color: Colors.grey.shade200,
-                                child: Image.network(
-                                  imageUrl,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      Center(
-                                        child: Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Icon(
-                                              Icons.broken_image_rounded,
-                                              color: Colors.grey.shade400,
-                                              size: 36,
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              'Tautan gambar tidak valid',
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.grey.shade600,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                ),
-                              ),
-                            )
-                          else
+                          if (imageUrl.isEmpty) ...[
+                            // Tombol Utama: Upload File dari Folder Komputer / HP
                             InkWell(
-                              onTap: () {
-                                // Memberikan tautan gambar default contoh jika user ingin langsung mencoba
-                                const sampleUrl =
-                                    'https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=600';
-                                imageController.text = sampleUrl;
-                                setModalState(() {
-                                  imageUrl = sampleUrl;
-                                });
-                              },
+                              key: const ValueKey('upload_logo_from_folder_btn'),
+                              onTap: () => pickImageFromFile(setModalState),
                               borderRadius: BorderRadius.circular(8),
                               child: Container(
                                 width: double.infinity,
-                                height: 90,
+                                padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 16),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
-                                    color: Colors.grey.shade300,
-                                    style: BorderStyle.solid,
+                                    color: const Color(0xFF7A4B29).withValues(alpha: 0.4),
+                                    width: 1.5,
                                   ),
                                 ),
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(
-                                      Icons.add_photo_alternate_outlined,
-                                      size: 28,
-                                      color: Colors.grey.shade500,
+                                    Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFBF6F2),
+                                        shape: BoxShape.circle,
+                                        border: Border.all(color: const Color(0xFF7A4B29).withValues(alpha: 0.2)),
+                                      ),
+                                      child: const Icon(
+                                        Icons.drive_folder_upload_rounded,
+                                        size: 30,
+                                        color: Color(0xFF7A4B29),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    const Text(
+                                      'Pilih File Gambar dari Folder Anda',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Color(0xFF4A301E),
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                     const SizedBox(height: 4),
-                                    const Text(
-                                      'Klik atau masukkan tautan gambar yang Anda inginkan',
+                                    Text(
+                                      'Klik di sini untuk membuka berkas folder (PNG, JPG, JPEG)',
                                       style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.black54,
-                                        fontWeight: FontWeight.w500,
+                                        fontSize: 11.5,
+                                        color: Colors.grey.shade600,
                                       ),
+                                      textAlign: TextAlign.center,
                                     ),
                                   ],
                                 ),
                               ),
                             ),
+                            const SizedBox(height: 12),
+                            // Opsi Tambahan: Tempel URL Web jika dibutuhkan (Opsional, Tanpa Template)
+                            TextField(
+                              controller: imageController,
+                              style: const TextStyle(fontSize: 12.5),
+                              onChanged: (val) {
+                                setModalState(() {
+                                  imageUrl = val.trim();
+                                  uploadedFileName = null;
+                                });
+                              },
+                              decoration: InputDecoration(
+                                hintText: 'Atau tempel Link / URL gambar web (opsional)',
+                                hintStyle: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade400,
+                                ),
+                                prefixIcon: const Icon(
+                                  Icons.link_rounded,
+                                  size: 18,
+                                  color: Color(0xFF7A4B29),
+                                ),
+                                filled: true,
+                                fillColor: Colors.white,
+                                isDense: true,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(
+                                    color: Colors.grey.shade300,
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(
+                                    color: Colors.grey.shade300,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ] else ...[
+                            // Area Pratinjau Gambar yang Diupload
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Container(
+                                width: double.infinity,
+                                height: 160,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade200,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Product.buildImageFromSource(
+                                  imageUrl,
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Row(
+                              children: [
+                                const Icon(Icons.check_circle_rounded, color: Color(0xFF2E7D32), size: 16),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    uploadedFileName != null && uploadedFileName!.isNotEmpty
+                                        ? 'File: $uploadedFileName'
+                                        : 'Gambar siap digunakan',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF2E7D32),
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                OutlinedButton.icon(
+                                  onPressed: () => pickImageFromFile(setModalState),
+                                  icon: const Icon(Icons.folder_open_rounded, size: 14),
+                                  label: const Text('Ganti File', style: TextStyle(fontSize: 11)),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: const Color(0xFF4A301E),
+                                    side: const BorderSide(color: Color(0xFF7A4B29)),
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    minimumSize: const Size(0, 30),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                IconButton(
+                                  tooltip: 'Hapus Gambar',
+                                  icon: const Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                  onPressed: () {
+                                    setModalState(() {
+                                      imageUrl = '';
+                                      uploadedFileName = null;
+                                      imageController.clear();
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -510,6 +561,18 @@ class _UserHomePageState extends State<UserHomePage> {
                             return;
                           }
 
+                          if (imageUrl.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Silakan pilih file gambar logo dari folder Anda terlebih dahulu',
+                                ),
+                                backgroundColor: Colors.redAccent,
+                              ),
+                            );
+                            return;
+                          }
+
                           // Format hashtag dari input user
                           String rawHashtag = hashtagController.text.trim();
                           String formattedHashtag;
@@ -522,10 +585,6 @@ class _UserHomePageState extends State<UserHomePage> {
                                 : '#$cleaned';
                           }
 
-                          final finalImage = imageUrl.isNotEmpty
-                              ? imageUrl
-                              : 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600';
-
                           final newProduct = Product(
                             id: 'custom_${DateTime.now().millisecondsSinceEpoch}',
                             name: name,
@@ -533,7 +592,7 @@ class _UserHomePageState extends State<UserHomePage> {
                             description: noteController.text.trim().isNotEmpty
                                 ? noteController.text.trim()
                                 : 'Desain logo custom sangkar buatan user login.',
-                            imageUrl: finalImage,
+                            imageUrl: imageUrl,
                             category: formattedHashtag,
                             rating: 5.0,
                             isUserCustom: true,
@@ -542,7 +601,12 @@ class _UserHomePageState extends State<UserHomePage> {
                           );
 
                           widget.onAddCustomLogo(newProduct);
-                          UserService.instance.incrementRequestCount(AuthService.instance.userPhone);
+                          final currentId = AuthService.instance.userPhone.isNotEmpty
+                              ? AuthService.instance.userPhone
+                              : AuthService.instance.userEmail;
+                          if (currentId.isNotEmpty) {
+                            UserService.instance.incrementCustomLogoCount(currentId);
+                          }
                           Navigator.pop(ctx);
 
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -619,10 +683,11 @@ class _UserHomePageState extends State<UserHomePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final isCompact = constraints.maxWidth < 440;
+                  final memberInfo = Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
                         padding: const EdgeInsets.all(8),
@@ -637,33 +702,38 @@ class _UserHomePageState extends State<UserHomePage> {
                         ),
                       ),
                       const SizedBox(width: 10),
-                      const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Area Member Terverifikasi',
-                            style: TextStyle(
-                              color: Color(0xFFFFD900),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 0.5,
+                      const Flexible(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Area Member Terverifikasi',
+                              style: TextStyle(
+                                color: Color(0xFFFFD900),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.5,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                          Text(
-                            'Jatimas Sangkar Custom',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                            Text(
+                              'Jatimas Sangkar Custom',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ],
-                  ),
+                  );
 
-                  // Tombol Opsi Lihat Katalog Standar
-                  OutlinedButton.icon(
+                  final katalogBtn = OutlinedButton.icon(
                     onPressed: widget.onOpenStandardCatalog,
                     icon: const Icon(
                       Icons.storefront_outlined,
@@ -684,8 +754,28 @@ class _UserHomePageState extends State<UserHomePage> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                  ),
-                ],
+                  );
+
+                  if (isCompact) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        memberInfo,
+                        const SizedBox(height: 12),
+                        katalogBtn,
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(child: memberInfo),
+                      const SizedBox(width: 12),
+                      katalogBtn,
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: 14),
               const Text(
@@ -865,18 +955,7 @@ class _UserHomePageState extends State<UserHomePage> {
                         width: double.infinity,
                         height: double.infinity,
                         color: Colors.grey.shade100,
-                        child: Image.network(
-                          product.imageUrl,
-                          width: double.infinity,
-                          height: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Center(
-                            child: Icon(
-                              Icons.image_outlined,
-                              color: Colors.grey.shade400,
-                            ),
-                          ),
-                        ),
+                        child: product.buildImage(fit: BoxFit.cover),
                       ),
                     ),
                   ),

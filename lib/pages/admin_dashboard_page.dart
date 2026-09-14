@@ -80,6 +80,7 @@ class _PieChartPainter extends CustomPainter {
 class AdminIncomingOrder {
   final int no;
   final String phone;
+  final String email;
   final String date;
   final int quantity;
   final String productCode;
@@ -91,6 +92,7 @@ class AdminIncomingOrder {
   const AdminIncomingOrder({
     required this.no,
     required this.phone,
+    this.email = '',
     required this.date,
     required this.quantity,
     required this.productCode,
@@ -105,6 +107,7 @@ class AdminIncomingOrder {
 class AdminCompletedOrder {
   final int no;
   final String phone;
+  final String email;
   final String date;
   final int quantity;
   final String productCode;
@@ -116,6 +119,7 @@ class AdminCompletedOrder {
   const AdminCompletedOrder({
     required this.no,
     required this.phone,
+    this.email = '',
     required this.date,
     required this.quantity,
     required this.productCode,
@@ -220,6 +224,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           AdminIncomingOrder(
             no: counter++,
             phone: order.phone,
+            email: order.email,
             date: dateStr,
             quantity: order.quantity,
             productCode: code,
@@ -256,10 +261,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   List<AdminCompletedOrder> get _allCompletedOrders {
     final List<AdminCompletedOrder> combined = List.from(_completedOrders);
 
-    final appOrders = [
-      ...OrderService.instance.userOrders,
-      ...OrderService.instance.guestOrders,
-    ];
+    final appOrders = OrderService.instance.allOrders;
 
     int nextNo = combined.length + 1;
     for (final order in appOrders) {
@@ -274,6 +276,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           AdminCompletedOrder(
             no: nextNo++,
             phone: order.phone,
+            email: order.email,
             date:
                 '${order.orderDate.day.toString().padLeft(2, '0')}-${order.orderDate.month.toString().padLeft(2, '0')}-${order.orderDate.year}',
             quantity: order.quantity,
@@ -298,6 +301,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     UserService.instance.addListener(_handleUserUpdate);
     ProductService.instance.addListener(_handleProductUpdate);
     ProductService.instance.fetchProducts();
+    UserService.instance.fetchUsers();
+    OrderService.instance.fetchOrders();
   }
 
   @override
@@ -994,7 +999,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
               final totalProducts = _publicProducts.length;
               final totalOrders = _allCompletedOrders.length + _allIncomingOrders.length;
-              final totalRequests = UserService.instance.users.fold<int>(0, (sum, u) => sum + u.requestCount);
+              final totalCustomLogos = UserService.instance.users.fold<int>(0, (sum, u) => sum + u.customLogoCount);
               final newOrders = _allIncomingOrders.length;
 
               Widget buildRow1() => Row(
@@ -1015,8 +1020,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                       const SizedBox(width: 16),
                       Expanded(
                         child: _buildMetricCard(
-                          title: 'JUMLAH DESIGN REQUEST',
-                          value: '$totalRequests',
+                          title: 'JUMLAH LOGO CUSTOM',
+                          value: '$totalCustomLogos',
                         ),
                       ),
                     ],
@@ -1374,7 +1379,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                   DataCell(Text('${order.no}.', style: _cellStyle)),
                   DataCell(
                     Text(
-                      order.phone,
+                      order.phone.trim().isNotEmpty ? order.phone : (order.email.trim().isNotEmpty ? order.email : '-'),
                       style: _cellStyle.copyWith(
                         decoration: TextDecoration.underline,
                       ),
@@ -1512,7 +1517,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                         );
                       },
                       child: Text(
-                        order.phone,
+                        order.phone.trim().isNotEmpty ? order.phone : (order.email.trim().isNotEmpty ? order.email : '-'),
                         style: _cellStyle.copyWith(
                           decoration: TextDecoration.underline,
                         ),
@@ -1625,22 +1630,24 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             columns: const [
               DataColumn(label: Text('No.', style: _headerStyle)),
               DataColumn(label: Text('No. Telp', style: _headerStyle)),
+              DataColumn(label: Text('Email', style: _headerStyle)),
               DataColumn(label: Text('Password', style: _headerStyle)),
               DataColumn(label: Text('Tgl Masuk', style: _headerStyle)),
-              DataColumn(label: Text('Jumlah Request', style: _headerStyle)),
+              DataColumn(label: Text('Jumlah Logo Custom', style: _headerStyle)),
               DataColumn(label: Text('Action', style: _headerStyle)),
             ],
             rows: _privateUsers.map((user) {
               return DataRow(
                 cells: [
                   DataCell(Text('${user.no}.', style: _cellStyle)),
-                  DataCell(Text(user.phone, style: _cellStyle)),
+                  DataCell(Text(user.phone.isNotEmpty ? user.phone : '-', style: _cellStyle)),
+                  DataCell(Text(user.email.isNotEmpty ? user.email : '-', style: _cellStyle)),
                   DataCell(Text(user.password, style: _cellStyle)),
                   DataCell(Text(user.joinDate, style: _cellStyle)),
-                  DataCell(Text('${user.requestCount}', style: _cellStyle)),
+                  DataCell(Text('${user.customLogoCount}', style: _cellStyle)),
                   DataCell(
                     ElevatedButton(
-                      key: ValueKey('user_detail_${user.phone}'),
+                      key: ValueKey('user_detail_${user.phone.isNotEmpty ? user.phone : user.email}'),
                       onPressed: () {
                         Navigator.push(
                           context,

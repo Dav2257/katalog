@@ -16,7 +16,7 @@ class AuthService extends ChangeNotifier {
   final String _adminName = 'Admin 1';
   final String _adminEmail = 'admin@gmail.com';
 
-  String _userPhone = '085732257048';
+  String _userPhone = '';
   String _userEmail = '';
 
   bool get isLoggedIn => _isLoggedIn;
@@ -58,6 +58,8 @@ class AuthService extends ChangeNotifier {
     } catch (_) {}
     _isLoggedIn = false;
     _isAdmin = false;
+    _userPhone = '';
+    _userEmail = '';
     notifyListeners();
   }
 }

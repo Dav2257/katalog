@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/product.dart';
 import '../services/user_service.dart';
+import 'admin_edit_product_page.dart';
 import 'product_detail_page.dart';
 
 /// Halaman Detail User Private untuk Admin
@@ -18,6 +19,7 @@ class AdminUserDetailPage extends StatefulWidget {
 class _AdminUserDetailPageState extends State<AdminUserDetailPage> {
   late AdminPrivateUser _currentUser;
   late TextEditingController _phoneController;
+  late TextEditingController _emailController;
   late TextEditingController _passwordController;
   bool _obscurePassword = true;
 
@@ -25,27 +27,42 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage> {
   void initState() {
     super.initState();
     _currentUser = widget.user;
-    _phoneController = TextEditingController(
-      text: _currentUser.phone.isNotEmpty ? _currentUser.phone : _currentUser.email,
-    );
+    _phoneController = TextEditingController(text: _currentUser.phone);
+    _emailController = TextEditingController(text: _currentUser.email);
     _passwordController = TextEditingController(text: _currentUser.password);
+    UserService.instance.addListener(_handleUserServiceUpdate);
+  }
+
+  void _handleUserServiceUpdate() {
+    if (!mounted) return;
+    final fresh = UserService.instance.findUserByIdentifier(
+      _currentUser.phone.isNotEmpty ? _currentUser.phone : _currentUser.email,
+    );
+    if (fresh != null) {
+      setState(() {
+        _currentUser = fresh;
+      });
+    }
   }
 
   @override
   void dispose() {
+    UserService.instance.removeListener(_handleUserServiceUpdate);
     _phoneController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  void _saveUserData() {
+  Future<void> _saveUserData() async {
     final newPhone = _phoneController.text.trim();
+    final newEmail = _emailController.text.trim();
     final newPassword = _passwordController.text.trim();
 
-    if (newPhone.isEmpty) {
+    if (newPhone.isEmpty && newEmail.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Nomor HP / Email tidak boleh kosong!'),
+          content: Text('Nomor HP atau Email harus diisi!'),
           backgroundColor: Colors.red,
         ),
       );
@@ -62,25 +79,26 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage> {
       return;
     }
 
-    UserService.instance.updateUser(
+    await UserService.instance.updateUser(
       no: _currentUser.no,
       phone: newPhone,
       password: newPassword,
-      email: newPhone.contains('@') ? newPhone : _currentUser.email,
+      email: newEmail,
     );
 
     setState(() {
       _currentUser = _currentUser.copyWith(
         phone: newPhone,
         password: newPassword,
-        email: newPhone.contains('@') ? newPhone : _currentUser.email,
+        email: newEmail,
       );
     });
 
+    if (!mounted) return;
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Data user ${_currentUser.phone} berhasil disimpan!'),
+        content: Text('Data user ${newPhone.isNotEmpty ? newPhone : newEmail} berhasil disimpan ke Supabase!'),
         backgroundColor: const Color(0xFF2E7D32),
         duration: const Duration(seconds: 2),
       ),
@@ -162,7 +180,10 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage> {
                       onTap: () => Navigator.pop(context),
                       borderRadius: BorderRadius.circular(4),
                       child: const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+                        padding: EdgeInsets.symmetric(
+                          vertical: 4,
+                          horizontal: 2,
+                        ),
                         child: Text(
                           'Kembali',
                           style: TextStyle(
@@ -189,6 +210,23 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage> {
                         color: Color(0xFF4A4A4A),
                       ),
                     ),
+                    const SizedBox(width: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF5A3825).withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF5A3825).withValues(alpha: 0.25)),
+                      ),
+                      child: Text(
+                        '${_currentUser.customLogoCount} Logo Custom',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF5A3825),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
 
@@ -203,7 +241,10 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage> {
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFF4A4A4A),
                         side: const BorderSide(color: Color(0xFFC0C0C0)),
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(6),
                         ),
@@ -226,7 +267,10 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage> {
                         backgroundColor: const Color(0xFFE52525),
                         foregroundColor: Colors.white,
                         elevation: 0,
-                        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 28,
+                          vertical: 12,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(6),
                         ),
@@ -246,14 +290,15 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage> {
 
             const SizedBox(height: 32),
 
-            // Form Input Email / No. HP
+            // Form Input No. HP, Email, & Password
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Form Input Nomor Telepon
                   const Text(
-                    'Email',
+                    'Nomor Telepon (No. HP)',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
@@ -265,6 +310,7 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage> {
                     key: const ValueKey('user_detail_phone_field'),
                     controller: _phoneController,
                     decoration: InputDecoration(
+                      hintText: 'Contoh: 085732257048',
                       filled: true,
                       fillColor: Colors.white,
                       border: OutlineInputBorder(
@@ -277,13 +323,61 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: Color(0xFF5A3825), width: 1.5),
+                        borderSide: const BorderSide(
+                          color: Color(0xFF5A3825),
+                          width: 1.5,
+                        ),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
                     ),
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 18),
+
+                  // Form Input Email
+                  const Text(
+                    'Email',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF4A4A4A),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    key: const ValueKey('user_detail_email_field'),
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: InputDecoration(
+                      hintText: 'Contoh: user@gmail.com',
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFFBDBDBD)),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFFBDBDBD)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(
+                          color: Color(0xFF5A3825),
+                          width: 1.5,
+                        ),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 18),
 
                   // Form Input Password
                   const Text(
@@ -326,70 +420,203 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: Color(0xFF5A3825), width: 1.5),
+                        borderSide: const BorderSide(
+                          color: Color(0xFF5A3825),
+                          width: 1.5,
+                        ),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
                     ),
                   ),
 
                   const SizedBox(height: 32),
 
                   // Bagian Produk Costum Pribadi
-                  const Text(
-                    'Produk Costum Pribadi',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF4A4A4A),
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Produk Custom Pribadi (${_currentUser.customLogoCount} Logo)',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF4A4A4A),
+                        ),
+                      ),
+                      if (_currentUser.customProducts.isNotEmpty)
+                        TextButton.icon(
+                          onPressed: _addNewCustomProductForUser,
+                          icon: const Icon(
+                            Icons.add,
+                            size: 16,
+                            color: Color(0xFF7A4B29),
+                          ),
+                          label: const Text(
+                            'Tambah Produk Custom',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF7A4B29),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 14),
 
-                  // Baris Kartu Logo Custom Pribadi
-                  if (_currentUser.customLogos.isEmpty)
-                    const Text(
-                      'Belum ada logo custom pribadi.',
-                      style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
+                  // Baris Kartu Logo Custom Pribadi (Dinamis per user, tanpa dummy)
+                  if (_currentUser.customProducts.isEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 20,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Belum ada produk custom pribadi untuk user ini.',
+                            style: TextStyle(
+                              color: Colors.grey,
+                              fontStyle: FontStyle.italic,
+                              fontSize: 13,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          ElevatedButton.icon(
+                            onPressed: _addNewCustomProductForUser,
+                            icon: const Icon(
+                              Icons.add_photo_alternate_outlined,
+                              size: 16,
+                            ),
+                            label: const Text('Tambah Produk Custom Pribadi'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF7A4B29),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 10,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     )
                   else
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
-                        children: _currentUser.customLogos.map((logoName) {
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 18),
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ..._currentUser.customProducts.map((product) {
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 18),
+                              child: InkWell(
+                                onTap: () => _editCustomProduct(product),
+                                borderRadius: BorderRadius.circular(10),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Kotak Abu-abu Membulat Persis di Gambar Referensi
+                                    Container(
+                                      width: 110,
+                                      height: 110,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFA6A6A6),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      clipBehavior: Clip.antiAlias,
+                                      child: product.buildImage(
+                                        fit: BoxFit.cover,
+                                        placeholder: const Center(
+                                          child: Icon(
+                                            Icons.image_outlined,
+                                            size: 40,
+                                            color: Colors.white70,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    SizedBox(
+                                      width: 110,
+                                      child: Text(
+                                        product.name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF4A4A4A),
+                                        ),
+                                      ),
+                                    ),
+                                    if (product.code != null &&
+                                        product.code!.isNotEmpty)
+                                      Text(
+                                        product.code!,
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Color(0xFF888888),
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }),
+
+                          // Tombol Tambah Produk Custom Tambahan
+                          InkWell(
+                            onTap: _addNewCustomProductForUser,
+                            borderRadius: BorderRadius.circular(10),
                             child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                // Kotak Abu-abu Membulat Persis di Gambar Referensi
                                 Container(
                                   width: 110,
                                   height: 110,
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFA6A6A6),
+                                    color: const Color(0xFFF0F0F0),
                                     borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: const Color(0xFFCCCCCC),
+                                    ),
                                   ),
                                   child: const Center(
                                     child: Icon(
-                                      Icons.image_outlined,
-                                      size: 40,
-                                      color: Colors.white70,
+                                      Icons.add_rounded,
+                                      size: 38,
+                                      color: Color(0xFF7A4B29),
                                     ),
                                   ),
                                 ),
                                 const SizedBox(height: 8),
-                                Text(
-                                  logoName,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF4A4A4A),
+                                const Text(
+                                  '+ Tambah',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF7A4B29),
                                   ),
                                 ),
                               ],
                             ),
-                          );
-                        }).toList(),
+                          ),
+                        ],
                       ),
                     ),
                 ],
@@ -399,6 +626,144 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage> {
         ),
       ),
     );
+  }
+
+  void _editCustomProduct(Product product) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AdminEditProductPage(
+          product: product,
+          userPhone: _currentUser.phone.isNotEmpty
+              ? _currentUser.phone
+              : _currentUser.email,
+          isUserCustomProduct: true,
+        ),
+      ),
+    ).then((_) {
+      if (mounted) {
+        _handleUserServiceUpdate();
+      }
+    });
+  }
+
+  void _addNewCustomProductForUser() {
+    final nextNumber = _currentUser.customProducts.length + 1;
+    final nextCode = 'A0$nextNumber';
+    final codeCtrl = TextEditingController(text: nextCode);
+    final nameCtrl = TextEditingController(text: 'Logo $nextNumber');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: const Row(
+          children: [
+            Icon(Icons.add_photo_alternate_rounded, color: Color(0xFF7A4B29)),
+            SizedBox(width: 8),
+            Text(
+              'Tambah Produk Custom Pribadi',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Kode:',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 6),
+            TextField(
+              controller: codeCtrl,
+              decoration: InputDecoration(
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'Nama Logo / Produk:',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 6),
+            TextField(
+              controller: nameCtrl,
+              decoration: InputDecoration(
+                hintText: 'Contoh: Logo Merak',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final code = codeCtrl.text.trim().isNotEmpty
+                  ? codeCtrl.text.trim()
+                  : nextCode;
+              final name = nameCtrl.text.trim().isNotEmpty
+                  ? nameCtrl.text.trim()
+                  : 'Logo Custom';
+              final identifier = _currentUser.phone.isNotEmpty
+                  ? _currentUser.phone
+                  : _currentUser.email;
+
+              final newProd = Product(
+                id: 'custom_${DateTime.now().millisecondsSinceEpoch}',
+                code: code,
+                name: name,
+                price: 0,
+                description:
+                    'Desain logo custom pribadi untuk user $identifier',
+                imageUrl: '',
+                category: '#LogoCustomPribadi',
+                rating: 5.0,
+                isUserCustom: true,
+                lastEditedDate: _getTodayFormatted(),
+              );
+
+              UserService.instance.addCustomProductToUser(identifier, newProd);
+              Navigator.pop(ctx);
+              _handleUserServiceUpdate();
+
+              // Langsung buka halaman edit (Gambar 2) agar admin bisa upload gambar dan sangkar
+              _editCustomProduct(newProd);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF7A4B29),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Buat & Edit'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getTodayFormatted() {
+    final now = DateTime.now();
+    final day = now.day.toString().padLeft(2, '0');
+    final month = now.month.toString().padLeft(2, '0');
+    final year = now.year.toString();
+    return '$day-$month-$year';
   }
 }
 
@@ -411,26 +776,8 @@ class AdminUserCatalogPreviewPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Generate produk preview dari custom logos user
-    final previewProducts = user.customLogos.asMap().entries.map((entry) {
-      final idx = entry.key;
-      final logoName = entry.value;
-      return Product(
-        id: 'user_preview_${user.no}_$idx',
-        name: logoName,
-        price: 0,
-        description:
-            'Desain logo custom $logoName eksklusif untuk akun ${user.phone}. Dibuat oleh pengrajin kayu jati pilihan.',
-        imageUrl: idx % 2 == 0
-            ? 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600'
-            : 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=600',
-        category: '#LogoCustomPribadi',
-        rating: 5.0,
-        isUserCustom: true,
-        customNote: 'Finishing premium dengan ukiran relief.',
-        selectedCage: 'Sangkar ${idx + 1}',
-      );
-    }).toList();
+    // Menggunakan data produk custom pribadi asli milik user (tanpa dummy)
+    final previewProducts = user.customProducts;
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
@@ -472,7 +819,10 @@ class AdminUserCatalogPreviewPage extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.remove_red_eye_rounded, color: Color(0xFFB78103)),
+                  const Icon(
+                    Icons.remove_red_eye_rounded,
+                    color: Color(0xFFB78103),
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
@@ -503,10 +853,7 @@ class AdminUserCatalogPreviewPage extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               'Daftar logo custom yang sudah diajukan oleh pengguna ini',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey.shade600,
-              ),
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
             ),
 
             const SizedBox(height: 16),
@@ -566,16 +913,25 @@ class AdminUserCatalogPreviewPage extends StatelessWidget {
                                   child: Image.network(
                                     product.imageUrl,
                                     fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) => const Center(
-                                      child: Icon(Icons.image_outlined, size: 48, color: Colors.white70),
-                                    ),
+                                    errorBuilder:
+                                        (context, error, stackTrace) =>
+                                            const Center(
+                                              child: Icon(
+                                                Icons.image_outlined,
+                                                size: 48,
+                                                color: Colors.white70,
+                                              ),
+                                            ),
                                   ),
                                 ),
                                 Positioned(
                                   top: 8,
                                   right: 8,
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: const Color(0xFF7A4B29),
                                       borderRadius: BorderRadius.circular(6),
@@ -638,8 +994,12 @@ class AdminUserCatalogPreviewPage extends StatelessWidget {
                                   },
                                   style: OutlinedButton.styleFrom(
                                     foregroundColor: const Color(0xFF7A4B29),
-                                    side: const BorderSide(color: Color(0xFF7A4B29)),
-                                    padding: const EdgeInsets.symmetric(vertical: 6),
+                                    side: const BorderSide(
+                                      color: Color(0xFF7A4B29),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 6,
+                                    ),
                                     minimumSize: const Size(0, 30),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(6),
@@ -647,7 +1007,10 @@ class AdminUserCatalogPreviewPage extends StatelessWidget {
                                   ),
                                   child: const Text(
                                     'Lihat Detail',
-                                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                               ),
