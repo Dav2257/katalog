@@ -47,6 +47,7 @@ class CageData {
         width: width,
         height: height,
         fit: fit,
+        gaplessPlayback: true,
         errorBuilder: (context, error, stackTrace) => defaultPlaceholder,
       );
     }
@@ -57,6 +58,7 @@ class CageData {
         width: width,
         height: height,
         fit: fit,
+        gaplessPlayback: true,
         errorBuilder: (context, error, stackTrace) => defaultPlaceholder,
       );
     }

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../supabase_config.dart';
+import '../models/product.dart';
 import '../services/auth_service.dart';
+import '../services/settings_service.dart';
 import '../services/user_service.dart';
+import '../supabase_config.dart';
 
 class LoginPage extends StatefulWidget {
   final void Function({bool isAdmin, String? phone, String? email})? onLoginSuccess;
@@ -22,7 +24,18 @@ class _LoginPageState extends State<LoginPage> {
   bool _isRegisterMode = false;
 
   @override
+  void initState() {
+    super.initState();
+    AppSettingsService.instance.addListener(_onSettingsChanged);
+  }
+
+  void _onSettingsChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
   void dispose() {
+    AppSettingsService.instance.removeListener(_onSettingsChanged);
     _emailController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
@@ -45,7 +58,52 @@ class _LoginPageState extends State<LoginPage> {
 
     setState(() => _isLoading = true);
 
-    // 1. Cek kecocokan di database lokal UserService atau langsung di Supabase
+    // 1. Cek Kredensial Akun Administrator Resmi
+    final settings = AppSettingsService.instance;
+    final adminEmail = settings.adminEmail.trim().toLowerCase();
+    final adminUsername = settings.adminUsername.trim().toLowerCase();
+    final adminWhatsApp = settings.adminWhatsApp.trim();
+    final adminPass = settings.adminPassword;
+    final cleanInput = identifier.trim().toLowerCase();
+
+    final bool isInputAdmin = cleanInput.isNotEmpty &&
+        (cleanInput == adminEmail ||
+            cleanInput == adminUsername ||
+            cleanInput == 'admin@jatimas.com' ||
+            cleanInput == 'admin@gmail.com' ||
+            cleanInput == 'admin' ||
+            (adminWhatsApp.isNotEmpty && cleanInput == adminWhatsApp.toLowerCase()));
+
+    if (isInputAdmin && password == adminPass) {
+      AuthService.instance.login(
+        isAdmin: true,
+        email: settings.adminEmail,
+        phone: settings.adminWhatsApp,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Selamat datang kembali, Administrator!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        widget.onLoginSuccess?.call(
+          isAdmin: true,
+          email: settings.adminEmail,
+          phone: settings.adminWhatsApp,
+        );
+        Navigator.pop(context, {
+          'isLoggedIn': true,
+          'isAdmin': true,
+          'email': settings.adminEmail,
+          'phone': settings.adminWhatsApp,
+        });
+      }
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    // 2. Cek kecocokan di database lokal UserService atau langsung di Supabase
     var registeredUser = UserService.instance.findUser(identifier, password);
     registeredUser ??= await UserService.instance.findUserInSupabase(identifier, password);
 
@@ -73,27 +131,6 @@ class _LoginPageState extends State<LoginPage> {
           'isAdmin': false,
           'phone': registeredUser.phone,
           'email': registeredUser.email,
-        });
-      }
-      setState(() => _isLoading = false);
-      return;
-    }
-
-    // 2. Kredensial Admin Demo Cepat
-    if (identifier.toLowerCase().contains('admin') && password == 'admin123') {
-      AuthService.instance.login(isAdmin: true, email: identifier);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Berhasil masuk sebagai Administrator!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        widget.onLoginSuccess?.call(isAdmin: true, email: identifier);
-        Navigator.pop(context, {
-          'isLoggedIn': true,
-          'isAdmin': true,
-          'email': identifier,
         });
       }
       setState(() => _isLoading = false);
@@ -246,20 +283,35 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  void _handleDemoAdminLogin() {
-    AuthService.instance.login(isAdmin: true, email: 'admin@gmail.com');
-    widget.onLoginSuccess?.call(isAdmin: true, email: 'admin@gmail.com');
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Berhasil masuk sebagai Administrator (Mode Demo)'),
-        backgroundColor: Colors.green,
-      ),
+  Widget _buildBackground() {
+    final settings = AppSettingsService.instance;
+
+    if (settings.loginWallpaperBytes != null && settings.loginWallpaperBytes!.isNotEmpty) {
+      return Image.memory(
+        settings.loginWallpaperBytes!,
+        fit: BoxFit.cover,
+        errorBuilder: (ctx, err, stack) => Image.asset(
+          'assets/images/login_bg.jpg',
+          fit: BoxFit.cover,
+        ),
+      );
+    }
+
+    if (settings.loginWallpaperUrl != null && settings.loginWallpaperUrl!.trim().isNotEmpty) {
+      return Product.buildImageFromSource(
+        settings.loginWallpaperUrl!.trim(),
+        fit: BoxFit.cover,
+        placeholder: Image.asset(
+          'assets/images/login_bg.jpg',
+          fit: BoxFit.cover,
+        ),
+      );
+    }
+
+    return Image.asset(
+      'assets/images/login_bg.jpg',
+      fit: BoxFit.cover,
     );
-    Navigator.pop(context, {
-      'isLoggedIn': true,
-      'isAdmin': true,
-      'email': 'admin@gmail.com',
-    });
   }
 
   Widget _buildBackButton() {
@@ -486,6 +538,10 @@ class _LoginPageState extends State<LoginPage> {
           TextField(
             controller: _passwordController,
             obscureText: _obscurePassword,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) {
+              if (!_isLoading) _handleRegister();
+            },
             style: const TextStyle(color: Colors.black87, fontSize: 13),
             decoration: InputDecoration(
               hintText: 'Minimal 4 karakter',
@@ -592,6 +648,10 @@ class _LoginPageState extends State<LoginPage> {
           TextField(
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.next,
+            onSubmitted: (_) {
+              if (!_isLoading) _handleLogin();
+            },
             style: const TextStyle(color: Colors.black87, fontSize: 13),
             decoration: InputDecoration(
               hintText: 'Example@gmail.com / 0812...',
@@ -622,6 +682,10 @@ class _LoginPageState extends State<LoginPage> {
           TextField(
             controller: _passwordController,
             obscureText: _obscurePassword,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) {
+              if (!_isLoading) _handleLogin();
+            },
             style: const TextStyle(color: Colors.black87, fontSize: 13),
             decoration: InputDecoration(
               filled: true,
@@ -700,23 +764,6 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
           ),
-
-          const SizedBox(height: 6),
-
-          // Tombol Demo Khusus Admin
-          Center(
-            child: TextButton.icon(
-              onPressed: _handleDemoAdminLogin,
-              icon: const Icon(Icons.admin_panel_settings_rounded, size: 14, color: Color(0xFFFFD900)),
-              label: const Text(
-                'Masuk sebagai Admin (Demo)',
-                style: TextStyle(fontSize: 12, color: Color(0xFFFFD900), fontWeight: FontWeight.bold),
-              ),
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              ),
-            ),
-          ),
         ],
       ],
     );
@@ -734,10 +781,7 @@ class _LoginPageState extends State<LoginPage> {
             return Stack(
               children: [
                 Positioned.fill(
-                  child: Image.asset(
-                    'assets/images/login_bg.jpg',
-                    fit: BoxFit.cover,
-                  ),
+                  child: _buildBackground(),
                 ),
                 Positioned(
                   top: 24,
@@ -765,10 +809,7 @@ class _LoginPageState extends State<LoginPage> {
             return Stack(
               children: [
                 Positioned.fill(
-                  child: Image.asset(
-                    'assets/images/login_bg.jpg',
-                    fit: BoxFit.cover,
-                  ),
+                  child: _buildBackground(),
                 ),
                 Positioned.fill(
                   child: Container(

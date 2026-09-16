@@ -23,6 +23,9 @@ Future<void> main() async {
     publishableKey: SupabaseConfig.supabaseAnonKey,
   );
 
+  // Muat pengaturan toko (Banner, Logo, WhatsApp, Akun) yang tersimpan di Supabase
+  await AppSettingsService.instance.loadSettings();
+
   runApp(const MyApp());
 }
 
@@ -212,7 +215,11 @@ class _MyHomePageState extends State<MyHomePage> {
       MaterialPageRoute(
         builder: (context) => LoginPage(
           onLoginSuccess: ({isAdmin = false, phone, email}) {
-            AuthService.instance.login(isAdmin: isAdmin, phone: phone, email: email);
+            AuthService.instance.login(
+              isAdmin: isAdmin,
+              phone: phone,
+              email: email,
+            );
             setState(() {
               _isLoggedIn = true;
               _isAdmin = isAdmin;
@@ -242,27 +249,6 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  void _toggleRole() {
-    AuthService.instance.toggleRole();
-    setState(() {
-      _isAdmin = AuthService.instance.isAdmin;
-      _showStandardCatalogForUser = false;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          _isAdmin
-              ? 'Beralih ke Akun Administrator (Dashboard Admin)'
-              : 'Beralih ke Akun Member Pengguna',
-        ),
-        backgroundColor: _isAdmin
-            ? const Color(0xFF382314)
-            : Colors.blue.shade800,
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
-
   void _openProductDetailPage(Product product) async {
     await Navigator.push(
       context,
@@ -276,7 +262,6 @@ class _MyHomePageState extends State<MyHomePage> {
           onCartTap: _openCartPage,
           onProfileTap: _openLoginPage,
           onLogout: _handleLogout,
-          onSwitchRole: _toggleRole,
           onAddItemsToCart: (items) {
             setState(() {
               final cart = _activeCart;
@@ -346,9 +331,6 @@ class _MyHomePageState extends State<MyHomePage> {
           });
         },
         onLogout: _handleLogout,
-        onSwitchToMember: () {
-          _toggleRole();
-        },
       );
     }
 
@@ -376,7 +358,6 @@ class _MyHomePageState extends State<MyHomePage> {
         cartItemCount: _totalCartCount,
         isLoggedIn: _isLoggedIn,
         isAdmin: _isAdmin,
-        onSwitchRole: _toggleRole,
         onLogoTap: () {
           setState(() {
             _searchController.clear();
@@ -413,9 +394,14 @@ class _MyHomePageState extends State<MyHomePage> {
                 onAddCustomLogo: (newCustomProduct) {
                   final currentPhone = AuthService.instance.userPhone;
                   final currentEmail = AuthService.instance.userEmail;
-                  final identifier = currentPhone.isNotEmpty ? currentPhone : currentEmail;
+                  final identifier = currentPhone.isNotEmpty
+                      ? currentPhone
+                      : currentEmail;
 
-                  UserService.instance.addCustomProductToUser(identifier, newCustomProduct);
+                  UserService.instance.addCustomProductToUser(
+                    identifier,
+                    newCustomProduct,
+                  );
 
                   setState(() {
                     _activeCart.add(
@@ -565,7 +551,10 @@ class _MyHomePageState extends State<MyHomePage> {
                       )
                     else if (filteredProducts.isEmpty)
                       Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 50.0, horizontal: 20.0),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 50.0,
+                          horizontal: 20.0,
+                        ),
                         child: Center(
                           child: Column(
                             children: [
@@ -677,10 +666,10 @@ class _MyHomePageState extends State<MyHomePage> {
                 child: Container(
                   width: double.infinity,
                   color: Colors.grey.shade100,
-                  child: Image.network(
+                  child: Product.buildImageFromSource(
                     product.imageUrl,
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Center(
+                    placeholder: Center(
                       child: Icon(
                         Icons.inventory_2_outlined,
                         color: Colors.grey.shade400,

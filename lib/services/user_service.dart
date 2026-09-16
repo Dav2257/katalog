@@ -10,7 +10,7 @@ class AdminPrivateUser {
   final String email;
   final String password;
   final String joinDate;
-  final int customLogoCount;
+  final int _customLogoCount;
   final List<Product> customProducts;
 
   const AdminPrivateUser({
@@ -19,11 +19,13 @@ class AdminPrivateUser {
     this.email = '',
     required this.password,
     required this.joinDate,
-    required this.customLogoCount,
+    required int customLogoCount,
     this.customProducts = const [],
-  });
+  }) : _customLogoCount = customLogoCount;
 
-  /// Getter untuk kompatibilitas data lama
+  /// Jumlah logo custom selalu sinkron dengan produk custom riil yang ada
+  int get customLogoCount =>
+      customProducts.isNotEmpty ? customProducts.length : _customLogoCount;
   int get requestCount => customLogoCount;
   List<String> get customLogos => customProducts.map((p) => p.name).toList();
 
@@ -37,14 +39,16 @@ class AdminPrivateUser {
     int? requestCount,
     List<Product>? customProducts,
   }) {
+    final prods = customProducts ?? this.customProducts;
+    final count = customLogoCount ?? requestCount ?? prods.length;
     return AdminPrivateUser(
       no: no ?? this.no,
       phone: phone ?? this.phone,
       email: email ?? this.email,
       password: password ?? this.password,
       joinDate: joinDate ?? this.joinDate,
-      customLogoCount: customLogoCount ?? requestCount ?? this.customLogoCount,
-      customProducts: customProducts ?? this.customProducts,
+      customLogoCount: count,
+      customProducts: prods,
     );
   }
 }
@@ -106,9 +110,8 @@ class UserService extends ChangeNotifier {
           }
         }
 
-        if (customLogoCount == 0 && userCustoms.isNotEmpty) {
-          customLogoCount = userCustoms.length;
-        }
+        // Sinkronkan selalu jumlah logo custom dengan produk custom riil milik user private
+        customLogoCount = userCustoms.length;
 
         loadedUsers.add(
           AdminPrivateUser(
@@ -394,7 +397,7 @@ class UserService extends ChangeNotifier {
     if (index >= 0) {
       final old = _users[index];
       final updatedList = List<Product>.from(old.customProducts)..insert(0, product);
-      final newCount = old.customLogoCount + 1;
+      final newCount = updatedList.length;
       _users[index] = old.copyWith(
         customProducts: updatedList,
         customLogoCount: newCount,
@@ -503,8 +506,29 @@ class UserService extends ChangeNotifier {
         toDelete = prodList[pIndex];
         prodList.removeAt(pIndex);
       }
-      _users[index] = old.copyWith(customProducts: prodList);
+      final newCount = prodList.length;
+      _users[index] = old.copyWith(
+        customProducts: prodList,
+        customLogoCount: newCount,
+      );
       notifyListeners();
+
+      // Sinkronkan pengurangan jumlah logo custom ke database Supabase
+      try {
+        if (old.phone.isNotEmpty) {
+          await supabase.from('user_private').update({
+            'jumlah_logo_custom': newCount,
+            'request_count': newCount,
+          }).eq('phone', old.phone);
+        } else if (old.email.isNotEmpty) {
+          await supabase.from('user_private').update({
+            'jumlah_logo_custom': newCount,
+            'request_count': newCount,
+          }).eq('email', old.email);
+        }
+      } catch (e) {
+        debugPrint('Catatan: Gagal update pengurangan jumlah_logo_custom di Supabase: $e');
+      }
     }
 
     // Hapus dari database Supabase

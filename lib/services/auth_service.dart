@@ -47,11 +47,6 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
   }
 
-  void toggleRole() {
-    _isAdmin = !_isAdmin;
-    notifyListeners();
-  }
-
   Future<void> logout() async {
     try {
       await supabase.auth.signOut();

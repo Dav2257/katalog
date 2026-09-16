@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../models/product.dart';
 import '../services/order_service.dart';
+import '../services/product_service.dart';
+import '../services/user_service.dart';
 import 'admin_dashboard_page.dart';
 
 /// Ikon Logo WhatsApp Khas & Presisi
@@ -97,6 +100,7 @@ class _OrderItemDetail {
   final int quantity;
   String selectedStatus;
   List<String> stages;
+  final String? imageUrl;
 
   _OrderItemDetail({
     required this.id,
@@ -107,6 +111,7 @@ class _OrderItemDetail {
     required this.quantity,
     required this.selectedStatus,
     List<String>? stages,
+    this.imageUrl,
   }) : stages = stages ?? ['Tahap 1', 'Tahap 2', 'Tahap 3', 'Finishing', 'Diterima'];
 }
 
@@ -117,6 +122,56 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
   void initState() {
     super.initState();
     _initItems();
+  }
+
+  String? _resolveProductImage(String productName, String phone, String email) {
+    final pName = productName.trim().toLowerCase();
+
+    // 1. Cek dari produk custom user di UserService (khususnya user pemesan)
+    final allUsers = UserService.instance.users;
+    final cleanPhone = phone.trim();
+    final cleanEmail = email.trim().toLowerCase();
+
+    for (final u in allUsers) {
+      final matchUser = (cleanPhone.isNotEmpty && u.phone.trim() == cleanPhone) ||
+          (cleanEmail.isNotEmpty && u.email.trim().toLowerCase() == cleanEmail);
+      if (matchUser) {
+        for (final p in u.customProducts) {
+          if (p.name.trim().toLowerCase() == pName && p.imageUrl.trim().isNotEmpty) {
+            return p.imageUrl.trim();
+          }
+        }
+      }
+    }
+
+    // 2. Cek ke semua custom product di semua user jika belum ketemu
+    for (final u in allUsers) {
+      for (final p in u.customProducts) {
+        if (p.name.trim().toLowerCase() == pName && p.imageUrl.trim().isNotEmpty) {
+          return p.imageUrl.trim();
+        }
+      }
+    }
+
+    // 3. Cek katalog produk umum di ProductService
+    for (final p in ProductService.instance.products) {
+      if ((p.name.trim().toLowerCase() == pName ||
+              (p.code != null && p.code!.trim().toLowerCase() == pName)) &&
+          p.imageUrl.trim().isNotEmpty) {
+        return p.imageUrl.trim();
+      }
+    }
+
+    // 4. Cek adminProducts di ProductService
+    for (final p in ProductService.instance.adminProducts) {
+      if ((p.name.trim().toLowerCase() == pName ||
+              p.code.trim().toLowerCase() == pName) &&
+          p.imageUrl.trim().isNotEmpty) {
+        return p.imageUrl.trim();
+      }
+    }
+
+    return null;
   }
 
   void _initItems() {
@@ -136,6 +191,10 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
             ? codeMatch.group(1)!
             : (widget.order.productCode.isNotEmpty ? widget.order.productCode : 'PROD');
 
+        String? img = (o.imageUrl != null && o.imageUrl!.trim().isNotEmpty)
+            ? o.imageUrl!.trim()
+            : _resolveProductImage(o.productName, o.phone, o.email);
+
         return _OrderItemDetail(
           id: o.id,
           productCode: code,
@@ -144,9 +203,14 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
           note: o.note,
           quantity: o.quantity,
           selectedStatus: o.status,
+          imageUrl: img,
         );
       }).toList();
     } else {
+      String? img = (widget.order.imageUrl != null && widget.order.imageUrl!.trim().isNotEmpty)
+          ? widget.order.imageUrl!.trim()
+          : _resolveProductImage(widget.order.productCode, widget.order.phone, widget.order.email);
+
       _items = [
         _OrderItemDetail(
           id: widget.order.orderId.isNotEmpty ? widget.order.orderId : 'ITEM-1',
@@ -156,6 +220,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
           note: widget.order.note,
           quantity: widget.order.quantity,
           selectedStatus: widget.order.status,
+          imageUrl: img,
         ),
       ];
     }
@@ -597,23 +662,23 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Kotak Abu-abu Berisi Kode Produk (seperti A01, B03 di gambar)
-                      Container(
-                        width: 78,
-                        height: 78,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFA6A6A6),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Center(
-                          child: Text(
-                            item.productCode,
-                            style: const TextStyle(
-                              color: Color(0xFF555555),
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
+                      // Kotak Abu-abu Berisi Gambar Logo dari Pesanan Pelanggan (Bukan sekadar tulisan)
+                      GestureDetector(
+                        onTap: () {
+                          final img = item.imageUrl?.trim() ?? '';
+                          if (img.isNotEmpty) {
+                            _showImagePreviewDialog(context, item.productName, img);
+                          }
+                        },
+                        child: Container(
+                          width: 78,
+                          height: 78,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFA6A6A6),
+                            borderRadius: BorderRadius.circular(8),
                           ),
+                          clipBehavior: Clip.antiAlias,
+                          child: _buildItemImage(item),
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -863,6 +928,123 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                   ),
                 ),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildItemImage(_OrderItemDetail item) {
+    final imgUrl = item.imageUrl?.trim() ?? '';
+
+    if (imgUrl.isNotEmpty) {
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          Product.buildImageFromSource(
+            imgUrl,
+            width: 78,
+            height: 78,
+            fit: BoxFit.cover,
+            placeholder: const Center(
+              child: Icon(Icons.image_outlined, color: Colors.white70, size: 28),
+            ),
+          ),
+          Positioned(
+            right: 3,
+            bottom: 3,
+            child: Container(
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Icon(Icons.zoom_in_rounded, color: Colors.white, size: 12),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.image_outlined, size: 26, color: Color(0xFF555555)),
+          const SizedBox(height: 2),
+          Text(
+            item.productCode,
+            style: const TextStyle(
+              color: Color(0xFF555555),
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showImagePreviewDialog(BuildContext context, String title, String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(16),
+        child: Stack(
+          alignment: Alignment.topRight,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Logo Pesanan: $title',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF333333),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      constraints: const BoxConstraints(maxHeight: 380, maxWidth: 380),
+                      color: const Color(0xFFF0F0F0),
+                      child: InteractiveViewer(
+                        child: Product.buildImageFromSource(
+                          imageUrl,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Pinch atau geser untuk memperbesar logo',
+                    style: TextStyle(fontSize: 11, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+            Positioned(
+              top: 6,
+              right: 6,
+              child: IconButton(
+                onPressed: () => Navigator.pop(ctx),
+                icon: const CircleAvatar(
+                  radius: 14,
+                  backgroundColor: Color(0xFFEEEEEE),
+                  child: Icon(Icons.close, size: 16, color: Colors.black87),
+                ),
+              ),
             ),
           ],
         ),

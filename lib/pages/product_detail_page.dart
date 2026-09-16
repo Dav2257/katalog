@@ -1,7 +1,12 @@
+import 'dart:convert';
+import 'dart:typed_data';
+import 'dart:ui' show PointerDeviceKind;
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../models/product.dart';
 import '../services/cage_service.dart';
 import '../services/auth_service.dart';
+import '../services/product_service.dart';
 import '../widgets/top_navbar.dart';
 
 class CageOption {
@@ -9,12 +14,16 @@ class CageOption {
   final String name;
   int quantity;
   String note;
+  String? imageUrl;
+  Uint8List? imageBytes;
 
   CageOption({
     required this.id,
     required this.name,
     this.quantity = 0,
     this.note = '',
+    this.imageUrl,
+    this.imageBytes,
   });
 }
 
@@ -36,7 +45,6 @@ class ProductDetailPage extends StatefulWidget {
   final VoidCallback? onCartTap;
   final VoidCallback? onProfileTap;
   final VoidCallback? onLogout;
-  final VoidCallback? onSwitchRole;
 
   const ProductDetailPage({
     super.key,
@@ -51,7 +59,6 @@ class ProductDetailPage extends StatefulWidget {
     this.onCartTap,
     this.onProfileTap,
     this.onLogout,
-    this.onSwitchRole,
   });
 
   @override
@@ -59,6 +66,9 @@ class ProductDetailPage extends StatefulWidget {
 }
 
 class _ProductDetailPageState extends State<ProductDetailPage> {
+  late final PageController _slideController;
+  int _currentSlideIndex = 0;
+
   int _selectedCageIndex = 0;
   final TextEditingController _noteController = TextEditingController();
   final ScrollController _cageScrollController = ScrollController();
@@ -68,6 +78,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   @override
   void initState() {
     super.initState();
+    _slideController = PageController();
     // Sinkronisasi status autentikasi awal jika widget diberikan parameter eksplisit
     if (widget.isLoggedIn && !AuthService.instance.isLoggedIn) {
       AuthService.instance.login(isAdmin: widget.isAdmin);
@@ -103,50 +114,81 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     if (_cages.isNotEmpty) {
       _noteController.text = _cages[_selectedCageIndex].note;
     }
+
+    _precacheImages();
+  }
+
+  void _precacheImages() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (widget.product.imageUrl.isNotEmpty) {
+        _precacheSource(widget.product.imageUrl);
+      }
+      for (final cage in _cages) {
+        if (cage.imageBytes != null && cage.imageBytes!.isNotEmpty) {
+          precacheImage(MemoryImage(cage.imageBytes!), context).catchError((_) {});
+        } else if (cage.imageUrl != null && cage.imageUrl!.isNotEmpty) {
+          _precacheSource(cage.imageUrl!);
+        }
+      }
+    });
+  }
+
+  void _precacheSource(String src) {
+    try {
+      final clean = src.trim();
+      if (clean.isEmpty) return;
+      if (clean.startsWith('data:image') || (clean.length > 200 && !clean.startsWith('http'))) {
+        final commaIdx = clean.indexOf(',');
+        final rawB64 = commaIdx != -1 ? clean.substring(commaIdx + 1) : clean;
+        final bytes = base64Decode(rawB64);
+        precacheImage(MemoryImage(bytes), context).catchError((_) {});
+      } else {
+        precacheImage(NetworkImage(clean), context).catchError((_) {});
+      }
+    } catch (_) {}
   }
 
   void _loadCagesFromService() {
     final Map<String, CageOption> existing = {for (final c in _cages) c.id: c};
-
     final List<CageOption> updated = [];
 
-    if (widget.product.cageVariations != null &&
-        widget.product.cageVariations!.isNotEmpty) {
-      for (final cv in widget.product.cageVariations!) {
-        if (existing.containsKey(cv.id)) {
-          final prev = existing[cv.id]!;
-          updated.add(
-            CageOption(
-              id: cv.id,
-              name: cv.name,
-              quantity: prev.quantity,
-              note: prev.note,
-            ),
-          );
-        } else {
-          updated.add(
-            CageOption(id: cv.id, name: cv.name, quantity: 0, note: ''),
-          );
-        }
-      }
-    } else {
-      final serviceCages = CageService.instance.cages;
+    final serviceCages = CageService.instance.cages;
+    final productVariations = widget.product.cageVariations ?? [];
+
+    if (serviceCages.isNotEmpty) {
       for (final sc in serviceCages) {
-        if (existing.containsKey(sc.id)) {
-          final prev = existing[sc.id]!;
-          updated.add(
-            CageOption(
-              id: sc.id,
-              name: sc.name,
-              quantity: prev.quantity,
-              note: prev.note,
-            ),
-          );
-        } else {
-          updated.add(
-            CageOption(id: sc.id, name: sc.name, quantity: 0, note: ''),
-          );
-        }
+        final matchCustom = productVariations.where(
+          (cv) => cv.name.toLowerCase() == sc.name.toLowerCase() || cv.id == sc.id,
+        ).firstOrNull;
+
+        final prev = existing[sc.id];
+        updated.add(
+          CageOption(
+            id: sc.id,
+            name: sc.name,
+            quantity: prev?.quantity ?? 0,
+            note: prev?.note ?? '',
+            imageUrl: (matchCustom != null && matchCustom.imageUrl.isNotEmpty)
+                ? matchCustom.imageUrl
+                : sc.imageUrl,
+            imageBytes: matchCustom?.imageBytes ?? sc.imageBytes,
+          ),
+        );
+      }
+    } else if (productVariations.isNotEmpty) {
+      for (final cv in productVariations) {
+        final prev = existing[cv.id];
+        updated.add(
+          CageOption(
+            id: cv.id,
+            name: cv.name,
+            quantity: prev?.quantity ?? 0,
+            note: prev?.note ?? '',
+            imageUrl: cv.imageUrl,
+            imageBytes: cv.imageBytes,
+          ),
+        );
       }
     }
 
@@ -166,57 +208,177 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
       if (_selectedCageIndex < _cages.length) {
         _noteController.text = _cages[_selectedCageIndex].note;
       }
+      _precacheImages();
     });
   }
 
-  void _addCageByAdmin() {
-    final added = CageService.instance.addCage();
-    Future.delayed(const Duration(milliseconds: 100), () {
-      if (_cageScrollController.hasClients) {
-        _cageScrollController.animateTo(
-          _cageScrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeOut,
-        );
-      }
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Bentuk ${added.name} berhasil ditambahkan oleh Admin!'),
-        duration: const Duration(seconds: 1),
-      ),
-    );
-  }
+  /// Ganti foto bentuk sangkar khusus produk ini (tidak mengubah produk lain)
+  void _changeCageImageForProduct(int cageIndex) {
+    if (cageIndex >= _cages.length) return;
+    final cage = _cages[cageIndex];
+    final urlCtrl = TextEditingController(text: cage.imageUrl ?? '');
+    Uint8List? pickedBytes;
+    String? pickedName;
 
-  void _confirmRemoveCage(CageOption cage) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Hapus Varian Sangkar'),
-        content: Text('Apakah Anda yakin ingin menghapus "${cage.name}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              Navigator.pop(ctx);
-              CageService.instance.removeCage(cage.id);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Varian "${cage.name}" berhasil dihapus.'),
-                  duration: const Duration(seconds: 1),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            title: Row(
+              children: [
+                const Icon(Icons.camera_alt_rounded, color: Color(0xFF7A4B29)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Ganti Foto ${cage.name}',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
                 ),
-              );
-            },
-            child: const Text('Hapus'),
-          ),
-        ],
+              ],
+            ),
+            content: SizedBox(
+              width: 360,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Foto ini hanya diterapkan untuk produk "${widget.product.name}" dan tidak akan mengubah produk lain.',
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF666666)),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Opsi Upload File dari Galeri / Komputer
+                  InkWell(
+                    onTap: () async {
+                      try {
+                        final picker = ImagePicker();
+                        final picked = await picker.pickImage(source: ImageSource.gallery);
+                        if (picked != null) {
+                          final bytes = await picked.readAsBytes();
+                          setDialogState(() {
+                            pickedBytes = bytes;
+                            pickedName = picked.name;
+                            urlCtrl.clear();
+                          });
+                        }
+                      } catch (e) {
+                        if (ctx.mounted) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            SnackBar(content: Text('Gagal upload: $e')),
+                          );
+                        }
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: pickedBytes != null ? const Color(0xFFE8F5E9) : const Color(0xFFFBF6F2),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: pickedBytes != null ? const Color(0xFF4CAF50) : const Color(0xFF7A4B29).withValues(alpha: 0.4),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            pickedBytes != null ? Icons.check_circle_rounded : Icons.cloud_upload_rounded,
+                            color: pickedBytes != null ? const Color(0xFF2E7D32) : const Color(0xFF7A4B29),
+                            size: 20,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              pickedBytes != null ? '✓ ${pickedName ?? "Foto Terpilih"}' : 'Pilih Foto dari Galeri / File',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: pickedBytes != null ? const Color(0xFF2E7D32) : const Color(0xFF7A4B29),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+                  const Text('Atau Masukkan URL Gambar:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF555555))),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: urlCtrl,
+                    onChanged: (val) {
+                      if (val.trim().isNotEmpty) {
+                        setDialogState(() {
+                          pickedBytes = null;
+                          pickedName = null;
+                        });
+                      }
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'https://...',
+                      prefixIcon: const Icon(Icons.link, size: 16, color: Color(0xFF7A4B29)),
+                      filled: true,
+                      fillColor: const Color(0xFFF7F7F7),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  final newUrl = urlCtrl.text.trim();
+                  setState(() {
+                    cage.imageUrl = newUrl.isNotEmpty ? newUrl : null;
+                    cage.imageBytes = pickedBytes;
+                  });
+
+                  // Update ProductService agar tersimpan khusus produk ini
+                  final updatedVariations = _cages.map((c) => ProductCageVariation(
+                    id: c.id,
+                    name: c.name,
+                    imageUrl: c.imageUrl ?? '',
+                    imageBytes: c.imageBytes,
+                  )).toList();
+
+                  ProductService.instance.updateProduct(
+                    id: widget.product.id,
+                    name: widget.product.name,
+                    code: widget.product.code ?? 'A01',
+                    hashtags: widget.product.hashtags,
+                    cageVariations: updatedVariations,
+                  );
+
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Foto ${cage.name} untuk "${widget.product.name}" berhasil diubah!'),
+                      backgroundColor: const Color(0xFF7A4B29),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF7A4B29),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                child: const Text('Simpan Foto'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -227,7 +389,19 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     CageService.instance.removeListener(_handleCageServiceUpdate);
     _noteController.dispose();
     _cageScrollController.dispose();
+    _slideController.dispose();
     super.dispose();
+  }
+
+  void _scrollCageThumbToVisible(int index) {
+    if (!_cageScrollController.hasClients) return;
+    const itemWidth = 124.0;
+    final targetOffset = (index * itemWidth) - 40.0;
+    _cageScrollController.animateTo(
+      targetOffset.clamp(0.0, _cageScrollController.position.maxScrollExtent),
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
+    );
   }
 
   void _handleAuthUpdate() {
@@ -247,18 +421,27 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   int get _totalQuantity => _cages.fold(0, (sum, cage) => sum + cage.quantity);
 
   void _selectCage(int index) {
-    if (_selectedCageIndex == index) return;
+    if (_selectedCageIndex == index && _currentSlideIndex == index + 1) return;
     // Simpan catatan bentuk yang sedang aktif
     _cages[_selectedCageIndex].note = _noteController.text;
 
     setState(() {
       _selectedCageIndex = index;
+      _currentSlideIndex = index + 1;
       // Muat catatan khusus bentuk yang baru dipilih
       _noteController.text = _cages[index].note;
       _noteController.selection = TextSelection.fromPosition(
         TextPosition(offset: _noteController.text.length),
       );
     });
+
+    if (_slideController.hasClients) {
+      _slideController.animateToPage(
+        index + 1,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
   }
 
   void _handleNoteChanged(String text) {
@@ -373,10 +556,6 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           widget.onLogout?.call();
           if (mounted) setState(() {});
         },
-        onSwitchRole: () {
-          widget.onSwitchRole?.call();
-          if (mounted) setState(() {});
-        },
         onLogoTap: () => Navigator.pop(context),
       ),
       body: SafeArea(
@@ -458,84 +637,328 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     );
   }
 
-  /// Kolom Kiri: Gambar Logo Paling Besar & Bentuk Sangkar + Quantity
+  /// Kolom Kiri: Gambar Logo Paling Besar & Bentuk Sangkar (Bisa Digeser) + Quantity
   Widget _buildLeftSection() {
-    final selectedCage = _cages[_selectedCageIndex];
-    final bool showNavButtons = _cages.length > 4;
+    final int totalSlides = 1 + _cages.length;
+    final bool isLogoSlide = _currentSlideIndex == 0;
+    final int currentCageIndex = _currentSlideIndex - 1;
+    final bool showNavButtons = (_cages.length + 1) > 4;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Gambar Utama Logo / Desain Sangkar Paling Besar
+        // Kotak Slider Foto Produk & Bentuk Sangkar (Slide 1: Logo, Slide 2 dst: Bentuk Sangkar)
         Container(
           width: double.infinity,
-          height: 320,
+          height: 350,
           decoration: BoxDecoration(
-            color: const Color(0xFFC4C4C4),
-            borderRadius: BorderRadius.circular(16),
+            color: const Color(0xFFB0B0B0),
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-          child: widget.product.imageUrl.isNotEmpty
-              ? ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: Image.network(
-                    widget.product.imageUrl,
-                    width: double.infinity,
-                    height: 320,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.broken_image_rounded,
-                            size: 48,
-                            color: Colors.grey.shade600,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(18),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // 1. PageView Slider dengan dukungan Drag Mouse di Web/Desktop & Touch di HP
+                ScrollConfiguration(
+                  behavior: const MaterialScrollBehavior().copyWith(
+                    dragDevices: {
+                      PointerDeviceKind.touch,
+                      PointerDeviceKind.mouse,
+                      PointerDeviceKind.trackpad,
+                      PointerDeviceKind.stylus,
+                    },
+                  ),
+                  child: PageView.builder(
+                    controller: _slideController,
+                    itemCount: totalSlides,
+                    onPageChanged: (slideIdx) {
+                      setState(() {
+                        _currentSlideIndex = slideIdx;
+                        if (slideIdx > 0 && slideIdx - 1 < _cages.length) {
+                          final cageIdx = slideIdx - 1;
+                          if (_selectedCageIndex != cageIdx) {
+                            _cages[_selectedCageIndex].note = _noteController.text;
+                            _selectedCageIndex = cageIdx;
+                            _noteController.text = _cages[cageIdx].note;
+                            _noteController.selection = TextSelection.fromPosition(
+                              TextPosition(offset: _noteController.text.length),
+                            );
+                          }
+                        }
+                      });
+                      if (slideIdx > 0) {
+                        _scrollCageThumbToVisible(slideIdx);
+                      } else {
+                        _scrollCageThumbToVisible(0);
+                      }
+                    },
+                    itemBuilder: (context, index) {
+                      final slideKey = ValueKey('detail_slide_${index}_${index == 0 ? widget.product.imageUrl : (_cages[index - 1].imageUrl ?? _cages[index - 1].imageBytes.hashCode)}');
+                      if (index == 0) {
+                        // Slide 1: Logo Produk
+                        return _KeepAliveWrapper(
+                          key: slideKey,
+                          child: widget.product.imageUrl.isNotEmpty
+                              ? Product.buildImageFromSource(
+                                  widget.product.imageUrl,
+                                  width: double.infinity,
+                                  height: 350,
+                                  fit: BoxFit.contain,
+                                  placeholder: Center(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.broken_image_rounded,
+                                          size: 48,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          widget.product.name,
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(
+                                            color: Colors.black54,
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                )
+                              : Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.image_outlined,
+                                        size: 48,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        widget.product.name,
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          color: Colors.black54,
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                        );
+                      } else {
+                        // Slide 2 dst: Bentuk Sangkar
+                        final cageIdx = index - 1;
+                        final cage = _cages[cageIdx];
+                        return _KeepAliveWrapper(
+                          key: slideKey,
+                          child: Builder(
+                            builder: (context) {
+                              if (cage.imageBytes != null && cage.imageBytes!.isNotEmpty) {
+                                return Image.memory(
+                                  cage.imageBytes!,
+                                  width: double.infinity,
+                                  height: 350,
+                                  fit: BoxFit.contain,
+                                  gaplessPlayback: true,
+                                );
+                              }
+                              if (cage.imageUrl != null && cage.imageUrl!.isNotEmpty) {
+                                return Product.buildImageFromSource(
+                                  cage.imageUrl!,
+                                  width: double.infinity,
+                                  height: 350,
+                                  fit: BoxFit.contain,
+                                  placeholder: Center(
+                                    child: Icon(Icons.grid_view_rounded, color: Colors.grey.shade600, size: 54),
+                                  ),
+                                );
+                              }
+                              final sc = CageService.instance.cages
+                                  .where((c) => c.name.toLowerCase() == cage.name.toLowerCase() || c.id == cage.id)
+                                  .firstOrNull;
+                              if (sc != null && (sc.imageBytes != null || (sc.imageUrl != null && sc.imageUrl!.isNotEmpty))) {
+                                return sc.buildImage(
+                                  width: double.infinity,
+                                  height: 350,
+                                  fit: BoxFit.contain,
+                                );
+                              }
+                              return Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.grid_view_rounded, color: Colors.grey.shade600, size: 54),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      cage.name,
+                                      style: const TextStyle(
+                                        color: Colors.black54,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            widget.product.name,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: Colors.black54,
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                            ),
+                        );
+                      }
+                    },
+                  ),
+                ),
+
+                // 2. Badge Keterangan Slide di Pojok Kiri Atas
+                Positioned(
+                  top: 14,
+                  left: 14,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.65),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isLogoSlide ? Icons.image_rounded : Icons.grid_view_rounded,
+                          color: Colors.white,
+                          size: 13,
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          isLogoSlide
+                              ? 'Logo Produk (${_currentSlideIndex + 1}/$totalSlides)'
+                              : '${_cages[currentCageIndex].name} (${_currentSlideIndex + 1}/$totalSlides)',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
                           ),
-                        ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // 3. Tombol Panah Navigasi Kiri (<)
+                if (_currentSlideIndex > 0)
+                  Positioned(
+                    left: 10,
+                    top: 0,
+                    bottom: 0,
+                    child: Center(
+                      child: InkWell(
+                        onTap: () {
+                          _slideController.previousPage(
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.9),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.15),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.arrow_back_ios_new_rounded,
+                            size: 16,
+                            color: Color(0xFF2C1810),
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                )
-              : Center(
-                  child: Column(
+
+                // 4. Tombol Panah Navigasi Kanan (>)
+                if (_currentSlideIndex < totalSlides - 1)
+                  Positioned(
+                    right: 10,
+                    top: 0,
+                    bottom: 0,
+                    child: Center(
+                      child: InkWell(
+                        onTap: () {
+                          _slideController.nextPage(
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.9),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.15),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            size: 16,
+                            color: Color(0xFF2C1810),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // 5. Dot Indicators di Tengah Bawah
+                Positioned(
+                  bottom: 14,
+                  left: 0,
+                  right: 0,
+                  child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.image_outlined,
-                        size: 48,
-                        color: Colors.grey.shade600,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        widget.product.name,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Colors.black54,
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
+                    children: List.generate(totalSlides, (idx) {
+                      final isActive = idx == _currentSlideIndex;
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        margin: const EdgeInsets.symmetric(horizontal: 3),
+                        width: isActive ? 18 : 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: isActive ? Colors.white : Colors.white.withValues(alpha: 0.45),
+                          borderRadius: BorderRadius.circular(3),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        selectedCage.name,
-                        style: const TextStyle(
-                          color: Colors.black45,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
+                      );
+                    }),
                   ),
                 ),
+              ],
+            ),
+          ),
         ),
 
         const SizedBox(height: 10),
@@ -593,9 +1016,97 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                 physics: const BouncingScrollPhysics(),
                 child: Row(
                   children: [
+                    // Pilihan 1: Logo Produk
+                    Container(
+                      width: 114,
+                      margin: const EdgeInsets.symmetric(horizontal: 5.0),
+                      child: Column(
+                        children: [
+                          InkWell(
+                            onTap: () {
+                              setState(() {
+                                _currentSlideIndex = 0;
+                              });
+                              if (_slideController.hasClients) {
+                                _slideController.animateToPage(
+                                  0,
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeInOut,
+                                );
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(16),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  height: 102,
+                                  decoration: BoxDecoration(
+                                    color: _currentSlideIndex == 0
+                                        ? const Color(0xFF6E7173)
+                                        : const Color(0xFFB5B7B9),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: _currentSlideIndex == 0
+                                        ? Border.all(
+                                            color: Theme.of(context).colorScheme.primary,
+                                            width: 2.5,
+                                          )
+                                        : null,
+                                  ),
+                                  child: Center(
+                                    child: widget.product.imageUrl.isNotEmpty
+                                        ? ClipRRect(
+                                            borderRadius: BorderRadius.circular(14),
+                                            child: Product.buildImageFromSource(
+                                              widget.product.imageUrl,
+                                              width: double.infinity,
+                                              height: double.infinity,
+                                              fit: BoxFit.cover,
+                                              placeholder: const Center(
+                                                child: Icon(Icons.image_rounded, color: Colors.white70, size: 36),
+                                              ),
+                                            ),
+                                          )
+                                        : const Icon(Icons.image_outlined, color: Colors.white, size: 36),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Logo Produk',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: _currentSlideIndex == 0
+                                        ? FontWeight.bold
+                                        : FontWeight.w500,
+                                    color: _currentSlideIndex == 0
+                                        ? Colors.black87
+                                        : Colors.grey.shade700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade200,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              'Utama',
+                              style: TextStyle(fontSize: 10, color: Colors.grey.shade700),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Pilihan 2 dst: Bentuk Sangkar
                     ...List.generate(_cages.length, (index) {
                       final cage = _cages[index];
-                      final isSelected = _selectedCageIndex == index;
+                      final isSelected = _currentSlideIndex == index + 1;
 
                       return Container(
                         width: 114,
@@ -632,26 +1143,37 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                                         Center(
                                           child: Builder(
                                             builder: (context) {
-                                              final sc = CageService
-                                                  .instance
-                                                  .cages
-                                                  .where(
-                                                    (c) =>
-                                                        c.name.toLowerCase() ==
-                                                            cage.name
-                                                                .toLowerCase() ||
-                                                        c.id == cage.id,
-                                                  )
-                                                  .firstOrNull;
-                                              if (sc != null &&
-                                                  (sc.imageBytes != null ||
-                                                      (sc.imageUrl != null &&
-                                                          sc
-                                                              .imageUrl!
-                                                              .isNotEmpty))) {
+                                              if (cage.imageBytes != null && cage.imageBytes!.isNotEmpty) {
                                                 return ClipRRect(
-                                                  borderRadius:
-                                                      BorderRadius.circular(14),
+                                                  borderRadius: BorderRadius.circular(14),
+                                                  child: Image.memory(
+                                                    cage.imageBytes!,
+                                                    width: double.infinity,
+                                                    height: double.infinity,
+                                                    fit: BoxFit.cover,
+                                                  ),
+                                                );
+                                              }
+                                              if (cage.imageUrl != null && cage.imageUrl!.isNotEmpty) {
+                                                return ClipRRect(
+                                                  borderRadius: BorderRadius.circular(14),
+                                                  child: Product.buildImageFromSource(
+                                                    cage.imageUrl!,
+                                                    width: double.infinity,
+                                                    height: double.infinity,
+                                                    fit: BoxFit.cover,
+                                                    placeholder: const Center(
+                                                      child: Icon(Icons.grid_view_rounded, color: Colors.white70, size: 36),
+                                                    ),
+                                                  ),
+                                                );
+                                              }
+                                              final sc = CageService.instance.cages
+                                                  .where((c) => c.name.toLowerCase() == cage.name.toLowerCase() || c.id == cage.id)
+                                                  .firstOrNull;
+                                              if (sc != null && (sc.imageBytes != null || (sc.imageUrl != null && sc.imageUrl!.isNotEmpty))) {
+                                                return ClipRRect(
+                                                  borderRadius: BorderRadius.circular(14),
                                                   child: sc.buildImage(
                                                     width: double.infinity,
                                                     height: double.infinity,
@@ -661,9 +1183,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                                               }
                                               return Icon(
                                                 Icons.grid_view_rounded,
-                                                color: isSelected
-                                                    ? Colors.white
-                                                    : Colors.white70,
+                                                color: isSelected ? Colors.white : Colors.white70,
                                                 size: 36,
                                               );
                                             },
@@ -672,7 +1192,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                                         if (cage.note.trim().isNotEmpty)
                                           Positioned(
                                             top: 5,
-                                            right: 5,
+                                            left: 5,
                                             child: Container(
                                               padding: const EdgeInsets.all(3),
                                               decoration: const BoxDecoration(
@@ -686,28 +1206,27 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                                               ),
                                             ),
                                           ),
-                                        // Tombol Hapus Bentuk Sangkar Khusus Admin untuk varian tambahan
-                                        if (_isAdmin && _cages.length > 4)
+                                        // Tombol Ganti Foto Khusus Admin untuk varian ini pada produk ini
+                                        if (_isAdmin)
                                           Positioned(
-                                            top: 3,
-                                            left: 3,
-                                            child: InkWell(
-                                              onTap: () =>
-                                                  _confirmRemoveCage(cage),
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                              child: Container(
-                                                padding: const EdgeInsets.all(
-                                                  2,
-                                                ),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.red.shade600,
-                                                  shape: BoxShape.circle,
-                                                ),
-                                                child: const Icon(
-                                                  Icons.close,
-                                                  size: 11,
-                                                  color: Colors.white,
+                                            top: 5,
+                                            right: 5,
+                                            child: Tooltip(
+                                              message: 'Ganti foto ${cage.name} untuk produk ini',
+                                              child: InkWell(
+                                                onTap: () => _changeCageImageForProduct(index),
+                                                borderRadius: BorderRadius.circular(12),
+                                                child: Container(
+                                                  padding: const EdgeInsets.all(4),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.black.withValues(alpha: 0.65),
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                  child: const Icon(
+                                                    Icons.camera_alt_rounded,
+                                                    size: 13,
+                                                    color: Colors.white,
+                                                  ),
                                                 ),
                                               ),
                                             ),
@@ -810,49 +1329,6 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                         ),
                       );
                     }),
-
-                    // Tombol Tambah Bentuk HANYA UNTUK ADMIN (User Login & Umum TIDAK BISA LIHAT)
-                    if (_isAdmin)
-                      Container(
-                        width: 114,
-                        margin: const EdgeInsets.symmetric(horizontal: 5.0),
-                        child: InkWell(
-                          onTap: _addCageByAdmin,
-                          borderRadius: BorderRadius.circular(16),
-                          child: Column(
-                            children: [
-                              Container(
-                                height: 102,
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade100,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: Colors.grey.shade400,
-                                    width: 1.2,
-                                    style: BorderStyle.solid,
-                                  ),
-                                ),
-                                child: const Center(
-                                  child: Icon(
-                                    Icons.add_circle_outline_rounded,
-                                    size: 36,
-                                    color: Colors.black54,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              const Text(
-                                '+ Tambah',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.black54,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
                   ],
                 ),
               ),
@@ -1018,5 +1494,25 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         ),
       ],
     );
+  }
+}
+
+class _KeepAliveWrapper extends StatefulWidget {
+  final Widget child;
+  const _KeepAliveWrapper({super.key, required this.child});
+
+  @override
+  State<_KeepAliveWrapper> createState() => _KeepAliveWrapperState();
+}
+
+class _KeepAliveWrapperState extends State<_KeepAliveWrapper>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
   }
 }

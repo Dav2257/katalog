@@ -5,6 +5,7 @@ import '../models/product.dart';
 import '../services/cage_service.dart';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
+import '../services/storage_service.dart';
 
 class UserHomePage extends StatefulWidget {
   final List<Product> customLogos;
@@ -50,6 +51,14 @@ class _UserHomePageState extends State<UserHomePage> {
             uploadedFileName = picked.name;
             imageUrl = base64String;
             imageController.text = picked.name;
+          });
+          // Unggah ke Supabase Storage di latar belakang agar mendapatkan URL publik langsung
+          StorageService.instance.uploadImageIfPossible(base64String).then((publicUrl) {
+            if (publicUrl != null && publicUrl.isNotEmpty) {
+              setModalState(() {
+                imageUrl = publicUrl;
+              });
+            }
           });
         }
       } catch (e) {

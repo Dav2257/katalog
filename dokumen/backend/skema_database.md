@@ -283,3 +283,16 @@ CREATE POLICY "Admin dapat mengelola seluruh pesanan" ON public.pesanan
         )
     );
 ```
+
+---
+
+## 7. 📦 Pemetaan Penyimpanan Data Bentuk Sangkar di PostgreSQL Supabase
+
+Untuk efisiensi querying dan fleksibilitas variasi dinamis, data bentuk sangkar disimpan pada struktur berikut:
+
+| Konteks | Tabel Supabase | Nama Kolom / Field | Tipe Data | Contoh Nilai |
+| :--- | :--- | :--- | :--- | :--- |
+| **Daftar Variasi Sangkar pada Produk** | `public.produk` & `public.produk_custom` | `variasi` | `JSONB` (Array of Object) | `[{"id": "1", "name": "Sangkar 1", "imageUrl": ""}]` |
+| **Pilihan Sangkar pada Pesanan Masuk & Riwayat** | `public.pesanan` | `items` -> `cage_type` | `JSONB` -> `VARCHAR` | `"Sangkar 1"`, `"Sangkar Segi Enam"` |
+| **Tabel Master Entitas (Relasional)** | `public.bentuk_sangkar` | `nama`, `id`, `icon_url` | `UUID`, `VARCHAR` | `id: uuid`, `nama: "Sangkar 1"` |
+

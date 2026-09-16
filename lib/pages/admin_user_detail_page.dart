@@ -163,18 +163,25 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage> {
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+        padding: EdgeInsets.symmetric(
+          horizontal: MediaQuery.of(context).size.width < 500 ? 16 : 32,
+          vertical: 24,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Baris Navigasi Breadcrumb & Tombol Aksi (Preview Katalog & Simpan)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.center,
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 12,
+              runSpacing: 12,
               children: [
                 // Breadcrumb Navigasi: Kembali / Detail User Private
-                Row(
-                  mainAxisSize: MainAxisSize.min,
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 6,
+                  runSpacing: 4,
                   children: [
                     InkWell(
                       onTap: () => Navigator.pop(context),
@@ -195,7 +202,7 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage> {
                       ),
                     ),
                     const Text(
-                      '  /  ',
+                      '/',
                       style: TextStyle(
                         fontSize: 14,
                         color: Color(0xFF7A7A7A),
@@ -210,7 +217,6 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage> {
                         color: Color(0xFF4A4A4A),
                       ),
                     ),
-                    const SizedBox(width: 10),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
@@ -231,8 +237,10 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage> {
                 ),
 
                 // Tombol Preview Katalog & Simpan
-                Row(
-                  mainAxisSize: MainAxisSize.min,
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     // Tombol Preview Katalog (Outlined Button)
                     OutlinedButton(
@@ -257,7 +265,6 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 14),
 
                     // Tombol Simpan (Red Button)
                     ElevatedButton(
@@ -435,8 +442,11 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage> {
                   const SizedBox(height: 32),
 
                   // Bagian Produk Costum Pribadi
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
                       Text(
                         'Produk Custom Pribadi (${_currentUser.customLogoCount} Logo)',
@@ -661,9 +671,11 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage> {
           children: [
             Icon(Icons.add_photo_alternate_rounded, color: Color(0xFF7A4B29)),
             SizedBox(width: 8),
-            Text(
-              'Tambah Produk Custom Pribadi',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            Expanded(
+              child: Text(
+                'Tambah Produk Custom Pribadi',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
             ),
           ],
         ),
@@ -910,18 +922,16 @@ class AdminUserCatalogPreviewPage extends StatelessWidget {
                             child: Stack(
                               children: [
                                 Positioned.fill(
-                                  child: Image.network(
+                                  child: Product.buildImageFromSource(
                                     product.imageUrl,
                                     fit: BoxFit.cover,
-                                    errorBuilder:
-                                        (context, error, stackTrace) =>
-                                            const Center(
-                                              child: Icon(
-                                                Icons.image_outlined,
-                                                size: 48,
-                                                color: Colors.white70,
-                                              ),
-                                            ),
+                                    placeholder: const Center(
+                                      child: Icon(
+                                        Icons.image_outlined,
+                                        size: 48,
+                                        color: Colors.white70,
+                                      ),
+                                    ),
                                   ),
                                 ),
                                 Positioned(

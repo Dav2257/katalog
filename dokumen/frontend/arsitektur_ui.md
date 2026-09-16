@@ -20,8 +20,9 @@ Dokumen ini mendokumentasikan secara rinci komponen-komponen antarmuka pengguna 
 - **Tanggung Jawab**: Pusat kendali operasional terpadu bagi administrator (`Admin 1` / `admin@gmail.com`).
 - **Fitur Utama**:
   - **Sidebar Navigasi Kayu Jati**:
-    - Berwarna cokelat kayu jati pekat (`#382314`) dengan aksen hover halus.
-    - Ikon `PieChartIcon`, nama `Admin 1`, menu aktif berlatar belakang kontras, serta tombol "Preview Umum" dan "Keluar" (Logout).
+    - Berwarna cokelat kayu jati pekat (`#382314`), lebar 220px dengan aksen emas (`#D4AF37`).
+    - Logo emblem diperbesar (**62 × 62 px**) dengan border emas 2.0px dan tipografi *JATIMAS SANGKAR* serta badge *ADMIN PANEL*.
+    - Menu aktif berlatar belakang kontras, serta tombol "Preview Umum" dan "Keluar" (Logout).
   - **Header Admin**:
     - Menampilkan kartu profil admin, status online, dan tombol aksi cepat.
   - **Analisis Data Metrik (Strict 2 Rows x 3 Columns)**:
@@ -40,22 +41,24 @@ Dokumen ini mendokumentasikan secara rinci komponen-komponen antarmuka pengguna 
     - Menampilkan katalog produk yang sedang tayang di sisi publik.
     - Header pencarian "Cari berdasarkan:" dengan tombol pill pilihan `Nama` (cokelat aktif) dan `Kode` (abu-abu), serta dua kolom input filter real-time (`.....` dan `...`).
     - Grid kartu produk berisi gambar thumbnail proporsional, nama produk (contoh: `A01-Batman Swing biru cantik`), dan tag produk (`#superhero #batman #DC`).
-  - **Section "Sangkar" (Manajemen Varian Bentuk Sangkar)**:
-    - Deretan kartu bentuk sangkar dengan ukuran proporsional (tinggi 125px, lebar 140px, padding rapi).
+  - **Section "Sangkar" (Manajemen Varian Bentuk Sangkar Ringkas)**:
+    - Deretan kartu bentuk sangkar minimalis dan bersih **tanpa gambar thumbnail** (hanya menampilkan ikon kategori, nama sangkar seperti *Sangkar 1*, *Sangkar 2*, dan tombol hapus `x`).
     - **Navigasi Multi-Input Lengkap**:
       - Tombol panah navigasi `<` dan `>` pada header section.
       - **Dukungan Scroll Mouse Horisontal**: Dilengkapi pendeteksi event pointer wheel (`Listener.onPointerSignal`) yang mengonversi scroll vertikal roda mouse menjadi geseran horisontal secara mulus.
       - **Mouse Drag**: Mengaktifkan `PointerDeviceKind.mouse` dalam `ScrollConfiguration` sehingga admin dapat menggeser baris sangkar menggunakan drag kursor mouse di desktop dan web.
       - **Scrollbar Khusus**: Scrollbar horizontal dengan thumb selalu terlihat (`thumbVisibility: true`).
-    - **Tombol "Tambah Sangkar"**:
+    - **Tombol "Tambah Sangkar" Cepat**:
       - Terletak di sudut kanan bawah section.
-      - Membuka modal dialog untuk menginput nama bentuk sangkar baru dan tautan icon/gambarnya.
+      - Membuka modal dialog ringkas: **hanya menginput nama bentuk sangkar saja** (tanpa perlu upload foto atau menyalin link/URL).
       - Menambahkan data ke `CageService` dan secara otomatis memicu **auto-scroll** ke ujung daftar item yang baru ditambahkan via `addPostFrameCallback`.
 
 ### C. `lib/pages/product_detail_page.dart` (`ProductDetailPage`)
 - **Tanggung Jawab**: Menyajikan detail lengkap mengenai sangkar burung yang dipilih pengguna dan konfigurasi pemesanan kustom.
 - **Fitur Utama**:
-  - **Tampilan Visual Produk**: Pratinjau gambar sangkar berkualitas tinggi.
+  - **Tampilan Visual Produk Presisi (Sama seperti Admin)**:
+    - Kotak foto utama berukuran **tinggi 350 px**, warna latar abu-abu halus (`#B0B0B0`), kelengkungan sudut **`borderRadius: 18`**, dan bayangan lembut.
+    - Menggunakan properti **`fit: BoxFit.contain`** dan `Product.buildImageFromSource` sehingga logo/artwork persegi (seperti *Es Durian Shake*), landscape, maupun portrait **tampil 100% utuh tanpa terpotong (no-crop)**.
   - **Navigasi Bentuk Sangkar dengan Tombol Next & Previous**: Dilengkapi tombol panah kiri (`<`) dan kanan (`>`) di samping deretan bentuk sangkar dinamis dari `CageService` (`Kotak`, `Bulat`, `Segi 8`, `Koper`, `Lovebird`, dst.).
   - **Counter Kuantitas per Bentuk**: Tombol `+` dan `-` kuantitas yang tersimpan secara terpisah untuk setiap bentuk sangkar.
   - **Catatan Dinamis per Bentuk**: Kolom catatan (*note*) berada di posisi yang konsisten, namun isi teks note dan batasan kata tersimpan secara independen untuk setiap bentuk sangkar yang dipilih.
@@ -142,7 +145,7 @@ Dokumen ini mendokumentasikan secara rinci komponen-komponen antarmuka pengguna 
 | `CageService` | `lib/services/cage_service.dart` | State manager berbasis `ChangeNotifier` yang menyimpan daftar bentuk sangkar aktif, menangani penambahan sangkar baru secara reaktif, dan menyinkronkannya ke seluruh halaman (Admin Dashboard & Product Detail). |
 | `OrderService` | `lib/services/order_service.dart` | Mengelola antrean pesanan masuk (`incomingOrders`), riwayat pesanan selesai (`completedOrders`), update 4 tahapan produksi custom, dan pelacakan pesanan aktif member di keranjang. |
 | `ProductService` | `lib/services/product_service.dart` | Mengelola data katalog produk umum secara reaktif (`ChangeNotifier`), sinkronisasi tambah/edit produk admin ke katalog publik. |
-| `AppSettingsService` | `lib/services/settings_service.dart` | Mengelola nomor WhatsApp tujuan pesanan (`adminWhatsApp`), banner kustom, style navbar (1-3), font katalog, serta pembentukan link pesanan WhatsApp yang menyertakan foto produk. |
+| `AppSettingsService` | `lib/services/settings_service.dart` | Mengelola nomor WhatsApp tujuan pesanan (`adminWhatsApp`), banner kustom, style navbar (1-3), font katalog, pembentukan link pesanan WhatsApp berfoto, serta penyedia logo terpadu (`buildLogoWidget`) yang dioptimasi dengan varian resolusi (1.0x, 2.0x, 3.0x), auto downsampling `cacheWidth`/`cacheHeight`, dan anti-aliasing `FilterQuality.medium`. |
 
 ---
 
@@ -150,7 +153,7 @@ Dokumen ini mendokumentasikan secara rinci komponen-komponen antarmuka pengguna 
 
 | Widget | File | Fungsi & Penggunaan |
 | :--- | :--- | :--- |
-| `TopNavbar` | `widgets/top_navbar.dart` | Bilah navigasi atas yang memuat logo brand, search input, ikon keranjang belanja berserta badge counter dinamis, tombol profil/login, dan mendukung 3 variasi style layout. |
+| `TopNavbar` | `widgets/top_navbar.dart` | Bilah navigasi atas yang memuat emblem logo lingkaran 44px bersanding dengan teks merek elegan `JATIMAS SANGKAR` (kombinasi putih tebal & kuning emas), search input dinamis, ikon keranjang belanja dengan badge counter, dan tombol profil/login. |
 | `HeroBanner` | `widgets/hero_banner.dart` | Banner visual di bagian atas halaman katalog untuk memperkuat identitas brand Jatimas Sangkar, mendukung gambar bawaan maupun banner kustom admin. |
 | `WhatsAppLogo` | `pages/cart_page.dart` | Komponen logo resmi WhatsApp berbasis Base64 memory image untuk tombol Pesan. |
 | `WhatsAppIcon` | `pages/admin_order_detail_page.dart` | Komponen ikon WhatsApp presisi berbasis CustomPainter untuk tombol hubungi pembeli di halaman admin. |

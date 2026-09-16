@@ -6,6 +6,7 @@ import '../models/product.dart';
 import '../services/auth_service.dart';
 import '../services/order_service.dart';
 import '../services/settings_service.dart';
+import '../services/storage_service.dart';
 
 class CartPage extends StatefulWidget {
   final List<CartItem> cartItems;
@@ -268,14 +269,11 @@ class _CartPageState extends State<CartPage> {
                           width: 42,
                           height: 42,
                           color: const Color(0xFF6E7173),
-                          child: it.product.imageUrl.isNotEmpty
-                              ? Image.network(
-                                  it.product.imageUrl,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      const Icon(Icons.image_not_supported, size: 18, color: Colors.white70),
-                                )
-                              : const Icon(Icons.image_not_supported, size: 18, color: Colors.white70),
+                          child: Product.buildImageFromSource(
+                            it.product.imageUrl,
+                            fit: BoxFit.cover,
+                            placeholder: const Icon(Icons.image_not_supported, size: 18, color: Colors.white70),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -331,7 +329,7 @@ class _CartPageState extends State<CartPage> {
             child: const Text('Batal'),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx);
               final inputVal = phoneController.text.trim();
               final customerPhone = inputVal.isNotEmpty
@@ -343,35 +341,14 @@ class _CartPageState extends State<CartPage> {
                           : '085113123142'));
               final customerEmail = AuthService.instance.userEmail.trim();
 
+              final orderCode = 'JTM-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
               final itemsToRemove = selectedList.toList();
+
+              bool hasUploadedCustomPhoto = false;
+              bool hasUploadedToCloud = false;
+              final List<String> itemDescriptions = [];
+
               for (final it in itemsToRemove) {
-                OrderService.instance.addOrder(
-                  UserOrder(
-                    id: 'ORD-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
-                    productName: it.product.name,
-                    quantity: it.quantity,
-                    cageTypeOrDesign: it.cageType != null ? 'Design ${it.cageType}' : 'Design 1 bentuk 1',
-                    note: (it.note != null && it.note!.trim().isNotEmpty)
-                        ? it.note!
-                        : 'Pesanan diproses via WhatsApp',
-                    status: 'Tahap 1',
-                    currentStep: 1,
-                    imageUrl: it.product.imageUrl,
-                    phone: customerPhone,
-                    email: customerEmail,
-                  ),
-                );
-              }
-              setState(() {
-                for (final it in itemsToRemove) {
-                  widget.cartItems.remove(it);
-                }
-                _selectedItems.clear();
-              });
-              for (final it in itemsToRemove) {
-                widget.onRemoveItem(it);
-              }
-              final itemDescriptions = itemsToRemove.map((it) {
                 final cageStr = it.cageType != null ? ' [${it.cageType}]' : '';
                 final noteStr = (it.note != null && it.note!.trim().isNotEmpty) ? '\n   Catatan: ${it.note}' : '';
 
@@ -387,24 +364,78 @@ class _CartPageState extends State<CartPage> {
                   }
                 }
 
-                final imgStr = (imgUrl.isNotEmpty && (imgUrl.startsWith('http://') || imgUrl.startsWith('https://')))
-                    ? '\n   📸 Foto Logo: $imgUrl'
-                    : '';
+                String imgStr = '';
+                if (imgUrl.isNotEmpty) {
+                  if (imgUrl.startsWith('http://') || imgUrl.startsWith('https://')) {
+                    imgStr = '\n   📸 Foto Desain: $imgUrl';
+                  } else {
+                    hasUploadedCustomPhoto = true;
+                    // Unggah ke Supabase Storage (bucket 'katalog')
+                    String? uploadedPublicUrl;
+                    try {
+                      uploadedPublicUrl = await StorageService.instance.uploadImageIfPossible(imgUrl);
+                    } catch (_) {}
 
-                return '${it.product.name}$cageStr x${it.quantity}$imgStr$noteStr';
-              }).toList();
+                    if (uploadedPublicUrl != null && uploadedPublicUrl.isNotEmpty) {
+                      hasUploadedToCloud = true;
+                      imgUrl = uploadedPublicUrl;
+                      imgStr = '\n   📸 Foto Desain: $uploadedPublicUrl';
+                    } else {
+                      // Tersimpan di database Supabase tabel pesanan & terbaca di Dashboard Admin
+                      imgStr = '\n   📸 Foto Desain: [Foto Custom telah tersimpan di Pesanan Dashboard Admin: #$orderCode]\n   (Mohon lampirkan juga file foto desain ini langsung di chat WA ini)';
+                    }
+                  }
+                }
+
+                // Catat ke pesanan di Supabase
+                OrderService.instance.addOrder(
+                  UserOrder(
+                    id: orderCode,
+                    productName: it.product.name,
+                    quantity: it.quantity,
+                    cageTypeOrDesign: it.cageType != null ? 'Design ${it.cageType}' : 'Design 1 bentuk 1',
+                    note: (it.note != null && it.note!.trim().isNotEmpty)
+                        ? it.note!
+                        : 'Pesanan diproses via WhatsApp',
+                    status: 'Tahap 1',
+                    currentStep: 1,
+                    imageUrl: imgUrl,
+                    phone: customerPhone,
+                    email: customerEmail,
+                  ),
+                );
+
+                itemDescriptions.add('${it.product.name}$cageStr x${it.quantity}$imgStr$noteStr');
+              }
+
+              setState(() {
+                for (final it in itemsToRemove) {
+                  widget.cartItems.remove(it);
+                }
+                _selectedItems.clear();
+              });
+              for (final it in itemsToRemove) {
+                widget.onRemoveItem(it);
+              }
 
               final waUri = AppSettingsService.instance.createOrderWhatsAppUri(
                 customerPhone: customerPhone,
                 itemDescriptions: itemDescriptions,
+                orderCode: orderCode,
               );
               _launchWhatsApp(waUri);
 
+              if (!mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
-                    'Pesanan diarahkan ke WhatsApp Admin (${AppSettingsService.instance.adminWhatsApp})! Terima kasih.',
+                    hasUploadedToCloud
+                        ? 'Pesanan #$orderCode dibuat! Foto desain otomatis terlampir di WhatsApp & tersimpan di sistem.'
+                        : (hasUploadedCustomPhoto
+                            ? 'Pesanan #$orderCode dibuat! Foto tersimpan di database admin. WhatsApp dibuka.'
+                            : 'Pesanan #$orderCode diarahkan ke WhatsApp Admin (${AppSettingsService.instance.adminWhatsApp})!'),
                   ),
+                  duration: const Duration(seconds: 4),
                   backgroundColor: const Color(0xFF43A047),
                 ),
               );
@@ -681,11 +712,10 @@ class _CartPageState extends State<CartPage> {
                                       width: 64,
                                       height: 48,
                                       color: const Color(0xFF6E7173),
-                                      child: Image.network(
+                                      child: Product.buildImageFromSource(
                                         item.product.imageUrl,
                                         fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) =>
-                                            const Center(
+                                        placeholder: const Center(
                                           child: Icon(Icons.inventory_2_outlined,
                                               color: Colors.white70, size: 22),
                                         ),
@@ -1000,20 +1030,14 @@ class _CartPageState extends State<CartPage> {
                   width: 64,
                   height: 48,
                   color: const Color(0xFF6E7173),
-                  child: (order.imageUrl != null && order.imageUrl!.isNotEmpty)
-                      ? Image.network(
-                          order.imageUrl!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Center(
-                            child: Icon(Icons.inventory_2_outlined,
-                                color: Colors.white70, size: 22),
-                          ),
-                        )
-                      : const Center(
-                          child: Icon(Icons.inventory_2_outlined,
-                              color: Colors.white70, size: 22),
-                        ),
+                  child: Product.buildImageFromSource(
+                    order.imageUrl ?? '',
+                    fit: BoxFit.cover,
+                    placeholder: const Center(
+                      child: Icon(Icons.inventory_2_outlined,
+                          color: Colors.white70, size: 22),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),

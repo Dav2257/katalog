@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/product.dart';
 import '../services/settings_service.dart';
 
 class HeroBanner extends StatelessWidget {
@@ -25,14 +26,15 @@ class HeroBanner extends StatelessWidget {
             settings.bannerImageBytes!,
             width: double.infinity,
             fit: BoxFit.fitWidth,
+            gaplessPlayback: true,
             errorBuilder: (context, error, stackTrace) => _buildFallbackBanner(context),
           );
         } else if (settings.bannerImageUrl != null && settings.bannerImageUrl!.isNotEmpty) {
-          bannerWidget = Image.network(
+          bannerWidget = Product.buildImageFromSource(
             settings.bannerImageUrl!,
             width: double.infinity,
             fit: BoxFit.fitWidth,
-            errorBuilder: (context, error, stackTrace) => _buildFallbackBanner(context),
+            placeholder: _buildFallbackBanner(context),
           );
         } else {
           bannerWidget = Image.asset(

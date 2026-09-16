@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../models/product.dart';
+import '../services/order_service.dart';
+import '../services/product_service.dart';
+import '../services/user_service.dart';
 import 'admin_dashboard_page.dart';
 import 'admin_order_detail_page.dart';
 
@@ -10,6 +14,7 @@ class CompletedOrderItem {
   final String cage;
   final String note;
   final int quantity;
+  final String? imageUrl;
 
   const CompletedOrderItem({
     required this.code,
@@ -17,6 +22,7 @@ class CompletedOrderItem {
     required this.cage,
     required this.note,
     required this.quantity,
+    this.imageUrl,
   });
 }
 
@@ -50,6 +56,56 @@ class _AdminCompletedOrderDetailPageState
     _initItemsAndDate();
   }
 
+  String? _resolveProductImage(String productName, String phone, String email) {
+    final pName = productName.trim().toLowerCase();
+
+    // 1. Cek dari produk custom user di UserService (khususnya user pemesan)
+    final allUsers = UserService.instance.users;
+    final cleanPhone = phone.trim();
+    final cleanEmail = email.trim().toLowerCase();
+
+    for (final u in allUsers) {
+      final matchUser = (cleanPhone.isNotEmpty && u.phone.trim() == cleanPhone) ||
+          (cleanEmail.isNotEmpty && u.email.trim().toLowerCase() == cleanEmail);
+      if (matchUser) {
+        for (final p in u.customProducts) {
+          if (p.name.trim().toLowerCase() == pName && p.imageUrl.trim().isNotEmpty) {
+            return p.imageUrl.trim();
+          }
+        }
+      }
+    }
+
+    // 2. Cek ke semua custom product di semua user jika belum ketemu
+    for (final u in allUsers) {
+      for (final p in u.customProducts) {
+        if (p.name.trim().toLowerCase() == pName && p.imageUrl.trim().isNotEmpty) {
+          return p.imageUrl.trim();
+        }
+      }
+    }
+
+    // 3. Cek katalog produk umum di ProductService
+    for (final p in ProductService.instance.products) {
+      if ((p.name.trim().toLowerCase() == pName ||
+              (p.code != null && p.code!.trim().toLowerCase() == pName)) &&
+          p.imageUrl.trim().isNotEmpty) {
+        return p.imageUrl.trim();
+      }
+    }
+
+    // 4. Cek adminProducts di ProductService
+    for (final p in ProductService.instance.adminProducts) {
+      if ((p.name.trim().toLowerCase() == pName ||
+              p.code.trim().toLowerCase() == pName) &&
+          p.imageUrl.trim().isNotEmpty) {
+        return p.imageUrl.trim();
+      }
+    }
+
+    return null;
+  }
+
   void _initItemsAndDate() {
     _completedDate = _calculateCompletedDate(widget.order.date);
 
@@ -57,10 +113,37 @@ class _AdminCompletedOrderDetailPageState
         widget.order.productCode.isNotEmpty ? widget.order.productCode : 'PROD';
     final codes = productCode.split(',').map((c) => c.trim()).toList();
 
+    // Cari UserOrder matching untuk mendapatkan imageUrl jika ada
+    final allUserOrders = OrderService.instance.allOrders;
+    UserOrder? matchingOrder;
+    if (widget.order.orderId != null && widget.order.orderId!.isNotEmpty) {
+      for (final o in allUserOrders) {
+        if (o.id == widget.order.orderId) {
+          matchingOrder = o;
+          break;
+        }
+      }
+    }
+    if (matchingOrder == null && widget.order.phone.isNotEmpty) {
+      for (final o in allUserOrders) {
+        if (o.phone == widget.order.phone) {
+          matchingOrder = o;
+          break;
+        }
+      }
+    }
+
+    final orderImg = (widget.order.imageUrl != null && widget.order.imageUrl!.trim().isNotEmpty)
+        ? widget.order.imageUrl!.trim()
+        : (matchingOrder?.imageUrl != null && matchingOrder!.imageUrl!.trim().isNotEmpty
+            ? matchingOrder.imageUrl!.trim()
+            : null);
+
     if (codes.length > 1) {
       _items = [];
       for (int i = 0; i < codes.length; i++) {
         final c = codes[i];
+        final itemImg = orderImg ?? _resolveProductImage(c, widget.order.phone, widget.order.email);
         _items.add(
           CompletedOrderItem(
             code: c,
@@ -72,16 +155,25 @@ class _AdminCompletedOrderDetailPageState
                 ? widget.order.note
                 : 'Tidak ada',
             quantity: (widget.order.quantity / codes.length).ceil().clamp(1, 99),
+            imageUrl: itemImg,
           ),
         );
       }
     } else {
+      final itemTitle = widget.order.customerName.isNotEmpty
+          ? '$productCode-${widget.order.customerName}'
+          : '$productCode-Produk Sangkar';
+      final itemImg = orderImg ??
+          _resolveProductImage(
+            matchingOrder?.productName ?? productCode,
+            widget.order.phone,
+            widget.order.email,
+          );
+
       _items = [
         CompletedOrderItem(
           code: productCode,
-          title: widget.order.customerName.isNotEmpty
-              ? '$productCode-${widget.order.customerName}'
-              : '$productCode-Produk Sangkar',
+          title: itemTitle,
           cage: widget.order.cageType.isNotEmpty
               ? widget.order.cageType
               : 'Sangkar Jati',
@@ -89,6 +181,7 @@ class _AdminCompletedOrderDetailPageState
               ? widget.order.note
               : 'Tidak ada',
           quantity: widget.order.quantity,
+          imageUrl: itemImg,
         ),
       ];
     }
@@ -297,22 +390,23 @@ class _AdminCompletedOrderDetailPageState
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            // Kotak Abu-Abu Thumbnail Kode (A01)
-                            Container(
-                              width: 104,
-                              height: 94,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFA6A6A6),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              alignment: Alignment.center,
-                              child: Text(
-                                item.code,
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF6E6E6E),
+                            // Kotak Abu-Abu Thumbnail Gambar Logo Pesanan Pelanggan
+                            GestureDetector(
+                              onTap: () {
+                                final img = item.imageUrl?.trim() ?? '';
+                                if (img.isNotEmpty) {
+                                  _showImagePreviewDialog(context, item.title, img);
+                                }
+                              },
+                              child: Container(
+                                width: 104,
+                                height: 94,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFA6A6A6),
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
+                                clipBehavior: Clip.antiAlias,
+                                child: _buildItemImage(item),
                               ),
                             ),
                             const SizedBox(width: 24),
@@ -426,6 +520,123 @@ class _AdminCompletedOrderDetailPageState
               const SizedBox(height: 40),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildItemImage(CompletedOrderItem item) {
+    final imgUrl = item.imageUrl?.trim() ?? '';
+
+    if (imgUrl.isNotEmpty) {
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          Product.buildImageFromSource(
+            imgUrl,
+            width: 104,
+            height: 94,
+            fit: BoxFit.cover,
+            placeholder: const Center(
+              child: Icon(Icons.image_outlined, color: Colors.white70, size: 32),
+            ),
+          ),
+          Positioned(
+            right: 4,
+            bottom: 4,
+            child: Container(
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Icon(Icons.zoom_in_rounded, color: Colors.white, size: 14),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.image_outlined, size: 28, color: Color(0xFF555555)),
+          const SizedBox(height: 3),
+          Text(
+            item.code,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF6E6E6E),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showImagePreviewDialog(BuildContext context, String title, String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(16),
+        child: Stack(
+          alignment: Alignment.topRight,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Logo Pesanan: $title',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF333333),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      constraints: const BoxConstraints(maxHeight: 380, maxWidth: 380),
+                      color: const Color(0xFFF0F0F0),
+                      child: InteractiveViewer(
+                        child: Product.buildImageFromSource(
+                          imageUrl,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Pinch atau geser untuk memperbesar logo',
+                    style: TextStyle(fontSize: 11, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+            Positioned(
+              top: 6,
+              right: 6,
+              child: IconButton(
+                onPressed: () => Navigator.pop(ctx),
+                icon: const CircleAvatar(
+                  radius: 14,
+                  backgroundColor: Color(0xFFEEEEEE),
+                  child: Icon(Icons.close, size: 16, color: Colors.black87),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

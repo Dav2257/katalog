@@ -11,7 +11,6 @@ class TopNavbar extends StatelessWidget implements PreferredSizeWidget {
   final bool isLoggedIn;
   final bool isAdmin;
   final VoidCallback? onLogout;
-  final VoidCallback? onSwitchRole;
   final int cartItemCount;
 
   const TopNavbar({
@@ -20,7 +19,6 @@ class TopNavbar extends StatelessWidget implements PreferredSizeWidget {
     this.onCartTap,
     this.onProfileTap,
     this.onLogout,
-    this.onSwitchRole,
     this.isLoggedIn = false,
     this.isAdmin = false,
     this.onSearchChanged,
@@ -69,7 +67,7 @@ class TopNavbar extends StatelessWidget implements PreferredSizeWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // 1. Logo di sebelah kiri (Brand Katalog)
+              // 1. Logo di sebelah kiri (Brand Jatimas Sangkar menggantikan tulisan Katalog)
               InkWell(
                 onTap: onLogoTap ??
                     () {
@@ -80,35 +78,73 @@ class TopNavbar extends StatelessWidget implements PreferredSizeWidget {
                         ),
                       );
                     },
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(24),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          Icons.storefront_rounded,
-                          color: Colors.white,
-                          size: 22,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Katalog',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ],
+                  padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
+                  child: ListenableBuilder(
+                    listenable: AppSettingsService.instance,
+                    builder: (context, _) {
+                      return Row(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: const Color(0xFFD4AF37),
+                                width: 1.5,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.25),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: Padding(
+                              padding: const EdgeInsets.all(1.0),
+                              child: AppSettingsService.instance.buildLogoWidget(
+                                width: 44,
+                                height: 44,
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Text(
+                                'JATIMAS',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 0.8,
+                                  height: 1.1,
+                                ),
+                              ),
+                              Text(
+                                'SANGKAR',
+                                style: TextStyle(
+                                  color: Color(0xFFD4AF37),
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.6,
+                                  height: 1.1,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ),
               ),
@@ -299,39 +335,6 @@ class TopNavbar extends StatelessWidget implements PreferredSizeWidget {
                                 ),
                               ),
 
-                              if (onSwitchRole != null) ...[
-                                const SizedBox(height: 8),
-                                ListTile(
-                                  leading: Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: Colors.blue.shade50,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Icon(
-                                      Icons.swap_horiz_rounded,
-                                      color: Colors.blue.shade700,
-                                    ),
-                                  ),
-                                  title: Text(
-                                    isAdmin ? 'Beralih ke Akun Member' : 'Beralih ke Akun Admin',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                  subtitle: Text(
-                                    isAdmin
-                                        ? 'Lihat aplikasi sebagai pengguna biasa (tanpa tombol tambah sangkar)'
-                                        : 'Akses hak istimewa admin untuk menambah/mengatur sangkar',
-                                    style: const TextStyle(fontSize: 11),
-                                  ),
-                                  onTap: () {
-                                    Navigator.pop(ctx);
-                                    onSwitchRole?.call();
-                                  },
-                                ),
-                              ],
 
                               const SizedBox(height: 6),
                               ListTile(

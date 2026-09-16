@@ -62,6 +62,7 @@ class ProductCageVariation {
         width: width,
         height: height,
         fit: fit,
+        gaplessPlayback: true,
         errorBuilder: (context, error, stackTrace) => defaultPlaceholder,
       );
     }
@@ -231,6 +232,8 @@ class Product {
     );
   }
 
+  static final Map<String, Uint8List> _base64Cache = {};
+
   static Widget buildImageFromSource(
     String src, {
     double? width,
@@ -246,15 +249,18 @@ class Product {
     final clean = src.trim();
     if (clean.isEmpty) return defaultPlaceholder;
 
-    if (clean.startsWith('data:image')) {
+    if (clean.startsWith('data:image') || (clean.length > 200 && !clean.startsWith('http') && !clean.startsWith('assets/'))) {
       try {
         final commaIdx = clean.indexOf(',');
         final rawB64 = commaIdx != -1 ? clean.substring(commaIdx + 1) : clean;
+        final normalized = rawB64.replaceAll(RegExp(r'\s+'), '');
+        final bytes = _base64Cache.putIfAbsent(normalized, () => base64Decode(normalized));
         return Image.memory(
-          base64Decode(rawB64),
+          bytes,
           width: width,
           height: height,
           fit: fit,
+          gaplessPlayback: true,
           errorBuilder: (ctx, err, stack) => defaultPlaceholder,
         );
       } catch (_) {
@@ -262,11 +268,23 @@ class Product {
       }
     }
 
+    if (clean.startsWith('assets/')) {
+      return Image.asset(
+        clean,
+        width: width,
+        height: height,
+        fit: fit,
+        gaplessPlayback: true,
+        errorBuilder: (ctx, err, stack) => defaultPlaceholder,
+      );
+    }
+
     return Image.network(
       clean,
       width: width,
       height: height,
       fit: fit,
+      gaplessPlayback: true,
       errorBuilder: (ctx, err, stack) => defaultPlaceholder,
     );
   }

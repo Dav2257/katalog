@@ -97,8 +97,8 @@ void main() {
   testWidgets('TopNavbar and HeroBanner elements test', (WidgetTester tester) async {
     await tester.pumpWidget(const MyApp());
 
-    // Verify logo 'Katalog' is present.
-    expect(find.text('Katalog'), findsOneWidget);
+    // Verify logo 'JATIMAS' is present.
+    expect(find.text('JATIMAS'), findsOneWidget);
 
     // Verify search bar is present.
     expect(find.byType(TextField), findsOneWidget);
