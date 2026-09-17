@@ -55,7 +55,7 @@ class MyApp extends StatelessWidget {
       animation: AppSettingsService.instance,
       builder: (context, _) {
         return MaterialApp(
-          title: 'Katalog',
+          title: 'Jatimas',
           debugShowCheckedModeBanner: false,
           theme: ThemeData(
             fontFamily: AppSettingsService.instance.fontFamily,
