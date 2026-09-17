@@ -52,7 +52,8 @@ gantt
     Pengaturan Toko, No WA, Banner, Font    :done,    adm8, 2026-09-12, 2026-09-12
     Checkout WA dengan Foto Produk & Preview:done,    fe5,  2026-09-12, 2026-09-12
     section Fase 5: Integrasi Cloud & Backend Lanjutan
-    Sinkronisasi Realtime Supabase Database :active,  be1,  2026-09-13, 2026-09-28
+    Sinkronisasi Realtime Supabase Database :done,    be1,  2026-09-13, 2026-09-17
+    Deployment Web via Firebase Hosting     :done,    fe6,  2026-09-17, 2026-09-17
     Payment Gateway Otomatis                :         be2,  2026-09-29, 2026-10-15
 ```
 
@@ -82,12 +83,15 @@ gantt
 - [x] Bagian "List Produk User Umum" di dashboard admin dengan pencarian berdasarkan Nama/Kode.
 - [x] Bagian "Sangkar" di dashboard admin dengan penambahan bentuk sangkar baru via dialog pop-up, auto-scroll, dan navigasi scrolling horizontal mouse/touch.
 - [x] Navigasi antarmuka cepat tanpa animasi transisi (instant page transitions).
+- [x] **Sinkronisasi Supabase Database 4 Tabel Inti**: Produk publik (`produk`), katalog kustom (`produk_custom`), user private (`user_private`), dan pesanan 4 tahap (`pesanan`).
+- [x] **Cloud Storage Pengaturan Toko**: Konfigurasi global admin disimpan langsung pada file `app_settings.json` di bucket Supabase Storage `katalog`.
+- [x] **Hosting Web Otomatis**: Integrasi konfigurasi hosting `firebase.json` untuk rilis Flutter Web ke Firebase Hosting.
 
 ### B. Fitur Prioritas Menengah (Medium Priority)
-- [ ] Sinkronisasi otomatis daftar produk langsung dari database Supabase (`produk` table).
-- [ ] Integrasi Supabase Auth penuh (Register akun mandiri, Forgot Password, OAuth Google).
+- [x] Sinkronisasi otomatis daftar produk langsung dari database Supabase (`produk` table).
 - [x] Integrasi pemesanan WhatsApp lengkap dengan format rincian produk, tautan foto produk, bentuk sangkar, dan catatan pemesan.
 - [x] Manajemen state terpusat via Service Layer (`AuthService`, `CageService`, `OrderService`, `ProductService`, `AppSettingsService`).
+- [ ] Integrasi Supabase Auth penuh (Register akun mandiri, Forgot Password, OAuth Google).
 
 ### C. Fitur Prioritas Rendah (Future Enhancements)
 - [ ] Integrasi Payment Gateway (Midtrans / Xendit).

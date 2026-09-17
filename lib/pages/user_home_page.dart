@@ -37,7 +37,7 @@ class _UserHomePageState extends State<UserHomePage> {
     String? uploadedFileName;
     String selectedCage = CageService.instance.cages.isNotEmpty
         ? CageService.instance.cages.first.name
-        : 'Sangkar 1';
+        : 'Standar';
 
     Future<void> pickImageFromFile(StateSetter setModalState) async {
       try {
@@ -253,7 +253,28 @@ class _UserHomePageState extends State<UserHomePage> {
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
-                        children: CageService.instance.cages.map((cage) {
+                        children: CageService.instance.cages.isEmpty
+                            ? [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF4A301E),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Text(
+                                    'Standar',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ]
+                            : CageService.instance.cages.map((cage) {
                           final isSelected = selectedCage == cage.name;
                           return Padding(
                             padding: const EdgeInsets.only(right: 8.0),

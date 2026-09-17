@@ -1,298 +1,254 @@
 # 🗄️ Skema Database & Keamanan (PostgreSQL Supabase)
 
-Dokumen ini mendefinisikan rancangan struktur tabel basis data relasional, tipe data, relasi (foreign keys), serta konfigurasi Row Level Security (RLS) di Supabase.
+Dokumen ini mendefinisikan struktur tabel basis data relasional aktif, tipe data, pemanfaatan JSONB, serta konfigurasi Row Level Security (RLS) di Supabase yang terintegrasi langsung dengan kode aplikasi **Katalog (Jatimas Sangkar)**.
 
 ---
 
-## 1. 🗂️ Diagram Relasi Entitas (ERD)
+## 1. 💡 Arsitektur & Prinsip Penyederhanaan Database
+
+Sebelumnya terdapat 14 tabel (termasuk tabel warisan template seperti `orders`, `order_items`, `carts`, `cart_items`, `logos`, `cage_shapes`, dll.). Basis data telah **disederhanakan dan dioptimalkan menjadi 4 tabel inti** berbasis pendekatan hibrida Relasional + JSONB:
+
+1. **Efisiensi Transaksi & Variasi (JSONB)**:
+   - Rincian variasi bentuk sangkar disimpan langsung di kolom `variasi` (`JSONB`) pada tabel `produk` dan `produk_custom`.
+   - Rincian barang belanjaan dalam pesanan disimpan langsung di kolom `items` (`JSONB`) pada tabel `pesanan`. Hal ini mengeliminasi kebutuhan tabel relasi terpisah seperti `order_items` dan mempercepat proses query.
+2. **Keranjang Belanja Sisi Klien (Local State & Direct WA Checkout)**:
+   - Keranjang belanja tamu dan member dikelola di memori aplikasi/lokal klien secara instan, lalu langsung divalidasi ke WhatsApp Admin (`wa.me`) sehingga tabel `carts` dan `cart_items` tidak lagi membebani cloud database.
+3. **Penyimpanan Pengaturan Toko (Cloud Object Storage)**:
+   - Pengaturan toko (nomor WhatsApp admin, banner kustom, navbar style, font) disimpan dalam file `app_settings.json` di dalam Supabase Storage Bucket `katalog`.
+
+---
+
+## 2. 🗂️ Diagram Relasi Entitas (ERD) Aktif
 
 ```mermaid
 erDiagram
-    PROFIL_PENGGUNA ||--o{ PESANAN : "membuat"
-    PROFIL_PENGGUNA ||--o{ KERANJANG : "memiliki"
-    PROFIL_PENGGUNA ||--o{ REQUEST_CUSTOM : "mengajukan"
-    KATEGORI ||--o{ PRODUK : "mengelompokkan"
-    PRODUK ||--o{ KERANJANG : "disimpan dalam"
-    PRODUK ||--o{ ITEM_PESANAN : "dipesan dalam"
-    BENTUK_SANGKAR ||--o{ KERANJANG : "opsi varian"
-    BENTUK_SANGKAR ||--o{ ITEM_PESANAN : "varian dipesan"
-    PESANAN ||--|{ ITEM_PESANAN : "memuat"
-
-    PROFIL_PENGGUNA {
-        uuid id PK
-        string email
-        string nama_lengkap
-        string role
-        string nomor_telepon
-        text alamat
-        timestamp created_at
-    }
-
-    KATEGORI {
-        int id PK
-        string nama
-        string slug
-    }
-
+    USER_PRIVATE ||--o{ PRODUK_CUSTOM : "memiliki desain kustom"
+    USER_PRIVATE ||--o{ PESANAN : "melakukan transaksi"
+    PRODUK ||--o{ PESANAN : "direferensikan dalam items (JSONB)"
+    
     PRODUK {
         uuid id PK
         string kode
         string nama
         bigint harga
         text deskripsi
-        string gambar_url
-        int kategori_id FK
-        float rating
+        text gambar_url
+        string tagar
         int stok
+        string last_edited_date
+        jsonb variasi "Daftar bentuk sangkar [id, name, imageUrl]"
         timestamp created_at
     }
 
-    BENTUK_SANGKAR {
+    PRODUK_CUSTOM {
         uuid id PK
+        string user_identifier FK "Email / No HP Pemilik"
+        string kode
         string nama
-        string icon_url
-        int urutan
-        boolean is_active
+        bigint harga
+        text deskripsi
+        text gambar_url
+        string kategori
+        jsonb variasi "Bentuk sangkar terpilih"
+        string last_edited_date
         timestamp created_at
     }
 
-    KERANJANG {
+    USER_PRIVATE {
         uuid id PK
-        uuid user_id FK
-        uuid produk_id FK
-        int jumlah
-        string tipe_sangkar
-        text catatan
-        timestamp updated_at
-    }
-
-    REQUEST_CUSTOM {
-        uuid id PK
-        uuid user_id FK
-        string nama_desain
-        string bentuk_sangkar
-        text deskripsi
-        string gambar_url
-        string status
+        string phone "Nomor Telepon Member"
+        string email "Email Member"
+        string password "Kredensial Akses"
+        string join_date "Tanggal Bergabung"
+        int jumlah_logo_custom "Total Desain Kustom"
+        int request_count
         timestamp created_at
     }
 
     PESANAN {
         uuid id PK
-        uuid user_id FK
-        string no_pesanan
-        bigint total_harga
-        string status
-        text catatan
+        string phone "Nomor HP Pemesan"
+        string email "Email Pemesan (opsional)"
+        string order_date "Tanggal Order"
+        string status "Tahap 1 s/d Tahap 4 / Selesai"
+        int stage_number "1: Verifikasi, 2: Kayu, 3: Ukir, 4: Perakitan"
+        boolean is_completed "Flag Pesanan Selesai"
+        bigint total_amount "Total Harga"
+        jsonb items "Array [product_name, quantity, cage_type, note, image_url]"
         timestamp created_at
-    }
-
-    ITEM_PESANAN {
-        uuid id PK
-        uuid pesanan_id FK
-        uuid produk_id FK
-        string tipe_sangkar
-        int jumlah
-        bigint harga_satuan
-        text catatan
     }
 ```
 
 ---
 
-## 2. 📝 Skrip DDL PostgreSQL (SQL Schema)
+## 3. 📝 Skrip DDL PostgreSQL (SQL Schema Produksi)
 
-Skrip SQL berikut dapat langsung dijalankan pada menu **SQL Editor** di Dashboard Supabase:
+Skrip SQL berikut merupakan skema bersih resmi yang digunakan oleh aplikasi:
 
 ```sql
--- 1. Tabel Kategori Produk
-CREATE TABLE public.kategori (
-    id SERIAL PRIMARY KEY,
-    nama VARCHAR(100) NOT NULL UNIQUE,
-    slug VARCHAR(100) NOT NULL UNIQUE
-);
-
--- 2. Tabel Produk Sangkar
-CREATE TABLE public.produk (
+-- ==============================================================================
+-- 1. TABEL PRODUK KATALOG PUBLIK
+-- Dikelola oleh ProductService (Fetch publik, Tambah/Edit/Hapus oleh Admin)
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS public.produk (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    kode VARCHAR(50),
+    kode VARCHAR(50) DEFAULT 'A01',
     nama VARCHAR(255) NOT NULL,
     harga BIGINT NOT NULL DEFAULT 0,
     deskripsi TEXT,
     gambar_url TEXT,
-    kategori_id INT REFERENCES public.kategori(id) ON DELETE SET NULL,
-    rating NUMERIC(3, 2) DEFAULT 4.8,
-    stok INT NOT NULL DEFAULT 0,
+    tagar VARCHAR(255),
+    stok INT NOT NULL DEFAULT 10,
+    last_edited_date VARCHAR(50),
+    variasi JSONB DEFAULT '[]'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 3. Tabel Bentuk Sangkar (Dinamis dari Dashboard Admin)
-CREATE TABLE public.bentuk_sangkar (
+-- ==============================================================================
+-- 2. TABEL USER PRIVATE (AKUN & MEMBER CUSTOM)
+-- Dikelola oleh UserService (Akun member, rekap request, profil)
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS public.user_private (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    nama VARCHAR(100) NOT NULL,
-    icon_url TEXT,
-    urutan INT DEFAULT 0,
-    is_active BOOLEAN DEFAULT true,
+    phone VARCHAR(30) DEFAULT '',
+    email VARCHAR(255) DEFAULT '',
+    password VARCHAR(255) DEFAULT 'user123',
+    join_date VARCHAR(50),
+    jumlah_logo_custom INT DEFAULT 0,
+    request_count INT DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 4. Tabel Profil Pengguna (Sinkronisasi dengan auth.users & role admin/member)
-CREATE TABLE public.profil_pengguna (
-    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-    email VARCHAR(255) NOT NULL,
-    nama_lengkap VARCHAR(255),
-    role VARCHAR(50) DEFAULT 'member' NOT NULL, -- 'member' atau 'admin'
-    nomor_telepon VARCHAR(20),
-    alamat TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
+-- Index pencarian cepat berdasarkan telepon dan email
+CREATE INDEX IF NOT EXISTS idx_user_private_phone ON public.user_private(phone);
+CREATE INDEX IF NOT EXISTS idx_user_private_email ON public.user_private(email);
 
--- 5. Tabel Keranjang Belanja
-CREATE TABLE public.keranjang (
+-- ==============================================================================
+-- 3. TABEL PRODUK CUSTOM (KATALOG KHUSUS MEMBER)
+-- Dikelola oleh UserService (Desain logo custom yang diajukan member)
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS public.produk_custom (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    user_id UUID REFERENCES public.profil_pengguna(id) ON DELETE CASCADE NOT NULL,
-    produk_id UUID REFERENCES public.produk(id) ON DELETE CASCADE NOT NULL,
-    jumlah INT NOT NULL DEFAULT 1,
-    tipe_sangkar VARCHAR(100),
-    catatan TEXT,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 6. Tabel Request Desain Sangkar & Logo Custom (User Private)
-CREATE TABLE public.request_custom (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    user_id UUID REFERENCES public.profil_pengguna(id) ON DELETE CASCADE NOT NULL,
-    nama_desain VARCHAR(255) NOT NULL,
-    bentuk_sangkar VARCHAR(100),
-    gambar_url TEXT, -- Referensi gambar desain/motif yang di-insert user
+    user_identifier VARCHAR(255) NOT NULL, -- Merujuk ke phone atau email pemilik
+    kode VARCHAR(50) DEFAULT 'A01',
+    nama VARCHAR(255) NOT NULL,
+    harga BIGINT NOT NULL DEFAULT 0,
     deskripsi TEXT,
-    status VARCHAR(50) DEFAULT 'menunggu_konfirmasi' NOT NULL, -- 'menunggu_konfirmasi', 'diproses', 'selesai'
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 7. Tabel Pesanan (Mendukung 4 Tahap Produksi & Riwayat Selesai)
-CREATE TABLE public.pesanan (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    user_id UUID REFERENCES public.profil_pengguna(id) ON DELETE CASCADE,
-    no_pesanan VARCHAR(50) UNIQUE NOT NULL,
-    total_harga BIGINT NOT NULL DEFAULT 0,
-    status VARCHAR(50) DEFAULT 'Tahap 1' NOT NULL, -- 'Tahap 1' s/d 'Tahap 4', atau 'Selesai'
-    current_step INT NOT NULL DEFAULT 1, -- 1: Verifikasi, 2: Kayu Jati, 3: Ukir, 4: Perakitan
-    catatan TEXT,
-    nomor_telepon VARCHAR(30) DEFAULT '085732257048',
-    tanggal_selesai TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 8. Tabel Item Pesanan
-CREATE TABLE public.item_pesanan (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    pesanan_id UUID REFERENCES public.pesanan(id) ON DELETE CASCADE NOT NULL,
-    produk_id UUID REFERENCES public.produk(id) ON DELETE SET NULL,
-    nama_produk VARCHAR(255) NOT NULL,
-    tipe_sangkar VARCHAR(100),
     gambar_url TEXT,
-    jumlah INT NOT NULL DEFAULT 1,
-    harga_satuan BIGINT NOT NULL DEFAULT 0,
-    catatan TEXT
+    kategori VARCHAR(100),
+    variasi JSONB DEFAULT '[]'::jsonb,
+    last_edited_date VARCHAR(50),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 9. Tabel Pengaturan Toko (Admin Settings)
-CREATE TABLE public.pengaturan_toko (
-    id INT PRIMARY KEY DEFAULT 1,
-    admin_whatsapp VARCHAR(30) NOT NULL DEFAULT '085732257048',
-    banner_image_url TEXT,
-    navbar_style INT NOT NULL DEFAULT 1, -- Style 1, 2, atau 3
-    font_family VARCHAR(50) NOT NULL DEFAULT 'Times New Roman',
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-    CONSTRAINT single_row CHECK (id = 1)
+CREATE INDEX IF NOT EXISTS idx_produk_custom_user ON public.produk_custom(user_identifier);
+
+-- ==============================================================================
+-- 4. TABEL PESANAN (TRACKING 4 TAHAP PRODUKSI & RIWAYAT)
+-- Dikelola oleh OrderService (Checkout WhatsApp, Tracking Member, Admin Detail)
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS public.pesanan (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    phone VARCHAR(30) NOT NULL,
+    email VARCHAR(255) DEFAULT '',
+    order_date VARCHAR(50),
+    status VARCHAR(50) DEFAULT 'Tahap 1' NOT NULL,
+    stage_number INT DEFAULT 1 NOT NULL, -- 1 s/d 4 (Tahap Produksi), >=5 (Selesai)
+    is_completed BOOLEAN DEFAULT false NOT NULL,
+    total_amount BIGINT DEFAULT 0,
+    items JSONB DEFAULT '[]'::jsonb NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_pesanan_phone ON public.pesanan(phone);
+CREATE INDEX IF NOT EXISTS idx_pesanan_is_completed ON public.pesanan(is_completed);
+
+-- ==============================================================================
+-- 5. TABEL BENTUK SANGKAR (MASTER BENTUK SANGKAR)
+-- Dikelola oleh CageService (Tambah/Hapus/Update dari Admin Dashboard, mulai dari 0)
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS public.bentuk_sangkar (
+    id TEXT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    image_url TEXT DEFAULT '',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 ```
 
 ---
 
-## 3. 🛡️ Kebijakan Keamanan (Row Level Security / RLS)
+## 4. 🗄️ Supabase Storage Bucket (`katalog`)
 
-Supabase menggunakan RLS untuk membatasi akses data pada level baris:
+Selain tabel PostgreSQL di atas, aplikasi menggunakan **Supabase Storage Bucket** bernama `katalog`:
+
+1. **`app_settings.json`**:
+   - Berisi konfigurasi global aplikasi yang dikelola oleh `AppSettingsService` (Nomor WA Admin `adminWhatsApp`, variasi navbar style 1-3, jenis font tampilan, dan URL banner aktif) serta cadangan sinkronisasi sangkar.
+2. **Aset Gambar**:
+   - Menampung file gambar produk publik, foto request logo custom member, dan gambar sangkar yang diunggah oleh admin maupun user.
+
+---
+
+## 5. 🛡️ Kebijakan Keamanan (Row Level Security / RLS)
 
 ```sql
--- Mengaktifkan RLS pada seluruh tabel
-ALTER TABLE public.kategori ENABLE ROW LEVEL SECURITY;
+-- Mengaktifkan RLS pada seluruh tabel inti
 ALTER TABLE public.produk ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.bentuk_sangkar ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.profil_pengguna ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.keranjang ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.request_custom ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_private ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.produk_custom ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pesanan ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.item_pesanan ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.pengaturan_toko ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.bentuk_sangkar ENABLE ROW LEVEL SECURITY;
 
--- 1. Kebijakan Produk, Kategori, & Bentuk Sangkar (Publik dapat melihat)
-CREATE POLICY "Publik dapat melihat kategori" ON public.kategori FOR SELECT USING (true);
-CREATE POLICY "Publik dapat melihat produk" ON public.produk FOR SELECT USING (true);
-CREATE POLICY "Publik dapat melihat bentuk sangkar" ON public.bentuk_sangkar FOR SELECT USING (true);
-CREATE POLICY "Publik dapat membaca pengaturan toko" ON public.pengaturan_toko FOR SELECT USING (true);
+-- 1. Kebijakan Produk Publik
+CREATE POLICY "Publik dapat melihat produk" ON public.produk 
+    FOR SELECT USING (true);
+CREATE POLICY "Pengguna terautentikasi/anonim dapat mengelola produk" ON public.produk 
+    FOR ALL USING (true);
 
--- 1b. Kebijakan Admin untuk Pengaturan Toko
-CREATE POLICY "Admin dapat mengubah pengaturan toko" ON public.pengaturan_toko
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM public.profil_pengguna
-            WHERE id = auth.uid() AND role = 'admin'
-        )
-    );
+-- 2. Kebijakan User Private
+CREATE POLICY "Akses baca user_private" ON public.user_private 
+    FOR SELECT USING (true);
+CREATE POLICY "Akses tulis user_private" ON public.user_private 
+    FOR ALL USING (true);
 
--- 2. Kebijakan Admin untuk Bentuk Sangkar & Produk
-CREATE POLICY "Admin dapat mengelola bentuk sangkar" ON public.bentuk_sangkar
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM public.profil_pengguna
-            WHERE id = auth.uid() AND role = 'admin'
-        )
-    );
+-- 3. Kebijakan Produk Custom
+CREATE POLICY "Akses baca produk_custom" ON public.produk_custom 
+    FOR SELECT USING (true);
+CREATE POLICY "Akses kelola produk_custom" ON public.produk_custom 
+    FOR ALL USING (true);
 
--- 3. Kebijakan Profil Pengguna
-CREATE POLICY "Pengguna dapat mengelola profil sendiri" ON public.profil_pengguna
-    FOR ALL USING (auth.uid() = id);
+-- 4. Kebijakan Pesanan
+CREATE POLICY "Akses baca pesanan" ON public.pesanan 
+    FOR SELECT USING (true);
+CREATE POLICY "Akses insert dan update pesanan" ON public.pesanan 
+    FOR ALL USING (true);
 
--- 4. Kebijakan Keranjang Belanja
-CREATE POLICY "Pengguna dapat mengelola keranjang sendiri" ON public.keranjang
-    FOR ALL USING (auth.uid() = user_id);
-
--- 5. Kebijakan Request Custom (User Private)
-CREATE POLICY "Pengguna dapat melihat & mengajukan request miliknya" ON public.request_custom
-    FOR ALL USING (auth.uid() = user_id);
-
-CREATE POLICY "Admin dapat melihat seluruh request custom" ON public.request_custom
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM public.profil_pengguna
-            WHERE id = auth.uid() AND role = 'admin'
-        )
-    );
-
--- 6. Kebijakan Pesanan & Item Pesanan
-CREATE POLICY "Pengguna dapat melihat pesanan sendiri" ON public.pesanan
-    FOR SELECT USING (auth.uid() = user_id);
-
-CREATE POLICY "Admin dapat mengelola seluruh pesanan" ON public.pesanan
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM public.profil_pengguna
-            WHERE id = auth.uid() AND role = 'admin'
-        )
-    );
+-- 5. Kebijakan Bentuk Sangkar
+CREATE POLICY "Akses baca bentuk_sangkar" ON public.bentuk_sangkar 
+    FOR SELECT USING (true);
+CREATE POLICY "Akses kelola bentuk_sangkar" ON public.bentuk_sangkar 
+    FOR ALL USING (true);
 ```
 
 ---
 
-## 7. 📦 Pemetaan Penyimpanan Data Bentuk Sangkar di PostgreSQL Supabase
+## 6. 🧹 Pembersihan Tabel Lama (Legacy Clean-Up)
 
-Untuk efisiensi querying dan fleksibilitas variasi dinamis, data bentuk sangkar disimpan pada struktur berikut:
+Bagi database yang sebelumnya telah terbuat tabel bawaan template lama, pembersihan dapat dieksekusi dengan perintah SQL berikut:
 
-| Konteks | Tabel Supabase | Nama Kolom / Field | Tipe Data | Contoh Nilai |
-| :--- | :--- | :--- | :--- | :--- |
-| **Daftar Variasi Sangkar pada Produk** | `public.produk` & `public.produk_custom` | `variasi` | `JSONB` (Array of Object) | `[{"id": "1", "name": "Sangkar 1", "imageUrl": ""}]` |
-| **Pilihan Sangkar pada Pesanan Masuk & Riwayat** | `public.pesanan` | `items` -> `cage_type` | `JSONB` -> `VARCHAR` | `"Sangkar 1"`, `"Sangkar Segi Enam"` |
-| **Tabel Master Entitas (Relasional)** | `public.bentuk_sangkar` | `nama`, `id`, `icon_url` | `UUID`, `VARCHAR` | `id: uuid`, `nama: "Sangkar 1"` |
-
+```sql
+DROP TABLE IF EXISTS public.logo_hashtags CASCADE;
+DROP TABLE IF EXISTS public.hashtags CASCADE;
+DROP TABLE IF EXISTS public.logos CASCADE;
+DROP TABLE IF EXISTS public.cart_items CASCADE;
+DROP TABLE IF EXISTS public.carts CASCADE;
+DROP TABLE IF EXISTS public.order_items CASCADE;
+DROP TABLE IF EXISTS public.orders CASCADE;
+DROP TABLE IF EXISTS public.cage_shapes CASCADE;
+DROP TABLE IF EXISTS public.private_requests CASCADE;
+DROP TABLE IF EXISTS public.profiles CASCADE;
+DROP TABLE IF EXISTS public.kategori CASCADE;
+DROP TABLE IF EXISTS public.bentuk_sangkar CASCADE;
+DROP TABLE IF EXISTS public.keranjang CASCADE;
+DROP TABLE IF EXISTS public.request_custom CASCADE;
+DROP TABLE IF EXISTS public.item_pesanan CASCADE;
+```

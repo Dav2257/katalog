@@ -107,13 +107,6 @@ class _AdminEditProductPageState extends State<AdminEditProductPage> {
     } else {
       if (existingVariations.isNotEmpty) {
         _cages.addAll(existingVariations);
-      } else {
-        _cages.addAll([
-          const ProductCageVariation(id: 'c1', name: 'Sangkar 1'),
-          const ProductCageVariation(id: 'c2', name: 'Sangkar 2'),
-          const ProductCageVariation(id: 'c3', name: 'Sangkar 3'),
-          const ProductCageVariation(id: 'c4', name: 'Sangkar 4'),
-        ]);
       }
     }
 

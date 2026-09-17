@@ -192,6 +192,18 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
       }
     }
 
+    if (updated.isEmpty) {
+      updated.add(
+        CageOption(
+          id: 'standard',
+          name: 'Standar',
+          quantity: existing['standard']?.quantity ?? 0,
+          note: existing['standard']?.note ?? '',
+          imageUrl: widget.product.imageUrl,
+        ),
+      );
+    }
+
     _cages
       ..clear()
       ..addAll(updated);

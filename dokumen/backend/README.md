@@ -1,16 +1,21 @@
 # 🗄️ Dokumentasi Backend (Supabase)
 
-Dokumen ini menjelaskan arsitektur backend, konfigurasi layanan **Supabase (Backend-as-a-Service)**, autentikasi pengguna, dan integrasi API pada aplikasi **Katalog**.
+Dokumen ini menjelaskan arsitektur backend, konfigurasi layanan **Supabase (Backend-as-a-Service)**, autentikasi pengguna, penyimpanan file/pengaturan (Storage), dan integrasi API pada aplikasi **Katalog**.
 
 ---
 
 ## 1. ⚙️ Ringkasan Layanan Backend
 
 Aplikasi Katalog memanfaatkan platform cloud **Supabase** yang menyediakan:
-- **PostgreSQL Database**: Penyimpanan data relasional berkinerja tinggi untuk produk, kategori, keranjang, dan transaksi.
-- **Supabase Auth**: Manajemen pengguna (registrasi, login dengan email/password, session JWT).
-- **Row Level Security (RLS)**: Kontrol akses berbasis baris data langsung di tingkat database PostgreSQL.
-- **Supabase Storage**: Penyimpanan objek cloud untuk file gambar sangkar kayu jati.
+- **PostgreSQL Database (4 Tabel Inti)**:
+  1. `produk`: Katalog produk sangkar publik beserta variasi bentuk sangkar (JSONB).
+  2. `produk_custom`: Katalog desain custom khusus milik member/user tertentu.
+  3. `user_private`: Rekap akun member, kredensial, dan penghitung request desain custom.
+  4. `pesanan`: Tracking pesanan 4 tahap pengerjaan, rincian barang belanjaan (JSONB `items`), kontak pemesan, dan riwayat pesanan selesai.
+- **Supabase Auth**: Manajemen sesi login akun pengguna dan administrator.
+- **Supabase Storage**:
+  - Bucket `katalog`: Menyimpan file gambar produk/sangkar dan konfigurasi global toko (`app_settings.json`).
+- **Row Level Security (RLS)**: Kontrol akses keamanan langsung di tingkat baris database PostgreSQL.
 
 ---
 
@@ -37,9 +42,13 @@ await Supabase.initialize(
 
 ---
 
-## 3. 🔐 Autentikasi Pengguna (Supabase Auth)
+## 3. 🔐 Autentikasi Pengguna & Role
 
-Aplikasi telah mengintegrasikan fungsi autentikasi email & kata sandi pada [lib/pages/login_page.dart](file:///d:/Tugas/katalog/lib/pages/login_page.dart).
+Aplikasi mengintegrasikan autentikasi pada [lib/pages/login_page.dart](file:///d:/Tugas/katalog/lib/pages/login_page.dart) dengan manajemen status terpusat melalui [lib/services/auth_service.dart](file:///d:/Tugas/katalog/lib/services/auth_service.dart).
+
+- **Administrator**: Akun dengan email berawalan/memuat `admin` (misal: `admin@gmail.com`) diarahkan langsung ke `AdminDashboardPage`.
+- **Member**: Pengguna terdaftar diarahkan ke `UserHomePage` (beranda katalog kustom & request gambar logo).
+- **Tamu (Guest)**: Tetap dapat mengakses katalog umum publik tanpa hambatan login.
 
 ### Alur Autentikasi:
 ```mermaid
@@ -48,53 +57,65 @@ sequenceDiagram
     actor User as Pengguna
     participant App as Flutter App
     participant Auth as Supabase Auth
-    participant DB as PostgreSQL (profiles)
+    participant DB as user_private
 
-    User->>App: Masukkan email & password
+    User->>App: Masukkan email/nomor HP & password
     App->>Auth: supabase.auth.signInWithPassword(...)
     alt Kredensial Valid
         Auth-->>App: Return AuthResponse (Session + JWT)
-        App->>App: Set state _isLoggedIn = true
-        App-->>User: Tampilkan dialog sukses & redirect ke Home
+        App->>DB: Sinkronisasi data member / cek user_private
+        App->>App: Set state AuthService (_isLoggedIn, _isAdmin)
+        App-->>User: Redirect ke Admin Dashboard atau User Home
     else Kredensial Tidak Valid
-        Auth-->>App: Return AuthException (Error message)
-        App-->>User: Tampilkan pesan kesalahan di SnackBar
+        Auth-->>App: Return AuthException
+        App-->>User: Tampilkan SnackBar notifikasi kesalahan
     end
-```
-
-### Contoh Pemanggilan Auth di Kode:
-```dart
-// Login
-final response = await supabase.auth.signInWithPassword(
-  email: emailController.text.trim(),
-  password: passwordController.text,
-);
-
-// Cek Pengguna Aktif
-final currentUser = supabase.auth.currentUser;
-
-// Logout
-await supabase.auth.signOut();
 ```
 
 ---
 
-## 4. 🚀 Integrasi Data Katalog (CRUD)
+## 4. 🚀 Integrasi Service Layer & Query Supabase
 
-Untuk mengambil daftar produk langsung dari database Supabase (menggantikan data statis):
+Seluruh interaksi data dilakukan melalui arsitektur Service berbasis `ChangeNotifier`:
 
+### A. Katalog Produk Publik (`ProductService`)
 ```dart
-Future<List<Product>> fetchProducts() async {
-  final List<dynamic> data = await supabase
-      .from('produk')
-      .select()
-      .order('created_at', ascending: false);
+// Fetch produk dari tabel 'produk'
+final List<dynamic> data = await supabase
+    .from('produk')
+    .select()
+    .order('created_at', ascending: false);
+```
 
-  return data.map((item) => Product.fromMap(item)).toList();
-}
+### B. Pesanan Masuk & Tracking Tahap Produksi (`OrderService`)
+```dart
+// Insert pesanan baru dari keranjang checkout WhatsApp
+await supabase.from('pesanan').insert({
+  'phone': order.phone,
+  'email': order.email,
+  'order_date': dateStr,
+  'status': 'Tahap 1',
+  'stage_number': 1,
+  'is_completed': false,
+  'items': itemsPayload, // Array JSONB
+});
+```
+
+### C. Member & Produk Custom (`UserService`)
+```dart
+// Fetch member private & produk custom
+final userRows = await supabase.from('user_private').select();
+final customProdRows = await supabase.from('produk_custom').select();
+```
+
+### D. Pengaturan Toko & Gambar (`SettingsService`)
+```dart
+// Download konfigurasi toko dari Storage bucket 'katalog'
+final bytes = await supabase.storage.from('katalog').download('app_settings.json');
 ```
 
 ---
 
 ## 🔗 Dokumen Terkait
 - [Struktur Skema Database & RLS Policy](./skema_database.md)
+

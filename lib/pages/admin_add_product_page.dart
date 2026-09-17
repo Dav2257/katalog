@@ -52,13 +52,6 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
             name: c.name,
             imageUrl: c.imageUrl ?? '',
           )));
-    } else {
-      _cages.addAll([
-        const ProductCageVariation(id: 'c1', name: 'Sangkar 1'),
-        const ProductCageVariation(id: 'c2', name: 'Sangkar 2'),
-        const ProductCageVariation(id: 'c3', name: 'Sangkar 3'),
-        const ProductCageVariation(id: 'c4', name: 'Sangkar 4'),
-      ]);
     }
 
     _slideController = PageController();

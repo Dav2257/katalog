@@ -7,6 +7,7 @@ import 'pages/login_page.dart';
 import 'pages/product_detail_page.dart';
 import 'pages/user_home_page.dart';
 import 'services/auth_service.dart';
+import 'services/cage_service.dart';
 import 'services/order_service.dart';
 import 'services/product_service.dart';
 import 'services/user_service.dart';
@@ -123,6 +124,7 @@ class _MyHomePageState extends State<MyHomePage> {
     ProductService.instance.fetchProducts();
     UserService.instance.fetchUsers();
     OrderService.instance.fetchOrders();
+    CageService.instance.fetchCages();
   }
 
   void _syncAuthFromService() {
