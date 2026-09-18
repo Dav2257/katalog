@@ -338,34 +338,7 @@ class CageService extends ChangeNotifier {
   // ===========================================================================
 
   Future<void> _syncCagesToCloud() async {
-    final cagesList = _cages.map((c) => c.toMap()).toList();
-
-    // 1. Simpan langsung ke tabel public.app_settings (Database Supabase)
-    try {
-      final dbResult = await supabase
-          .from('app_settings')
-          .select('settings_json')
-          .eq('id', 'global_settings')
-          .maybeSingle();
-
-      final currentSettings = (dbResult != null && dbResult['settings_json'] is Map)
-          ? Map<String, dynamic>.from(dbResult['settings_json'] as Map)
-          : <String, dynamic>{};
-
-      currentSettings['cages'] = cagesList;
-      currentSettings['updatedAt'] = DateTime.now().toIso8601String();
-
-      await supabase.from('app_settings').upsert({
-        'id': 'global_settings',
-        'settings_json': currentSettings,
-        'updated_at': DateTime.now().toIso8601String(),
-      });
-      debugPrint('SUKSES: Cages berhasil disimpan ke tabel public.app_settings');
-    } catch (e) {
-      debugPrint('Catatan simpan cages ke public.app_settings: $e');
-    }
-
-    // 2. Simpan jika ada tabel bentuk_sangkar
+    // 1. Simpan langsung ke tabel public.bentuk_sangkar (tiap sangkar = 1 baris mandiri di Supabase)
     try {
       for (final cage in _cages) {
         try {
@@ -376,9 +349,12 @@ class CageService extends ChangeNotifier {
           });
         } catch (_) {}
       }
-    } catch (_) {}
+      debugPrint('SUKSES: Cages berhasil disimpan ke tabel public.bentuk_sangkar');
+    } catch (e) {
+      debugPrint('Catatan simpan cages ke public.bentuk_sangkar: $e');
+    }
 
-    // 3. Backup ke Supabase Storage (app_settings.json)
+    // 2. Backup ke Supabase Storage (app_settings.json) sebagai lapisan cadangan aman
     _backupCagesToStorage();
   }
 
