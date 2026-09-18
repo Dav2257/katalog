@@ -99,7 +99,8 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
   void _scrollThumbnailToVisible(int slideIndex) {
     if (!_cageScrollController.hasClients) return;
     const itemWidth = 131.0;
-    final targetOffset = (slideIndex * itemWidth) - 80.0;
+    final targetIndex = (slideIndex > 0) ? (slideIndex - 1) : 0;
+    final targetOffset = (targetIndex * itemWidth) - 80.0;
     _cageScrollController.animateTo(
       targetOffset.clamp(0.0, _cageScrollController.position.maxScrollExtent),
       duration: const Duration(milliseconds: 250),
@@ -971,113 +972,7 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Thumbnail 1: Logo Produk
-              Padding(
-                padding: const EdgeInsets.only(right: 16.0),
-                child: Column(
-                  children: [
-                    SizedBox(
-                      width: 115,
-                      height: 115,
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          Tooltip(
-                            message: 'Lihat / Pilih Logo Produk',
-                            child: InkWell(
-                              onTap: () {
-                                _slideController.animateToPage(
-                                  0,
-                                  duration: const Duration(milliseconds: 300),
-                                  curve: Curves.easeInOut,
-                                );
-                              },
-                              borderRadius: BorderRadius.circular(14),
-                              child: Container(
-                                width: 115,
-                                height: 115,
-                                decoration: BoxDecoration(
-                                  color: _currentSlideIndex == 0
-                                      ? const Color(0xFF6E6E6E)
-                                      : const Color(0xFFA6A6A6),
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: _currentSlideIndex == 0
-                                      ? Border.all(color: const Color(0xFF7A4B29), width: 3)
-                                      : null,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.08),
-                                      blurRadius: 6,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: _mainImageUrl.isNotEmpty
-                                      ? Product.buildImageFromSource(
-                                          _mainImageUrl,
-                                          fit: BoxFit.cover,
-                                          placeholder: const Center(
-                                            child: Icon(
-                                              Icons.add_photo_alternate_rounded,
-                                              color: Colors.white,
-                                              size: 40,
-                                            ),
-                                          ),
-                                        )
-                                      : const Center(
-                                          child: Icon(
-                                            Icons.add_photo_alternate_rounded,
-                                            color: Colors.white,
-                                            size: 40,
-                                          ),
-                                        ),
-                                ),
-                              ),
-                            ),
-                          ),
-
-                          // Badge Edit Foto di pojok kanan bawah
-                          Positioned(
-                            bottom: 6,
-                            right: 6,
-                            child: InkWell(
-                              onTap: () => _showEditPhotoDialog(isCage: false),
-                              borderRadius: BorderRadius.circular(12),
-                              child: Container(
-                                padding: const EdgeInsets.all(5),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.7),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.camera_alt_rounded,
-                                  size: 14,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-
-                    // Label Logo Produk
-                    Text(
-                      'Logo Produk',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: _currentSlideIndex == 0 ? FontWeight.bold : FontWeight.w600,
-                        color: _currentSlideIndex == 0 ? const Color(0xFF2C1810) : const Color(0xFF555555),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Thumbnail 2 dst: Bentuk Sangkar
+              // Bentuk Sangkar
               ...List.generate(_cages.length, (index) {
                 final cage = _cages[index];
                 final isSelected = _currentSlideIndex == index + 1;
