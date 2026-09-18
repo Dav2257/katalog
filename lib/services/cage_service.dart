@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../supabase_config.dart';
 
@@ -91,8 +92,10 @@ class CageData {
 class CageService extends ChangeNotifier {
   static final CageService instance = CageService._internal();
 
+  static const String _prefCagesKey = 'app_cached_cages_list';
+
   CageService._internal() {
-    fetchCages();
+    _loadFromLocalPrefs().then((_) => fetchCages());
   }
 
   // Dimulai dari 0 data (kosong, tanpa dummy)
@@ -104,7 +107,36 @@ class CageService extends ChangeNotifier {
   int get count => _cages.length;
   bool get isLoading => _isLoading;
 
-  /// Mengambil data bentuk sangkar langsung dari database Supabase
+  /// Memuat sangkar dari cache SharedPreferences lokal (sangat cepat & aman offline)
+  Future<void> _loadFromLocalPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_prefCagesKey);
+      if (raw != null && raw.trim().isNotEmpty) {
+        final list = jsonDecode(raw) as List<dynamic>;
+        if (list.isNotEmpty && _cages.isEmpty) {
+          _cages.clear();
+          for (final item in list) {
+            if (item is Map) {
+              _cages.add(CageData.fromMap(Map<String, dynamic>.from(item)));
+            }
+          }
+          notifyListeners();
+        }
+      }
+    } catch (_) {}
+  }
+
+  /// Menyimpan sangkar ke SharedPreferences lokal
+  Future<void> _saveToLocalPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final jsonString = jsonEncode(_cages.map((c) => c.toMap()).toList());
+      await prefs.setString(_prefCagesKey, jsonString);
+    } catch (_) {}
+  }
+
+  /// Mengambil data bentuk sangkar langsung dari database Supabase / Storage / Local cache
   Future<void> fetchCages() async {
     _isLoading = true;
     notifyListeners();
@@ -132,17 +164,25 @@ class CageService extends ChangeNotifier {
         }
       }
 
-      _cages.clear();
-      for (final r in rows) {
-        if (r is Map<String, dynamic>) {
-          _cages.add(CageData.fromMap(r));
-        } else if (r is Map) {
-          _cages.add(CageData.fromMap(Map<String, dynamic>.from(r)));
+      if (rows.isNotEmpty) {
+        _cages.clear();
+        for (final r in rows) {
+          if (r is Map<String, dynamic>) {
+            _cages.add(CageData.fromMap(r));
+          } else if (r is Map) {
+            _cages.add(CageData.fromMap(Map<String, dynamic>.from(r)));
+          }
         }
+        await _saveToLocalPrefs();
+      } else if (_cages.isEmpty) {
+        await _loadFromLocalPrefs();
       }
-      debugPrint('SUKSES: Berhasil memuat ${_cages.length} bentuk sangkar dari Supabase ($activeTable).');
+      debugPrint('SUKSES: Berhasil memuat ${_cages.length} bentuk sangkar ($activeTable).');
     } catch (e) {
       debugPrint('Catatan: Tidak dapat memuat bentuk sangkar dari Supabase: $e');
+      if (_cages.isEmpty) {
+        await _loadFromLocalPrefs();
+      }
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -163,6 +203,7 @@ class CageService extends ChangeNotifier {
     );
 
     _cages.add(newCage);
+    _saveToLocalPrefs();
     notifyListeners();
 
     // Simpan asinkron ke database Supabase
@@ -177,6 +218,7 @@ class CageService extends ChangeNotifier {
     final index = _cages.indexWhere((c) => c.id == id);
     if (index >= 0) {
       final removed = _cages.removeAt(index);
+      _saveToLocalPrefs();
       notifyListeners();
 
       // Hapus dari database Supabase
@@ -193,6 +235,7 @@ class CageService extends ChangeNotifier {
     final index = _cages.indexWhere((c) => c.name.trim().toLowerCase() == cleanName);
     if (index >= 0) {
       final removed = _cages.removeAt(index);
+      _saveToLocalPrefs();
       notifyListeners();
 
       _syncDeleteCageFromSupabase(removed.id, removed.name);
@@ -212,6 +255,7 @@ class CageService extends ChangeNotifier {
         imageBytes: imageBytes,
       );
       _cages[index] = updated;
+      _saveToLocalPrefs();
       notifyListeners();
 
       _syncUpdateCageToSupabase(updated);

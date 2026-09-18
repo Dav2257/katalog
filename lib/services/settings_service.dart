@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/product.dart';
 import '../supabase_config.dart';
+import 'cage_service.dart';
 
 /// Service untuk mengelola pengaturan toko/aplikasi oleh Admin,
 /// mencakup nomor WhatsApp tujuan pesanan, pilihan banner katalog umum,
@@ -519,7 +520,7 @@ class AppSettingsService extends ChangeNotifier {
         ? _loginWallpaperUrl
         : (_loginWallpaperBytes != null ? 'data:image/png;base64,${base64Encode(_loginWallpaperBytes!)}' : null);
 
-    final jsonMap = {
+    final jsonMap = <String, dynamic>{
       'adminWhatsApp': _adminWhatsApp,
       'adminEmail': _adminEmail,
       'adminUsername': _adminUsername,
@@ -531,6 +532,21 @@ class AppSettingsService extends ChangeNotifier {
       'fontFamily': _fontFamily,
       'updatedAt': DateTime.now().toIso8601String(),
     };
+
+    // Pertahankan data cages agar tidak tertimpa saat simpan pengaturan toko
+    try {
+      final downloadedBytes = await supabase.storage.from('katalog').download('app_settings.json');
+      final existingMap = jsonDecode(utf8.decode(downloadedBytes)) as Map<String, dynamic>;
+      if (existingMap['cages'] != null && existingMap['cages'] is List && (existingMap['cages'] as List).isNotEmpty) {
+        jsonMap['cages'] = existingMap['cages'];
+      } else if (CageService.instance.cages.isNotEmpty) {
+        jsonMap['cages'] = CageService.instance.cages.map((c) => c.toMap()).toList();
+      }
+    } catch (_) {
+      if (CageService.instance.cages.isNotEmpty) {
+        jsonMap['cages'] = CageService.instance.cages.map((c) => c.toMap()).toList();
+      }
+    }
 
     // 3. Simpan ke Supabase Storage (app_settings.json)
     try {

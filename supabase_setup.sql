@@ -128,3 +128,20 @@ DROP POLICY IF EXISTS "Public Access Katalog Storage" ON storage.objects;
 CREATE POLICY "Public Access Katalog Storage" ON storage.objects
 FOR ALL USING (bucket_id = 'katalog') WITH CHECK (bucket_id = 'katalog');
 
+
+-- ------------------------------------------------------------------------------
+-- 7. TABEL BENTUK SANGKAR (Variasi Bentuk Sangkar di Dashboard Admin)
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.bentuk_sangkar (
+    id VARCHAR(255) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    image_url TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.bentuk_sangkar ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Akses penuh bentuk_sangkar" ON public.bentuk_sangkar;
+CREATE POLICY "Akses penuh bentuk_sangkar" ON public.bentuk_sangkar FOR ALL USING (true) WITH CHECK (true);
+GRANT ALL ON TABLE public.bentuk_sangkar TO anon, authenticated;
+
+
