@@ -405,10 +405,11 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     super.dispose();
   }
 
-  void _scrollCageThumbToVisible(int index) {
+  void _scrollCageThumbToVisible(int slideIdx) {
     if (!_cageScrollController.hasClients) return;
     const itemWidth = 124.0;
-    final targetOffset = (index * itemWidth) - 40.0;
+    final targetIndex = (slideIdx > 0) ? (slideIdx - 1) : 0;
+    final targetOffset = (targetIndex * itemWidth) - 40.0;
     _cageScrollController.animateTo(
       targetOffset.clamp(0.0, _cageScrollController.position.maxScrollExtent),
       duration: const Duration(milliseconds: 250),
@@ -1028,94 +1029,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                 physics: const BouncingScrollPhysics(),
                 child: Row(
                   children: [
-                    // Pilihan 1: Logo Produk
-                    Container(
-                      width: 114,
-                      margin: const EdgeInsets.symmetric(horizontal: 5.0),
-                      child: Column(
-                        children: [
-                          InkWell(
-                            onTap: () {
-                              setState(() {
-                                _currentSlideIndex = 0;
-                              });
-                              if (_slideController.hasClients) {
-                                _slideController.animateToPage(
-                                  0,
-                                  duration: const Duration(milliseconds: 300),
-                                  curve: Curves.easeInOut,
-                                );
-                              }
-                            },
-                            borderRadius: BorderRadius.circular(16),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                AnimatedContainer(
-                                  duration: const Duration(milliseconds: 200),
-                                  height: 102,
-                                  decoration: BoxDecoration(
-                                    color: _currentSlideIndex == 0
-                                        ? const Color(0xFF6E7173)
-                                        : const Color(0xFFB5B7B9),
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: _currentSlideIndex == 0
-                                        ? Border.all(
-                                            color: Theme.of(context).colorScheme.primary,
-                                            width: 2.5,
-                                          )
-                                        : null,
-                                  ),
-                                  child: Center(
-                                    child: widget.product.imageUrl.isNotEmpty
-                                        ? ClipRRect(
-                                            borderRadius: BorderRadius.circular(14),
-                                            child: Product.buildImageFromSource(
-                                              widget.product.imageUrl,
-                                              width: double.infinity,
-                                              height: double.infinity,
-                                              fit: BoxFit.cover,
-                                              placeholder: const Center(
-                                                child: Icon(Icons.image_rounded, color: Colors.white70, size: 36),
-                                              ),
-                                            ),
-                                          )
-                                        : const Icon(Icons.image_outlined, color: Colors.white, size: 36),
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  'Logo Produk',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: _currentSlideIndex == 0
-                                        ? FontWeight.bold
-                                        : FontWeight.w500,
-                                    color: _currentSlideIndex == 0
-                                        ? Colors.black87
-                                        : Colors.grey.shade700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade200,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              'Utama',
-                              style: TextStyle(fontSize: 10, color: Colors.grey.shade700),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Pilihan 2 dst: Bentuk Sangkar
+                    // Bentuk Sangkar
                     ...List.generate(_cages.length, (index) {
                       final cage = _cages[index];
                       final isSelected = _currentSlideIndex == index + 1;
