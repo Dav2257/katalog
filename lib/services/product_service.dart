@@ -72,7 +72,7 @@ class ProductService extends ChangeNotifier {
   Future<void> fetchProducts() async {
     _isLoading = true;
     _errorMessage = null;
-    notifyListeners();
+    Future.microtask(() => notifyListeners());
 
     try {
       final List<dynamic> data = await supabase
@@ -130,7 +130,7 @@ class ProductService extends ChangeNotifier {
 
     final finalImage = (imageUrl != null && imageUrl.trim().isNotEmpty)
         ? imageUrl.trim()
-        : 'https://images.unsplash.com/photo-1548767797-d8c844163c4c?w=600';
+        : '';
 
     final finalDescription = (description != null && description.trim().isNotEmpty)
         ? description.trim()

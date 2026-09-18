@@ -38,10 +38,12 @@ class ProductCageVariation {
   }
 
   factory ProductCageVariation.fromMap(Map<String, dynamic> map) {
+    final raw = map['imageUrl']?.toString() ?? map['image_url']?.toString() ?? '';
+    final clean = raw.contains('images.unsplash.com') ? '' : raw;
     return ProductCageVariation(
       id: map['id']?.toString() ?? '',
       name: map['name']?.toString() ?? '',
-      imageUrl: map['imageUrl']?.toString() ?? map['image_url']?.toString() ?? '',
+      imageUrl: clean,
     );
   }
 
@@ -179,7 +181,8 @@ class Product {
         ? (map['harga'] as num).toInt()
         : (int.tryParse(map['price']?.toString() ?? '') ?? 0);
     final descVal = map['deskripsi']?.toString() ?? map['description']?.toString() ?? '';
-    final imgVal = map['gambar_url']?.toString() ?? map['imageUrl']?.toString() ?? '';
+    final rawImg = map['gambar_url']?.toString() ?? map['imageUrl']?.toString() ?? '';
+    final imgVal = rawImg.contains('images.unsplash.com') ? '' : rawImg;
     final catVal = map['kategori']?.toString() ?? map['category']?.toString() ?? map['hashtags']?.toString() ?? '#sangkar #jati';
     final ratingVal = map['rating'] is num ? (map['rating'] as num).toDouble() : 4.8;
     final hashtagsVal = map['hashtags']?.toString() ?? catVal;

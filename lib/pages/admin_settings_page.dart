@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -100,13 +101,18 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
       );
       if (picked != null) {
         final bytes = await picked.readAsBytes();
+        final ext = picked.name.toLowerCase().endsWith('.png') ? 'png' : 'jpeg';
+        final base64String = 'data:image/$ext;base64,${base64Encode(bytes)}';
+
         setState(() {
           _bannerImageBytes = bytes;
           _bannerFileName = picked.name;
+          _bannerImageUrl = base64String;
+          _bannerUrlController.text = base64String;
           _isUploadingBanner = true;
         });
 
-        // Unggah otomatis ke Supabase Storage bucket 'katalog' agar permanen
+        // Unggah otomatis ke Supabase Storage bucket 'katalog' agar permanen di cloud
         final publicUrl = await StorageService.instance.uploadBytes(
           bytes: bytes,
           prefix: 'banner',
@@ -124,8 +130,8 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(publicUrl != null
-                  ? 'Banner berhasil diunggah ke server! Klik "Simpan Pengaturan" di bawah untuk menerapkan.'
-                  : 'Banner dipilih secara lokal. Klik "Simpan Pengaturan" untuk menyimpan.'),
+                  ? 'Banner berhasil diunggah ke Cloud Storage! Klik "Simpan Pengaturan" untuk menerapkan.'
+                  : 'Banner berhasil dimuat. Klik "Simpan Pengaturan" di bawah untuk menyimpan permanen.'),
               backgroundColor: const Color(0xFF7A4B29),
               duration: const Duration(seconds: 3),
             ),
@@ -155,13 +161,18 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
       );
       if (picked != null) {
         final bytes = await picked.readAsBytes();
+        final ext = picked.name.toLowerCase().endsWith('.png') ? 'png' : 'jpeg';
+        final base64String = 'data:image/$ext;base64,${base64Encode(bytes)}';
+
         setState(() {
           _logoImageBytes = bytes;
           _logoFileName = picked.name;
+          _logoImageUrl = base64String;
+          _logoUrlController.text = base64String;
           _isUploadingLogo = true;
         });
 
-        // Unggah otomatis ke Supabase Storage bucket 'katalog' agar permanen
+        // Unggah otomatis ke Supabase Storage bucket 'katalog' agar permanen di cloud
         final publicUrl = await StorageService.instance.uploadBytes(
           bytes: bytes,
           prefix: 'logo',
@@ -179,8 +190,8 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(publicUrl != null
-                  ? 'Logo berhasil diunggah ke server! Klik "Simpan Pengaturan" di bawah untuk menerapkan.'
-                  : 'Logo dipilih secara lokal. Klik "Simpan Pengaturan" untuk menyimpan.'),
+                  ? 'Logo berhasil diunggah ke Cloud Storage! Klik "Simpan Pengaturan" untuk menerapkan.'
+                  : 'Logo berhasil dimuat. Klik "Simpan Pengaturan" di bawah untuk menyimpan permanen.'),
               backgroundColor: const Color(0xFF7A4B29),
               duration: const Duration(seconds: 3),
             ),
@@ -209,13 +220,18 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
       );
       if (picked != null) {
         final bytes = await picked.readAsBytes();
+        final ext = picked.name.toLowerCase().endsWith('.png') ? 'png' : 'jpeg';
+        final base64String = 'data:image/$ext;base64,${base64Encode(bytes)}';
+
         setState(() {
           _loginWallpaperBytes = bytes;
           _loginWallpaperFileName = picked.name;
+          _loginWallpaperUrl = base64String;
+          _loginWallpaperUrlController.text = base64String;
           _isUploadingWallpaper = true;
         });
 
-        // Unggah otomatis ke Supabase Storage bucket 'katalog' agar permanen
+        // Unggah otomatis ke Supabase Storage bucket 'katalog' agar permanen di cloud
         final publicUrl = await StorageService.instance.uploadBytes(
           bytes: bytes,
           prefix: 'wallpaper',
@@ -233,8 +249,8 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(publicUrl != null
-                  ? 'Wallpaper berhasil diunggah ke server! Klik "Simpan Pengaturan" di bawah untuk menerapkan.'
-                  : 'Wallpaper dipilih secara lokal. Klik "Simpan Pengaturan" untuk menyimpan.'),
+                  ? 'Wallpaper berhasil diunggah ke Cloud Storage! Klik "Simpan Pengaturan" untuk menerapkan.'
+                  : 'Wallpaper berhasil dimuat. Klik "Simpan Pengaturan" di bawah untuk menyimpan permanen.'),
               backgroundColor: const Color(0xFF7A4B29),
               duration: const Duration(seconds: 3),
             ),
@@ -633,7 +649,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
 
     try {
       // 1. Pastikan banner bytes terunggah ke Supabase jika URL publik belum didapat
-      if (_bannerImageBytes != null && (_bannerImageUrl == null || _bannerImageUrl!.isEmpty)) {
+      if (_bannerImageBytes != null && (_bannerImageUrl == null || _bannerImageUrl!.isEmpty || _bannerImageUrl!.startsWith('data:image'))) {
         final uploaded = await StorageService.instance.uploadBytes(
           bytes: _bannerImageBytes!,
           prefix: 'banner',
@@ -641,11 +657,13 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
         );
         if (uploaded != null) {
           _bannerImageUrl = uploaded;
+        } else if (_bannerImageUrl == null || _bannerImageUrl!.isEmpty) {
+          _bannerImageUrl = 'data:image/png;base64,${base64Encode(_bannerImageBytes!)}';
         }
       }
 
       // 2. Pastikan logo bytes terunggah ke Supabase jika URL publik belum didapat
-      if (_logoImageBytes != null && (_logoImageUrl == null || _logoImageUrl!.isEmpty)) {
+      if (_logoImageBytes != null && (_logoImageUrl == null || _logoImageUrl!.isEmpty || _logoImageUrl!.startsWith('data:image'))) {
         final uploaded = await StorageService.instance.uploadBytes(
           bytes: _logoImageBytes!,
           prefix: 'logo',
@@ -653,11 +671,13 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
         );
         if (uploaded != null) {
           _logoImageUrl = uploaded;
+        } else if (_logoImageUrl == null || _logoImageUrl!.isEmpty) {
+          _logoImageUrl = 'data:image/png;base64,${base64Encode(_logoImageBytes!)}';
         }
       }
 
       // 3. Pastikan wallpaper bytes terunggah ke Supabase jika URL publik belum didapat
-      if (_loginWallpaperBytes != null && (_loginWallpaperUrl == null || _loginWallpaperUrl!.isEmpty)) {
+      if (_loginWallpaperBytes != null && (_loginWallpaperUrl == null || _loginWallpaperUrl!.isEmpty || _loginWallpaperUrl!.startsWith('data:image'))) {
         final uploaded = await StorageService.instance.uploadBytes(
           bytes: _loginWallpaperBytes!,
           prefix: 'wallpaper',
@@ -665,6 +685,8 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
         );
         if (uploaded != null) {
           _loginWallpaperUrl = uploaded;
+        } else if (_loginWallpaperUrl == null || _loginWallpaperUrl!.isEmpty) {
+          _loginWallpaperUrl = 'data:image/png;base64,${base64Encode(_loginWallpaperBytes!)}';
         }
       }
 

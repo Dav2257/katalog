@@ -47,14 +47,6 @@ class _AdminEditProductPageState extends State<AdminEditProductPage> {
   // Daftar variasi bentuk sangkar untuk produk ini
   final List<ProductCageVariation> _cages = [];
 
-  // Sample photo options for quick selection
-  static const List<String> samplePhotos = [
-    'https://images.unsplash.com/photo-1548767797-d8c844163c4c?w=600',
-    'https://images.unsplash.com/photo-1552728089-57bdde30beb3?w=600',
-    'https://images.unsplash.com/photo-1522858547137-f1dcec554f55?w=600',
-    'https://images.unsplash.com/photo-1555169062-013468b47731?w=600',
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -71,11 +63,12 @@ class _AdminEditProductPageState extends State<AdminEditProductPage> {
       text: p?.hashtags ?? ap?.hashtags ?? '',
     );
 
-    _mainImageUrl = p?.imageUrl ?? ap?.imageUrl ?? '';
+    final rawMainImg = p?.imageUrl ?? ap?.imageUrl ?? '';
+    _mainImageUrl = rawMainImg.contains('images.unsplash.com') ? '' : rawMainImg;
     _lastEditedDate = p?.lastEditedDate ?? ap?.lastEditedDate ?? _getTodayFormatted();
 
     // Inisialisasi variasi bentuk sangkar:
-    // Bentuk sangkar diambil dari Dashboard (CageService), namun foto sangkar bersifat independen khusus produk ini
+    // Bentuk sangkar diambil dari Dashboard (CageService), foto kosong/upload admin (tidak menggunakan gambar template)
     final serviceCages = CageService.instance.cages;
     final existingVariations = p?.cageVariations ?? ap?.cageVariations ?? [];
     final Map<String, ProductCageVariation> existingMap = {
@@ -87,26 +80,29 @@ class _AdminEditProductPageState extends State<AdminEditProductPage> {
         final match = existingMap[sc.name.toLowerCase()] ??
             existingVariations.where((v) => v.id == sc.id).firstOrNull;
         if (match != null && (match.imageUrl.isNotEmpty || match.imageBytes != null)) {
-          // Tetap gunakan foto kustom tersimpan milik produk ini
+          final cleanImg = match.imageUrl.contains('images.unsplash.com') ? '' : match.imageUrl;
           _cages.add(ProductCageVariation(
             id: sc.id,
             name: sc.name,
-            imageUrl: match.imageUrl,
+            imageUrl: cleanImg,
             imageBytes: match.imageBytes,
           ));
         } else {
-          // Gunakan foto bawaan dari bentuk sangkar dashboard sebagai awal
+          final cleanImg = (sc.imageUrl ?? '').contains('images.unsplash.com') ? '' : (sc.imageUrl ?? '');
           _cages.add(ProductCageVariation(
             id: sc.id,
             name: sc.name,
-            imageUrl: sc.imageUrl ?? '',
+            imageUrl: cleanImg,
             imageBytes: sc.imageBytes,
           ));
         }
       }
     } else {
       if (existingVariations.isNotEmpty) {
-        _cages.addAll(existingVariations);
+        for (final v in existingVariations) {
+          final cleanImg = v.imageUrl.contains('images.unsplash.com') ? '' : v.imageUrl;
+          _cages.add(v.copyWith(imageUrl: cleanImg));
+        }
       }
     }
 
@@ -704,46 +700,6 @@ class _AdminEditProductPageState extends State<AdminEditProductPage> {
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       ),
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Contoh Foto
-                    const Text(
-                      'Atau Pilih Contoh Foto Sangkar:',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF6E6E6E)),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: List.generate(samplePhotos.length, (idx) {
-                        final photo = samplePhotos[idx];
-                        final isChosen = urlController.text == photo && uploadedImageBytes == null;
-                        return InkWell(
-                          onTap: () {
-                            setDialogState(() {
-                              uploadedImageBytes = null;
-                              uploadedFileName = null;
-                              urlController.text = photo;
-                            });
-                          },
-                          borderRadius: BorderRadius.circular(8),
-                          child: Container(
-                            width: 55,
-                            height: 55,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: isChosen ? const Color(0xFF7A4B29) : Colors.grey.shade300,
-                                width: isChosen ? 2.5 : 1,
-                              ),
-                              image: DecorationImage(
-                                image: NetworkImage(photo),
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                        );
-                      }),
                     ),
                   ],
                 ),
@@ -1421,12 +1377,34 @@ class _AdminEditProductPageState extends State<AdminEditProductPage> {
     );
   }
 
-  Widget _buildPlaceholderIcon() {
-    return const Center(
-      child: Icon(
-        Icons.add_photo_alternate_rounded,
-        size: 78,
-        color: Colors.white,
+  Widget _buildPlaceholderIcon({String? label}) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.add_photo_alternate_rounded,
+            size: 64,
+            color: Colors.white.withValues(alpha: 0.8),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label ?? 'Belum ada foto',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Colors.white.withValues(alpha: 0.9),
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Klik untuk upload foto',
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.white.withValues(alpha: 0.65),
+            ),
+          ),
+        ],
       ),
     );
   }

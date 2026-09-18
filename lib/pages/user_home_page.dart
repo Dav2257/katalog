@@ -28,6 +28,39 @@ class UserHomePage extends StatefulWidget {
 }
 
 class _UserHomePageState extends State<UserHomePage> {
+  int _customLogoLimit = 10;
+  bool _isLoadingMoreCustom = false;
+
+  void _loadMoreCustomLogos() {
+    if (_isLoadingMoreCustom) return;
+    final total = widget.customLogos.length;
+    if (_customLogoLimit >= total) return;
+
+    setState(() {
+      _isLoadingMoreCustom = true;
+    });
+
+    Future.delayed(const Duration(milliseconds: 250), () {
+      if (mounted) {
+        setState(() {
+          _customLogoLimit = _customLogoLimit + 10;
+          _isLoadingMoreCustom = false;
+        });
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant UserHomePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.customLogos.length != widget.customLogos.length) {
+      if (_customLogoLimit > widget.customLogos.length &&
+          widget.customLogos.length >= 10) {
+        _customLogoLimit = 10;
+      }
+    }
+  }
+
   void _showRequestDialog() {
     final nameController = TextEditingController();
     final hashtagController = TextEditingController();
@@ -687,10 +720,18 @@ class _UserHomePageState extends State<UserHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // 1. Banner Member Khusus User Login
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        if (notification.metrics.pixels >=
+            notification.metrics.maxScrollExtent - 250) {
+          _loadMoreCustomLogos();
+        }
+        return false;
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 1. Banner Member Khusus User Login
         Container(
           width: double.infinity,
           margin: const EdgeInsets.all(16.0),
@@ -927,20 +968,82 @@ class _UserHomePageState extends State<UserHomePage> {
                       childAspectRatio = 0.73;
                     }
 
-                    return GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: widget.customLogos.length,
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: crossAxisCount,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 14,
-                        childAspectRatio: childAspectRatio,
-                      ),
-                      itemBuilder: (context, index) {
-                        final item = widget.customLogos[index];
-                        return _buildCustomLogoCard(context, item);
-                      },
+                    final visibleLogos = widget.customLogos
+                        .take(_customLogoLimit)
+                        .toList();
+                    final hasMoreCustom =
+                        widget.customLogos.length > _customLogoLimit;
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: visibleLogos.length,
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: crossAxisCount,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 14,
+                            childAspectRatio: childAspectRatio,
+                          ),
+                          itemBuilder: (context, index) {
+                            final item = visibleLogos[index];
+                            return _buildCustomLogoCard(context, item);
+                          },
+                        ),
+                        const SizedBox(height: 20),
+                        if (_isLoadingMoreCustom)
+                          const Center(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(vertical: 16.0),
+                              child: CircularProgressIndicator(
+                                color: Color(0xFF7A4B29),
+                                strokeWidth: 2.5,
+                              ),
+                            ),
+                          )
+                        else if (hasMoreCustom)
+                          Center(
+                            child: OutlinedButton.icon(
+                              onPressed: _loadMoreCustomLogos,
+                              icon: const Icon(
+                                Icons.keyboard_arrow_down_rounded,
+                                color: Color(0xFF7A4B29),
+                              ),
+                              label: Text(
+                                'Muat Lebih Banyak (${widget.customLogos.length - _customLogoLimit} lagi)',
+                                style: const TextStyle(
+                                  color: Color(0xFF7A4B29),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(
+                                    color: Color(0xFF7A4B29)),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 12,
+                                ),
+                              ),
+                            ),
+                          )
+                        else if (widget.customLogos.length > 10)
+                          Center(
+                            child: Text(
+                              'Semua ${widget.customLogos.length} logo custom telah ditampilkan',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey.shade500,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ),
+                      ],
                     );
                   },
                 ),
@@ -949,8 +1052,9 @@ class _UserHomePageState extends State<UserHomePage> {
           ),
         ),
       ],
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildCustomLogoCard(BuildContext context, Product product) {
     return InkWell(

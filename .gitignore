@@ -43,3 +43,12 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Environment variables & secrets (JANGAN DI-COMMIT)
+.env
+*.env
+*.env.*
+
+# CLI Cache (Firebase & Cloudflare Wrangler)
+.firebase/
+.wrangler/

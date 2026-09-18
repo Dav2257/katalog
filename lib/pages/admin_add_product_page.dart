@@ -29,13 +29,6 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
   // Variasi bentuk sangkar disinkronkan dari CageService
   final List<ProductCageVariation> _cages = [];
 
-  static const List<String> samplePhotos = [
-    'https://images.unsplash.com/photo-1548767797-d8c844163c4c?w=600',
-    'https://images.unsplash.com/photo-1552728089-57bdde30beb3?w=600',
-    'https://images.unsplash.com/photo-1522858547137-f1dcec554f55?w=600',
-    'https://images.unsplash.com/photo-1555169062-013468b47731?w=600',
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -47,11 +40,15 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
 
     final serviceCages = CageService.instance.cages;
     if (serviceCages.isNotEmpty) {
-      _cages.addAll(serviceCages.map((c) => ProductCageVariation(
-            id: c.id,
-            name: c.name,
-            imageUrl: c.imageUrl ?? '',
-          )));
+      _cages.addAll(serviceCages.map((c) {
+        final cleanImg = (c.imageUrl ?? '').contains('images.unsplash.com') ? '' : (c.imageUrl ?? '');
+        return ProductCageVariation(
+          id: c.id,
+          name: c.name,
+          imageUrl: cleanImg,
+          imageBytes: c.imageBytes,
+        );
+      }));
     }
 
     _slideController = PageController();
@@ -513,46 +510,6 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       ),
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Contoh Foto
-                    const Text(
-                      'Atau Pilih Contoh Foto Sangkar:',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF6E6E6E)),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: List.generate(samplePhotos.length, (idx) {
-                        final photo = samplePhotos[idx];
-                        final isChosen = urlController.text == photo && uploadedImageBytes == null;
-                        return InkWell(
-                          onTap: () {
-                            setDialogState(() {
-                              uploadedImageBytes = null;
-                              uploadedFileName = null;
-                              urlController.text = photo;
-                            });
-                          },
-                          borderRadius: BorderRadius.circular(8),
-                          child: Container(
-                            width: 55,
-                            height: 55,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: isChosen ? const Color(0xFF7A4B29) : Colors.grey.shade300,
-                                width: isChosen ? 2.5 : 1,
-                              ),
-                              image: DecorationImage(
-                                image: NetworkImage(photo),
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                        );
-                      }),
                     ),
                   ],
                 ),
@@ -1230,12 +1187,34 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
     );
   }
 
-  Widget _buildPlaceholderIcon() {
-    return const Center(
-      child: Icon(
-        Icons.add_photo_alternate_rounded,
-        size: 78,
-        color: Colors.white,
+  Widget _buildPlaceholderIcon({String? label}) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.add_photo_alternate_rounded,
+            size: 64,
+            color: Colors.white.withValues(alpha: 0.8),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label ?? 'Belum ada foto',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Colors.white.withValues(alpha: 0.9),
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Klik untuk upload foto',
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.white.withValues(alpha: 0.65),
+            ),
+          ),
+        ],
       ),
     );
   }
