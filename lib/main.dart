@@ -67,7 +67,7 @@ class MyApp extends StatelessWidget {
             fontFamily: AppSettingsService.instance.fontFamily,
             colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
             useMaterial3: true,
-            scaffoldBackgroundColor: Colors.grey.shade50,
+            scaffoldBackgroundColor: const Color(0xFFF8F4EA),
             pageTransitionsTheme: const PageTransitionsTheme(
               builders: {
                 TargetPlatform.android: NoTransitionsBuilder(),
@@ -389,6 +389,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }).toList();
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF8F4EA),
       appBar: TopNavbar(
         searchController: _searchController,
         cartItemCount: _totalCartCount,
