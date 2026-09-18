@@ -1155,116 +1155,214 @@ class _AdminEditProductPageState extends State<AdminEditProductPage> {
 
         const SizedBox(height: 16),
 
-        // Horizontal List Thumbnail (Slide 1: Logo, Slide 2+: Bentuk Sangkar)
-        SingleChildScrollView(
-          controller: _cageScrollController,
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Bentuk Sangkar
-              ...List.generate(_cages.length, (index) {
-                final cage = _cages[index];
-                final isSelected = _currentSlideIndex == index + 1;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 16.0),
-                  child: Column(
-                    children: [
-                      // Kotak Sangkar (Klik langsung untuk geser ke slide atau ganti foto)
-                      SizedBox(
-                        width: 115,
-                        height: 115,
-                        child: Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            Tooltip(
-                              message: 'Lihat / Pilih ${cage.name}',
-                              child: InkWell(
-                                onTap: () {
-                                  _slideController.animateToPage(
-                                    index + 1,
-                                    duration: const Duration(milliseconds: 300),
-                                    curve: Curves.easeInOut,
-                                  );
-                                },
-                                borderRadius: BorderRadius.circular(14),
-                                child: Container(
-                                  width: 115,
-                                  height: 115,
-                                  decoration: BoxDecoration(
-                                    color: isSelected
-                                        ? const Color(0xFF6E6E6E)
-                                        : const Color(0xFFA6A6A6),
-                                    borderRadius: BorderRadius.circular(14),
-                                    border: isSelected
-                                        ? Border.all(color: const Color(0xFF7A4B29), width: 3)
-                                        : null,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(alpha: 0.08),
-                                        blurRadius: 6,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(12),
-                                    child: cage.buildImage(
-                                      fit: BoxFit.cover,
-                                      placeholder: const Center(
-                                        child: Icon(
-                                          Icons.add_photo_alternate_rounded,
-                                          color: Colors.white,
-                                          size: 40,
+        // Horizontal List Thumbnail Bentuk Sangkar dengan Tombol Prev & Next
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Tombol Previous (<)
+            if (_cages.length > 3) ...[
+              InkWell(
+                onTap: () {
+                  if (_cageScrollController.hasClients) {
+                    _cageScrollController.animateTo(
+                      (_cageScrollController.offset - 131).clamp(
+                        0.0,
+                        _cageScrollController.position.maxScrollExtent,
+                      ),
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeInOut,
+                    );
+                  }
+                },
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                    border: Border.all(color: Colors.grey.shade300, width: 1),
+                  ),
+                  child: const Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    size: 14,
+                    color: Color(0xFF2C1810),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
+
+            // Daftar Thumbnail yang Dapat Digeser
+            Expanded(
+              child: SingleChildScrollView(
+                controller: _cageScrollController,
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Bentuk Sangkar
+                    ...List.generate(_cages.length, (index) {
+                      final cage = _cages[index];
+                      final isSelected = _currentSlideIndex == index + 1;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 16.0),
+                        child: SizedBox(
+                          width: 115,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Kotak Sangkar (Klik langsung untuk geser ke slide atau ganti foto)
+                              SizedBox(
+                                width: 115,
+                                height: 115,
+                                child: Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    Tooltip(
+                                      message: 'Lihat / Pilih ${cage.name}',
+                                      child: InkWell(
+                                        onTap: () {
+                                          _slideController.animateToPage(
+                                            index + 1,
+                                            duration: const Duration(milliseconds: 300),
+                                            curve: Curves.easeInOut,
+                                          );
+                                        },
+                                        borderRadius: BorderRadius.circular(14),
+                                        child: Container(
+                                          width: 115,
+                                          height: 115,
+                                          decoration: BoxDecoration(
+                                            color: isSelected
+                                                ? const Color(0xFF6E6E6E)
+                                                : const Color(0xFFA6A6A6),
+                                            borderRadius: BorderRadius.circular(14),
+                                            border: isSelected
+                                                ? Border.all(color: const Color(0xFF7A4B29), width: 3)
+                                                : null,
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black.withValues(alpha: 0.08),
+                                                blurRadius: 6,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ],
+                                          ),
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(12),
+                                            child: cage.buildImage(
+                                              fit: BoxFit.cover,
+                                              placeholder: const Center(
+                                                child: Icon(
+                                                  Icons.add_photo_alternate_rounded,
+                                                  color: Colors.white,
+                                                  size: 40,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
                                         ),
                                       ),
                                     ),
-                                  ),
-                                ),
-                              ),
-                            ),
 
-                            // Badge Edit Foto di pojok kanan bawah
-                            Positioned(
-                              bottom: 6,
-                              right: 6,
-                              child: InkWell(
-                                onTap: () => _showEditPhotoDialog(isCage: true, cageIndex: index),
-                                borderRadius: BorderRadius.circular(12),
-                                child: Container(
-                                  padding: const EdgeInsets.all(5),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withValues(alpha: 0.7),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(
-                                    Icons.camera_alt_rounded,
-                                    size: 14,
-                                    color: Colors.white,
-                                  ),
+                                    // Badge Edit Foto di pojok kanan bawah
+                                    Positioned(
+                                      bottom: 6,
+                                      right: 6,
+                                      child: InkWell(
+                                        onTap: () => _showEditPhotoDialog(isCage: true, cageIndex: index),
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Container(
+                                          padding: const EdgeInsets.all(5),
+                                          decoration: BoxDecoration(
+                                            color: Colors.black.withValues(alpha: 0.7),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Icon(
+                                            Icons.camera_alt_rounded,
+                                            size: 14,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 8),
+
+                              // Label Nama Sangkar (Maksimal 2 baris agar rapi dan tidak merenggangkan kotak)
+                              Text(
+                                cage.name,
+                                textAlign: TextAlign.center,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                                  color: isSelected ? const Color(0xFF2C1810) : const Color(0xFF555555),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            ),
+
+            // Tombol Next (>)
+            if (_cages.length > 3) ...[
+              const SizedBox(width: 8),
+              InkWell(
+                onTap: () {
+                  if (_cageScrollController.hasClients) {
+                    _cageScrollController.animateTo(
+                      (_cageScrollController.offset + 131).clamp(
+                        0.0,
+                        _cageScrollController.position.maxScrollExtent,
                       ),
-                      const SizedBox(height: 8),
-
-                      // Label Nama Sangkar (misal Sangkar 1, Sangkar 2)
-                      Text(
-                        cage.name,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                          color: isSelected ? const Color(0xFF2C1810) : const Color(0xFF555555),
-                        ),
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeInOut,
+                    );
+                  }
+                },
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
                       ),
                     ],
+                    border: Border.all(color: Colors.grey.shade300, width: 1),
                   ),
-                );
-              }),
+                  child: const Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 14,
+                    color: Color(0xFF2C1810),
+                  ),
+                ),
+              ),
             ],
-          ),
+          ],
         ),
       ],
     );

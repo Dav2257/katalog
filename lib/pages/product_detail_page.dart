@@ -1160,6 +1160,9 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                                   const SizedBox(height: 6),
                                   Text(
                                     cage.name,
+                                    textAlign: TextAlign.center,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: isSelected
