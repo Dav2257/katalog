@@ -995,9 +995,7 @@ class _AdminEditProductPageState extends State<AdminEditProductPage> {
                         ),
                         const SizedBox(width: 5),
                         Text(
-                          isLogoSlide
-                              ? 'Logo Produk (${_currentSlideIndex + 1}/$totalSlides)'
-                              : '${_cages[currentCageIndex].name} (${_currentSlideIndex + 1}/$totalSlides)',
+                          '(${_currentSlideIndex + 1}/$totalSlides)',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 11,

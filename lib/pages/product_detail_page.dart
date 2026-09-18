@@ -654,7 +654,6 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   Widget _buildLeftSection() {
     final int totalSlides = 1 + _cages.length;
     final bool isLogoSlide = _currentSlideIndex == 0;
-    final int currentCageIndex = _currentSlideIndex - 1;
     final bool showNavButtons = (_cages.length + 1) > 4;
 
     return Column(
@@ -855,9 +854,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                         ),
                         const SizedBox(width: 5),
                         Text(
-                          isLogoSlide
-                              ? 'Logo Produk (${_currentSlideIndex + 1}/$totalSlides)'
-                              : '${_cages[currentCageIndex].name} (${_currentSlideIndex + 1}/$totalSlides)',
+                          '(${_currentSlideIndex + 1}/$totalSlides)',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 11,
