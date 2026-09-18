@@ -7,14 +7,16 @@ Dokumen ini menjelaskan arsitektur backend, konfigurasi layanan **Supabase (Back
 ## 1. ⚙️ Ringkasan Layanan Backend
 
 Aplikasi Katalog memanfaatkan platform cloud **Supabase** yang menyediakan:
-- **PostgreSQL Database (4 Tabel Inti)**:
+- **PostgreSQL Database (6 Tabel Inti Aktif)**:
   1. `produk`: Katalog produk sangkar publik beserta variasi bentuk sangkar (JSONB).
   2. `produk_custom`: Katalog desain custom khusus milik member/user tertentu.
   3. `user_private`: Rekap akun member, kredensial, dan penghitung request desain custom.
   4. `pesanan`: Tracking pesanan 4 tahap pengerjaan, rincian barang belanjaan (JSONB `items`), kontak pemesan, dan riwayat pesanan selesai.
+  5. `bentuk_sangkar`: Master varian bentuk & ukuran sangkar tersimpan mandiri baris per baris (`id`, `name`, `image_url`, `created_at`).
+  6. `app_settings`: Pengaturan toko global tersentralisasi di database (`id: global_settings`, `settings_json`: banner, logo, WA, navbar, font).
 - **Supabase Auth**: Manajemen sesi login akun pengguna dan administrator.
 - **Supabase Storage**:
-  - Bucket `katalog`: Menyimpan file gambar produk/sangkar dan konfigurasi global toko (`app_settings.json`).
+  - Bucket `katalog`: Menyimpan file gambar produk/sangkar dan file cadangan sinkronisasi (`app_settings.json`).
 - **Row Level Security (RLS)**: Kontrol akses keamanan langsung di tingkat baris database PostgreSQL.
 
 ---
@@ -108,10 +110,40 @@ final userRows = await supabase.from('user_private').select();
 final customProdRows = await supabase.from('produk_custom').select();
 ```
 
-### D. Pengaturan Toko & Gambar (`SettingsService`)
+### D. Pengaturan Toko & Konfigurasi Global (`AppSettingsService`)
 ```dart
-// Download konfigurasi toko dari Storage bucket 'katalog'
-final bytes = await supabase.storage.from('katalog').download('app_settings.json');
+// Baca pengaturan toko langsung dari tabel 'app_settings'
+final dbResult = await supabase
+    .from('app_settings')
+    .select('settings_json')
+    .eq('id', 'global_settings')
+    .maybeSingle();
+
+// Upsert pengaturan toko
+await supabase.from('app_settings').upsert({
+  'id': 'global_settings',
+  'settings_json': currentSettings,
+  'updated_at': DateTime.now().toIso8601String(),
+});
+```
+
+### E. Varian Bentuk Sangkar Mandiri Per Baris (`CageService`)
+```dart
+// Fetch seluruh variasi bentuk sangkar dari tabel 'bentuk_sangkar'
+final rows = await supabase
+    .from('bentuk_sangkar')
+    .select()
+    .order('created_at', ascending: true);
+
+// Tambah/Update bentuk sangkar baris per baris
+await supabase.from('bentuk_sangkar').upsert({
+  'id': cage.id,
+  'name': cage.name,
+  'image_url': cage.imageUrl ?? '',
+});
+
+// Hapus bentuk sangkar berdasarkan ID
+await supabase.from('bentuk_sangkar').delete().eq('id', cageId);
 ```
 
 ---

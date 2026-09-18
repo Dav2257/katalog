@@ -30,6 +30,8 @@ Dokumen ini mendefinisikan kebutuhan fungsional, non-fungsional, use case, dan b
 | **FR-20** | Manajemen & Detail User Private | Admin dapat melihat profil lengkap member (*User Private*), kredensial akun, riwayat logo custom yang diajukan, serta pratinjau katalog kustom member melalui `AdminUserDetailPage`. |
 | **FR-21** | Tambah & Edit Produk Publik Admin | Admin dapat menambah produk baru (`AdminAddProductPage`) atau menyunting produk eksisting (`AdminEditProductPage`) dengan foto, harga, deskripsi, tagar, dan variasi bentuk sangkar yang tersinkronisasi dua arah dengan `CageService`. |
 | **FR-22** | Brand Identity & Tampilan Foto Anti-Crop | Logo brand transparan (`logo.png`) dilengkapi varian multi-resolusi (1.0x, 2.0x, 3.0x), auto downsampling cache di `AppSettingsService`, teks *JATIMAS SANGKAR* pada TopNavbar, serta wadah foto utama produk presisi 350px berproperti `BoxFit.contain` pada detail user maupun admin agar desain/logo tidak terpotong (*no-crop*). |
+| **FR-23** | Master Varian Bentuk Sangkar Relasional | Pengelolaan varian bentuk sangkar terhubung langsung secara mandiri baris per baris ke tabel database PostgreSQL `public.bentuk_sangkar` di Supabase, dengan persistensi lokal `SharedPreferences`, sinkronisasi otomatis saat startup, dan navigasi panah geser `<` / `>`. |
+| **FR-24** | Tema Latar Belakang Warna Krem Hangat | Seluruh antarmuka Katalog Umum dan Katalog Khusus mengadopsi latar belakang warna krem hangat (*Warm Cream / Ivory* - `#F8F4EA`) untuk kenyamanan visual dan keselarasan estetika dengan ukiran kayu jati Jepara. |
 
 ---
 
@@ -39,9 +41,9 @@ Dokumen ini mendefinisikan kebutuhan fungsional, non-fungsional, use case, dan b
 | :--- | :--- |
 | **Performa** | Aplikasi dapat melakukan rendering UI pada 60 fps secara halus di perangkat mobile maupun desktop, dengan transisi instan antar layar. |
 | **Keandalan Aset (Reliability)** | Aset brand penting seperti logo WhatsApp di-embed langsung ke memori (Base64) sehingga 100% bebas dari risiko kegagalan muat (asset load/cache error). |
-| **Interaksi Scrolling Desktop & Web** | Komponen horizontal scrolling (seperti baris bentuk sangkar) mendukung scroll mouse-wheel vertikal yang dikonversikan menjadi pergeseran horizontal, serta mouse drag (`PointerDeviceKind.mouse`) agar tidak macet di layar desktop. |
+| **Interaksi Scrolling Desktop & Web** | Komponen horizontal scrolling (seperti baris bentuk sangkar) mendukung scroll mouse-wheel vertikal yang dikonversikan menjadi pergeseran horizontal, tombol panah `<` dan `>`, serta mouse drag (`PointerDeviceKind.mouse`) agar tidak macet di layar desktop. |
 | **Kompatibilitas** | Mendukung multiplatform: Android (API 21+), iOS, Web (Chrome, Firefox, Safari, Edge), Windows Desktop. |
-| **Desain Antarmuka (UI/UX)** | Menggunakan Material Design 3 bernuansa kayu jati Jepara (*Teakwood* `#382314`, `#7A4B29`, `#8B5328`), kartu proporsional seragam, pill-shaped button, dan responsif terhadap variasi ukuran layar. |
+| **Desain Antarmuka (UI/UX)** | Menggunakan Material Design 3 bernuansa kayu jati Jepara (*Teakwood* `#382314`, `#7A4B29`, `#8B5328`), latar belakang krem hangat (*Warm Cream* `#F8F4EA`), kartu proporsional seragam, pill-shaped button, dan responsif terhadap variasi ukuran layar. |
 | **Keamanan & Otorisasi** | Pemisahan hak akses antara akun tamu (guest), member (`UserHomePage`), dan administrator (`AdminDashboardPage`). Token JWT melalui Supabase Auth serta penerapan Row Level Security (RLS) pada database. |
 
 ---

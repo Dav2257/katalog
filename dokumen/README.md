@@ -17,7 +17,7 @@ dokumen/
 │   └── arsitektur_ui.md           # Rincian halaman (Admin Dashboard, Member, Cart, dll.), navigasi, & widget
 └── backend/                       # Dokumentasi server-side & database (Supabase)
     ├── README.md                  # Konfigurasi Supabase, autentikasi role, Storage, & integrasi Service
-    └── skema_database.md          # Struktur 4 tabel inti (produk, produk_custom, user_private, pesanan), Storage, & RLS
+    └── skema_database.md          # Struktur 6 tabel inti aktif (produk, produk_custom, user_private, pesanan, bentuk_sangkar, app_settings), Storage, & RLS
 ```
 
 ---
@@ -26,16 +26,16 @@ dokumen/
 
 | Kategori | Deskripsi | Tautan |
 | :--- | :--- | :--- |
-| **Planing** | Rencana proyek, ruang lingkup, target pengguna, kebutuhan fungsional (FR-01 s/d FR-22) & non-fungsional, alur pengguna, serta roadmap rilis. | [Lihat Dokumen Planing](./planing/README.md) |
-| **Frontend** | Arsitektur aplikasi Flutter, rincian seluruh halaman (`AdminDashboardPage`, `AdminOrderDetailPage`, `AdminCompletedOrderDetailPage`, `AdminUserDetailPage`, `AdminSettingsPage`, `UserHomePage`, `CartPage`), service layer (`AuthService`, `CageService`, `OrderService`, `ProductService`, `AppSettingsService`), komponen (`widgets`), dan manajemen state. | [Lihat Dokumen Frontend](./frontend/README.md) |
-| **Backend** | Integrasi Backend-as-a-Service (BaaS) Supabase, konfigurasi URL & API Key, skema 4 tabel inti PostgreSQL (`produk`, `produk_custom`, `user_private`, `pesanan`), Supabase Storage (`katalog`), dan aturan keamanan (RLS). | [Lihat Dokumen Backend](./backend/README.md) |
+| **Planing** | Rencana proyek, ruang lingkup, target pengguna, kebutuhan fungsional (FR-01 s/d FR-24) & non-fungsional, alur pengguna, serta roadmap rilis. | [Lihat Dokumen Planing](./planing/README.md) |
+| **Frontend** | Arsitektur aplikasi Flutter, rincian seluruh halaman (`AdminDashboardPage`, `AdminOrderDetailPage`, `AdminCompletedOrderDetailPage`, `AdminUserDetailPage`, `AdminSettingsPage`, `UserHomePage`, `CartPage`), tema warna krem hangat, service layer (`AuthService`, `CageService`, `OrderService`, `ProductService`, `AppSettingsService`), komponen (`widgets`), dan manajemen state. | [Lihat Dokumen Frontend](./frontend/README.md) |
+| **Backend** | Integrasi Backend-as-a-Service (BaaS) Supabase, konfigurasi URL & API Key, skema 6 tabel inti aktif PostgreSQL (`produk`, `produk_custom`, `user_private`, `pesanan`, `bentuk_sangkar`, `app_settings`), Supabase Storage (`katalog`), dan aturan keamanan (RLS). | [Lihat Dokumen Backend](./backend/README.md) |
 
 ---
 
 ## 🛠️ Stack Teknologi & Infrastruktur
 
 - **Frontend Framework**: [Flutter SDK](https://flutter.dev/) (Dart `>= 3.11.4`)
-- **Backend & Database**: [Supabase](https://supabase.com/) (PostgreSQL 4 Tabel Inti + JSONB, Supabase Auth, Storage)
+- **Backend & Database**: [Supabase](https://supabase.com/) (PostgreSQL 6 Tabel Inti Aktif + JSONB, Supabase Auth, Storage)
 - **Web Hosting**: [Firebase Hosting](https://firebase.google.com/) (`firebase.json` -> `build/web`)
 - **State & Service Layer**: Modular Service Pattern (`ChangeNotifier`, `AuthService`, `CageService`, `OrderService`, `ProductService`, `AppSettingsService`)
 - **Messaging & Checkout**: WhatsApp Deep Link Gateway (`wa.me`) dengan penyertaan foto produk otomatis

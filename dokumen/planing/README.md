@@ -81,10 +81,10 @@ gantt
 - [x] **Tambah & Edit Produk Publik Admin (`AdminAddProductPage` & `AdminEditProductPage`)**: Menambah dan mengubah produk katalog umum beserta sinkronisasi bentuk sangkar dan gambar.
 - [x] **Pengaturan Toko Admin (`AdminSettingsPage` & `AppSettingsService`)**: Mengatur nomor WhatsApp tujuan seluruh pesanan, pilihan banner katalog umum, layout navbar (Style 1-3), dan font katalog.
 - [x] Bagian "List Produk User Umum" di dashboard admin dengan pencarian berdasarkan Nama/Kode.
-- [x] Bagian "Sangkar" di dashboard admin dengan penambahan bentuk sangkar baru via dialog pop-up, auto-scroll, dan navigasi scrolling horizontal mouse/touch.
-- [x] Navigasi antarmuka cepat tanpa animasi transisi (instant page transitions).
-- [x] **Sinkronisasi Supabase Database 4 Tabel Inti**: Produk publik (`produk`), katalog kustom (`produk_custom`), user private (`user_private`), dan pesanan 4 tahap (`pesanan`).
-- [x] **Cloud Storage Pengaturan Toko**: Konfigurasi global admin disimpan langsung pada file `app_settings.json` di bucket Supabase Storage `katalog`.
+- [x] **Sinkronisasi Supabase Database 6 Tabel Inti Aktif**: Produk publik (`produk`), katalog kustom (`produk_custom`), user private (`user_private`), pesanan 4 tahap (`pesanan`), master bentuk sangkar mandiri (`bentuk_sangkar`), dan pengaturan toko (`app_settings`).
+- [x] **Master Bentuk Sangkar Relasional Mandiri (`public.bentuk_sangkar`)**: Variasi bentuk sangkar dikelola mandiri baris per baris di database Supabase dengan sinkronisasi startup otomatis, loading state halus, dan cache lokal `SharedPreferences`.
+- [x] **Peremajaan Tema Warna Krem Hangat (*Warm Cream / Ivory* - `#F8F4EA`)**: Mengubah background katalog umum dan katalog khusus menjadi warna krem hangat yang estetik dan selaras dengan kayu jati Jepara.
+- [x] **Cloud Storage Pengaturan Toko**: Konfigurasi global admin disimpan langsung pada tabel `app_settings` dan file cadangan `app_settings.json` di bucket Supabase Storage `katalog`.
 - [x] **Hosting Web Otomatis**: Integrasi konfigurasi hosting `firebase.json` untuk rilis Flutter Web ke Firebase Hosting.
 
 ### B. Fitur Prioritas Menengah (Medium Priority)

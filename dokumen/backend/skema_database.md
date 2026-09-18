@@ -77,6 +77,19 @@ erDiagram
         jsonb items "Array [product_name, quantity, cage_type, note, image_url]"
         timestamp created_at
     }
+
+    BENTUK_SANGKAR {
+        string id PK "cage_timestamp_seq"
+        string name "Nama Ukuran / Bentuk Sangkar"
+        text image_url "URL Foto Master Bentuk"
+        timestamp created_at
+    }
+
+    APP_SETTINGS {
+        string id PK "global_settings"
+        jsonb settings_json "Konfigurasi Toko (logo, banner, wa, navbar, font)"
+        timestamp updated_at
+    }
 ```
 
 ---
@@ -164,14 +177,24 @@ CREATE INDEX IF NOT EXISTS idx_pesanan_phone ON public.pesanan(phone);
 CREATE INDEX IF NOT EXISTS idx_pesanan_is_completed ON public.pesanan(is_completed);
 
 -- ==============================================================================
--- 5. TABEL BENTUK SANGKAR (MASTER BENTUK SANGKAR)
--- Dikelola oleh CageService (Tambah/Hapus/Update dari Admin Dashboard, mulai dari 0)
+-- 5. TABEL BENTUK SANGKAR (MASTER BENTUK SANGKAR MANDIRI PER BARIS)
+-- Dikelola oleh CageService (Tambah/Hapus/Update dari Admin Dashboard)
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.bentuk_sangkar (
-    id TEXT PRIMARY KEY,
+    id VARCHAR(255) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     image_url TEXT DEFAULT '',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- ==============================================================================
+-- 6. TABEL APP SETTINGS (PENGATURAN TOKO GLOBAL & ADMIN)
+-- Dikelola oleh AppSettingsService (Logo, Banner, WhatsApp, Navbar, Font)
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS public.app_settings (
+    id VARCHAR(255) PRIMARY KEY,
+    settings_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 ```
 
@@ -182,7 +205,7 @@ CREATE TABLE IF NOT EXISTS public.bentuk_sangkar (
 Selain tabel PostgreSQL di atas, aplikasi menggunakan **Supabase Storage Bucket** bernama `katalog`:
 
 1. **`app_settings.json`**:
-   - Berisi konfigurasi global aplikasi yang dikelola oleh `AppSettingsService` (Nomor WA Admin `adminWhatsApp`, variasi navbar style 1-3, jenis font tampilan, dan URL banner aktif) serta cadangan sinkronisasi sangkar.
+   - Berisi file cadangan konfigurasi global aplikasi dan persistensi offline yang dikelola oleh `AppSettingsService` dan `CageService`.
 2. **Aset Gambar**:
    - Menampung file gambar produk publik, foto request logo custom member, dan gambar sangkar yang diunggah oleh admin maupun user.
 
@@ -197,6 +220,7 @@ ALTER TABLE public.user_private ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.produk_custom ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pesanan ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.bentuk_sangkar ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY;
 
 -- 1. Kebijakan Produk Publik
 CREATE POLICY "Publik dapat melihat produk" ON public.produk 
@@ -223,17 +247,21 @@ CREATE POLICY "Akses insert dan update pesanan" ON public.pesanan
     FOR ALL USING (true);
 
 -- 5. Kebijakan Bentuk Sangkar
-CREATE POLICY "Akses baca bentuk_sangkar" ON public.bentuk_sangkar 
-    FOR SELECT USING (true);
-CREATE POLICY "Akses kelola bentuk_sangkar" ON public.bentuk_sangkar 
-    FOR ALL USING (true);
+CREATE POLICY "Akses penuh bentuk_sangkar" ON public.bentuk_sangkar 
+    FOR ALL USING (true) WITH CHECK (true);
+GRANT ALL ON TABLE public.bentuk_sangkar TO anon, authenticated;
+
+-- 6. Kebijakan App Settings
+CREATE POLICY "Akses penuh app_settings" ON public.app_settings 
+    FOR ALL USING (true) WITH CHECK (true);
+GRANT ALL ON TABLE public.app_settings TO anon, authenticated;
 ```
 
 ---
 
 ## 6. 🧹 Pembersihan Tabel Lama (Legacy Clean-Up)
 
-Bagi database yang sebelumnya telah terbuat tabel bawaan template lama, pembersihan dapat dieksekusi dengan perintah SQL berikut:
+Bagi database yang sebelumnya telah terbuat tabel bawaan template lama yang tidak lagi digunakan, pembersihan dapat dieksekusi dengan perintah SQL berikut (tabel aktif `produk`, `user_private`, `produk_custom`, `pesanan`, `bentuk_sangkar`, dan `app_settings` tetap dipertahankan):
 
 ```sql
 DROP TABLE IF EXISTS public.logo_hashtags CASCADE;
@@ -247,7 +275,6 @@ DROP TABLE IF EXISTS public.cage_shapes CASCADE;
 DROP TABLE IF EXISTS public.private_requests CASCADE;
 DROP TABLE IF EXISTS public.profiles CASCADE;
 DROP TABLE IF EXISTS public.kategori CASCADE;
-DROP TABLE IF EXISTS public.bentuk_sangkar CASCADE;
 DROP TABLE IF EXISTS public.keranjang CASCADE;
 DROP TABLE IF EXISTS public.request_custom CASCADE;
 DROP TABLE IF EXISTS public.item_pesanan CASCADE;
