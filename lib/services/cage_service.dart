@@ -146,39 +146,34 @@ class CageService extends ChangeNotifier {
       List<dynamic> rows = [];
       String activeSource = 'none';
 
-      // 1. Prioritas Utama: Baca dari tabel database public.app_settings
+      // 1. Prioritas Utama: Baca dari tabel terpisah public.bentuk_sangkar (tiap sangkar = 1 baris mandiri)
       try {
-        final dbResult = await supabase
-            .from('app_settings')
-            .select('settings_json')
-            .eq('id', 'global_settings')
-            .maybeSingle();
-        if (dbResult != null && dbResult['settings_json'] is Map) {
-          final sJson = dbResult['settings_json'] as Map;
-          if (sJson['cages'] is List && (sJson['cages'] as List).isNotEmpty) {
-            rows = sJson['cages'] as List;
-            activeSource = 'public.app_settings (Database)';
-          }
+        final tableResult = await supabase
+            .from('bentuk_sangkar')
+            .select()
+            .order('created_at', ascending: true);
+        if (tableResult.isNotEmpty) {
+          rows = tableResult;
+          activeSource = 'public.bentuk_sangkar (Tabel Mandiri)';
         }
       } catch (_) {}
 
-      // 2. Fallback: Baca dari tabel bentuk_sangkar jika sudah dibuat
+      // 2. Fallback: Baca dari tabel database public.app_settings jika tabel bentuk_sangkar belum dibuat/masih kosong
       if (rows.isEmpty) {
         try {
-          rows = await supabase
-              .from('bentuk_sangkar')
-              .select()
-              .order('created_at', ascending: true);
-          if (rows.isNotEmpty) activeSource = 'bentuk_sangkar (Database)';
-        } catch (_) {
-          try {
-            rows = await supabase
-                .from('cage_shapes')
-                .select()
-                .order('created_at', ascending: true);
-            if (rows.isNotEmpty) activeSource = 'cage_shapes (Database)';
-          } catch (_) {}
-        }
+          final dbResult = await supabase
+              .from('app_settings')
+              .select('settings_json')
+              .eq('id', 'global_settings')
+              .maybeSingle();
+          if (dbResult != null && dbResult['settings_json'] is Map) {
+            final sJson = dbResult['settings_json'] as Map;
+            if (sJson['cages'] is List && (sJson['cages'] as List).isNotEmpty) {
+              rows = sJson['cages'] as List;
+              activeSource = 'public.app_settings (Fallback)';
+            }
+          }
+        } catch (_) {}
       }
 
       // 3. Fallback: Baca dari app_settings.json di Storage
@@ -198,6 +193,11 @@ class CageService extends ChangeNotifier {
           }
         }
         await _saveToLocalPrefs();
+
+        // Jika data didapat dari fallback (bukan tabel bentuk_sangkar), coba migrasi otomatis ke bentuk_sangkar
+        if (activeSource != 'public.bentuk_sangkar (Tabel Mandiri)') {
+          _migrateToBentukSangkarTable();
+        }
       } else if (_cages.isEmpty) {
         // Jika cloud kosong tapi lokal punya cache, gunakan cache lokal
         await _loadFromLocalPrefs();
@@ -214,15 +214,26 @@ class CageService extends ChangeNotifier {
     }
   }
 
+  /// Migrasi otomatis baris per baris ke tabel bentuk_sangkar jika tabel sudah dibuat
+  Future<void> _migrateToBentukSangkarTable() async {
+    try {
+      for (final cage in _cages) {
+        await supabase.from('bentuk_sangkar').upsert({
+          'id': cage.id,
+          'name': cage.name,
+          'image_url': cage.imageUrl ?? '',
+        });
+      }
+    } catch (_) {}
+  }
+
   /// Tambah sangkar baru oleh Admin (tersinkronisasi ke memori, lokal prefs, dan database Supabase)
   CageData addCage({String? name, String? imageUrl, Uint8List? imageBytes}) {
     final nextNumber = _cages.length + 1;
     final generatedId = 'cage_${DateTime.now().millisecondsSinceEpoch}_$nextNumber';
-    final cleanName = (name != null && name.trim().isNotEmpty) ? name.trim() : 'Sangkar $nextNumber';
-
     final newCage = CageData(
       id: generatedId,
-      name: cleanName,
+      name: (name != null && name.trim().isNotEmpty) ? name.trim() : 'Sangkar No.$nextNumber',
       imageUrl: imageUrl?.trim(),
       imageBytes: imageBytes,
     );
@@ -231,9 +242,8 @@ class CageService extends ChangeNotifier {
     _saveToLocalPrefs();
     notifyListeners();
 
-    // Simpan permanen ke Supabase Database & Storage
+    // Sinkronkan ke database Supabase
     _syncCagesToCloud();
-
     return newCage;
   }
 
@@ -245,6 +255,11 @@ class CageService extends ChangeNotifier {
       _cages.removeAt(index);
       _saveToLocalPrefs();
       notifyListeners();
+
+      // Hapus baris dari tabel bentuk_sangkar jika ada
+      try {
+        supabase.from('bentuk_sangkar').delete().eq('id', id);
+      } catch (_) {}
 
       // Sinkronkan ke database Supabase
       _syncCagesToCloud();
@@ -259,9 +274,14 @@ class CageService extends ChangeNotifier {
     final cleanName = name.trim().toLowerCase();
     final index = _cages.indexWhere((c) => c.name.trim().toLowerCase() == cleanName);
     if (index >= 0) {
+      final removedId = _cages[index].id;
       _cages.removeAt(index);
       _saveToLocalPrefs();
       notifyListeners();
+
+      try {
+        supabase.from('bentuk_sangkar').delete().eq('id', removedId);
+      } catch (_) {}
 
       _syncCagesToCloud();
       return true;
