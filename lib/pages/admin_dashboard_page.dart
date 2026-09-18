@@ -317,6 +317,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       ProductService.instance.fetchProducts();
       UserService.instance.fetchUsers();
       OrderService.instance.fetchOrders();
+      CageService.instance.fetchCages();
     });
   }
 
@@ -2500,33 +2501,62 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                   physics: const BouncingScrollPhysics(),
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Row(
-                    children: cages.isEmpty
+                    children: CageService.instance.isLoading && cages.isEmpty
                         ? [
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
+                            const Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 16,
                                 vertical: 12,
                               ),
                               child: Row(
                                 children: [
-                                  Icon(
-                                    Icons.info_outline,
-                                    size: 18,
-                                    color: Colors.grey.shade400,
+                                  SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Color(0xFF6D4C41),
+                                    ),
                                   ),
-                                  const SizedBox(width: 8),
+                                  SizedBox(width: 10),
                                   Text(
-                                    'Belum ada bentuk sangkar di database (0 data). Klik "+ Tambah Bentuk Sangkar" untuk membuatnya.',
+                                    'Memuat bentuk sangkar dari database...',
                                     style: TextStyle(
                                       fontSize: 13,
-                                      fontStyle: FontStyle.italic,
-                                      color: Colors.grey.shade600,
+                                      color: Colors.black54,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
                           ]
+                        : cages.isEmpty
+                            ? [
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 12,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.info_outline,
+                                        size: 18,
+                                        color: Colors.grey.shade400,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Belum ada bentuk sangkar di database (0 data). Klik "+ Tambah Bentuk Sangkar" untuk membuatnya.',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontStyle: FontStyle.italic,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ]
                         : cages.map((cage) {
                             return Container(
                               margin: const EdgeInsets.only(right: 12),

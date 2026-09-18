@@ -30,6 +30,9 @@ Future<void> main() async {
   // Muat pengaturan toko (Banner, Logo, WhatsApp, Akun) yang tersimpan di Supabase
   await AppSettingsService.instance.loadSettings();
 
+  // Muat bentuk sangkar dari database Supabase (tabel bentuk_sangkar)
+  await CageService.instance.fetchCages();
+
   runApp(const MyApp());
 }
 
