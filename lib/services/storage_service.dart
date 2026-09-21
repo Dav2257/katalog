@@ -69,28 +69,36 @@ class StorageService {
           ? 'jpg'
           : 'png';
       final mime = ext == 'jpg' ? 'image/jpeg' : 'image/png';
-      final fileName = 'settings/${prefix}_${DateTime.now().millisecondsSinceEpoch}.$ext';
+      final timeStamp = DateTime.now().millisecondsSinceEpoch;
+      final fileNames = [
+        'settings/${prefix}_$timeStamp.$ext',
+        '${prefix}_$timeStamp.$ext',
+      ];
 
       final buckets = ['katalog', 'images', 'uploads', 'public'];
       for (final bucket in buckets) {
-        try {
-          await supabase.storage.from(bucket).uploadBinary(
-                fileName,
-                bytes,
-                fileOptions: FileOptions(
-                  contentType: mime,
-                  upsert: true,
-                ),
-              );
-          final publicUrl = supabase.storage.from(bucket).getPublicUrl(fileName);
-          if (publicUrl.isNotEmpty) {
-            debugPrint('StorageService: Berhasil upload bytes $prefix ke $bucket -> $publicUrl');
-            return publicUrl;
+        for (final fileName in fileNames) {
+          try {
+            await supabase.storage.from(bucket).uploadBinary(
+                  fileName,
+                  bytes,
+                  fileOptions: FileOptions(
+                    contentType: mime,
+                    upsert: true,
+                  ),
+                );
+            final publicUrl = supabase.storage.from(bucket).getPublicUrl(fileName);
+            if (publicUrl.isNotEmpty) {
+              debugPrint('StorageService: Berhasil upload bytes $prefix ke $bucket/$fileName -> $publicUrl');
+              return publicUrl;
+            }
+          } catch (err) {
+            debugPrint('StorageService upload attempt to $bucket/$fileName failed: $err');
           }
-        } catch (_) {}
+        }
       }
     } catch (e) {
-      debugPrint('StorageService uploadBytes error: $e');
+      debugPrint('StorageService uploadBytes general error: $e');
     }
     return null;
   }

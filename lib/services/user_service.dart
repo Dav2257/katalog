@@ -479,13 +479,20 @@ class UserService extends ChangeNotifier {
         'last_edited_date': updatedProduct.lastEditedDate,
       };
 
-      await supabase
-          .from('produk_custom')
-          .update(dataToUpdate)
-          .match({
-            'user_identifier': identifier.trim(),
-            'nama': updatedProduct.name,
-          });
+      if (updatedProduct.id.isNotEmpty && !updatedProduct.id.startsWith('custom_')) {
+        await supabase
+            .from('produk_custom')
+            .update(dataToUpdate)
+            .eq('id', updatedProduct.id);
+      } else {
+        await supabase
+            .from('produk_custom')
+            .update(dataToUpdate)
+            .match({
+              'user_identifier': identifier.trim(),
+              'nama': updatedProduct.name,
+            });
+      }
     } catch (e) {
       debugPrint('Catatan: Gagal update produk_custom di Supabase: $e');
     }

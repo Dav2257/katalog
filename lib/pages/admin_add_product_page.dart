@@ -18,7 +18,8 @@ class AdminAddProductPage extends StatefulWidget {
 class _AdminAddProductPageState extends State<AdminAddProductPage> {
   late TextEditingController _codeController;
   late TextEditingController _nameController;
-  late TextEditingController _hashtagController;
+  final TextEditingController _hashtagInputController = TextEditingController();
+  final List<String> _hashtagsList = ['#sangkar', '#jati'];
 
   late final PageController _slideController;
   final ScrollController _cageScrollController = ScrollController();
@@ -29,13 +30,6 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
   // Variasi bentuk sangkar disinkronkan dari CageService
   final List<ProductCageVariation> _cages = [];
 
-  static const List<String> samplePhotos = [
-    'https://images.unsplash.com/photo-1548767797-d8c844163c4c?w=600',
-    'https://images.unsplash.com/photo-1552728089-57bdde30beb3?w=600',
-    'https://images.unsplash.com/photo-1522858547137-f1dcec554f55?w=600',
-    'https://images.unsplash.com/photo-1555169062-013468b47731?w=600',
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -43,15 +37,18 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
     final defaultCode = nextNum < 10 ? 'A0$nextNum' : 'A$nextNum';
     _codeController = TextEditingController(text: defaultCode);
     _nameController = TextEditingController();
-    _hashtagController = TextEditingController(text: '#sangkar #jati #jepara');
 
     final serviceCages = CageService.instance.cages;
     if (serviceCages.isNotEmpty) {
-      _cages.addAll(serviceCages.map((c) => ProductCageVariation(
-            id: c.id,
-            name: c.name,
-            imageUrl: c.imageUrl ?? '',
-          )));
+      _cages.addAll(serviceCages.map((c) {
+        final cleanImg = (c.imageUrl ?? '').contains('images.unsplash.com') ? '' : (c.imageUrl ?? '');
+        return ProductCageVariation(
+          id: c.id,
+          name: c.name,
+          imageUrl: cleanImg,
+          imageBytes: c.imageBytes,
+        );
+      }));
     }
 
     _slideController = PageController();
@@ -89,11 +86,38 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
     } catch (_) {}
   }
 
+  void _addHashtag([String? directValue]) {
+    final val = (directValue ?? _hashtagInputController.text).trim();
+    if (val.isEmpty) return;
+    final items = val
+        .split(RegExp(r'[\s,]+'))
+        .map((t) => t.trim())
+        .where((t) => t.isNotEmpty)
+        .map((t) => t.startsWith('#') ? t : '#$t');
+
+    setState(() {
+      for (final item in items) {
+        if (!_hashtagsList.contains(item)) {
+          _hashtagsList.add(item);
+        }
+      }
+      _hashtagInputController.clear();
+    });
+  }
+
+  void _removeHashtag(int index) {
+    setState(() {
+      if (index >= 0 && index < _hashtagsList.length) {
+        _hashtagsList.removeAt(index);
+      }
+    });
+  }
+
   @override
   void dispose() {
     _codeController.dispose();
     _nameController.dispose();
-    _hashtagController.dispose();
+    _hashtagInputController.dispose();
     _slideController.dispose();
     _cageScrollController.dispose();
     super.dispose();
@@ -102,7 +126,8 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
   void _scrollThumbnailToVisible(int slideIndex) {
     if (!_cageScrollController.hasClients) return;
     const itemWidth = 131.0;
-    final targetOffset = (slideIndex * itemWidth) - 80.0;
+    final targetIndex = (slideIndex > 0) ? (slideIndex - 1) : 0;
+    final targetOffset = (targetIndex * itemWidth) - 80.0;
     _cageScrollController.animateTo(
       targetOffset.clamp(0.0, _cageScrollController.position.maxScrollExtent),
       duration: const Duration(milliseconds: 250),
@@ -115,7 +140,12 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
   Future<void> _createProduct() async {
     final code = _codeController.text.trim();
     final name = _nameController.text.trim();
-    final hashtags = _hashtagController.text.trim();
+    if (_hashtagInputController.text.trim().isNotEmpty) {
+      _addHashtag();
+    }
+    final cleanHashtags = _hashtagsList.isNotEmpty
+        ? _hashtagsList.join(' ')
+        : '#sangkar #jati';
 
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -129,7 +159,6 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
     });
 
     final cleanCode = code.isNotEmpty ? code : 'A01';
-    final cleanHashtags = hashtags.isNotEmpty ? hashtags : '#sangkar #jati #jepara';
 
     try {
       await ProductService.instance.addProduct(
@@ -514,46 +543,6 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       ),
                     ),
-                    const SizedBox(height: 14),
-
-                    // Contoh Foto
-                    const Text(
-                      'Atau Pilih Contoh Foto Sangkar:',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF6E6E6E)),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: List.generate(samplePhotos.length, (idx) {
-                        final photo = samplePhotos[idx];
-                        final isChosen = urlController.text == photo && uploadedImageBytes == null;
-                        return InkWell(
-                          onTap: () {
-                            setDialogState(() {
-                              uploadedImageBytes = null;
-                              uploadedFileName = null;
-                              urlController.text = photo;
-                            });
-                          },
-                          borderRadius: BorderRadius.circular(8),
-                          child: Container(
-                            width: 55,
-                            height: 55,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: isChosen ? const Color(0xFF7A4B29) : Colors.grey.shade300,
-                                width: isChosen ? 2.5 : 1,
-                              ),
-                              image: DecorationImage(
-                                image: NetworkImage(photo),
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                        );
-                      }),
-                    ),
                   ],
                 ),
               ),
@@ -848,9 +837,7 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
                         ),
                         const SizedBox(width: 5),
                         Text(
-                          isLogoSlide
-                              ? 'Logo Produk (${_currentSlideIndex + 1}/$totalSlides)'
-                              : '${_cages[currentCageIndex].name} (${_currentSlideIndex + 1}/$totalSlides)',
+                          '(${_currentSlideIndex + 1}/$totalSlides)',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 11,
@@ -1009,233 +996,247 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
 
         const SizedBox(height: 16),
 
-        // Horizontal List Thumbnail (Slide 1: Logo, Slide 2+: Bentuk Sangkar)
-        SingleChildScrollView(
-          controller: _cageScrollController,
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Thumbnail 1: Logo Produk
-              Padding(
-                padding: const EdgeInsets.only(right: 16.0),
-                child: Column(
+        // Horizontal List Thumbnail Bentuk Sangkar dengan Tombol Prev & Next
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Tombol Previous (<)
+            if (_cages.length > 3) ...[
+              InkWell(
+                onTap: () {
+                  if (_cageScrollController.hasClients) {
+                    _cageScrollController.animateTo(
+                      (_cageScrollController.offset - 131).clamp(
+                        0.0,
+                        _cageScrollController.position.maxScrollExtent,
+                      ),
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeInOut,
+                    );
+                  }
+                },
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                    border: Border.all(color: Colors.grey.shade300, width: 1),
+                  ),
+                  child: const Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    size: 14,
+                    color: Color(0xFF2C1810),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
+
+            // Daftar Thumbnail yang Dapat Digeser
+            Expanded(
+              child: SingleChildScrollView(
+                controller: _cageScrollController,
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SizedBox(
-                      width: 115,
-                      height: 115,
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          Tooltip(
-                            message: 'Lihat / Pilih Logo Produk',
-                            child: InkWell(
-                              onTap: () {
-                                _slideController.animateToPage(
-                                  0,
-                                  duration: const Duration(milliseconds: 300),
-                                  curve: Curves.easeInOut,
-                                );
-                              },
-                              borderRadius: BorderRadius.circular(14),
-                              child: Container(
+                    // Bentuk Sangkar
+                    ...List.generate(_cages.length, (index) {
+                      final cage = _cages[index];
+                      final isSelected = _currentSlideIndex == index + 1;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 16.0),
+                        child: SizedBox(
+                          width: 115,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Kotak Sangkar (Klik langsung untuk geser ke slide atau ganti foto)
+                              SizedBox(
                                 width: 115,
                                 height: 115,
-                                decoration: BoxDecoration(
-                                  color: _currentSlideIndex == 0
-                                      ? const Color(0xFF6E6E6E)
-                                      : const Color(0xFFA6A6A6),
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: _currentSlideIndex == 0
-                                      ? Border.all(color: const Color(0xFF7A4B29), width: 3)
-                                      : null,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.08),
-                                      blurRadius: 6,
-                                      offset: const Offset(0, 2),
+                                child: Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    Tooltip(
+                                      message: 'Lihat / Pilih ${cage.name}',
+                                      child: InkWell(
+                                        onTap: () {
+                                          _slideController.animateToPage(
+                                            index + 1,
+                                            duration: const Duration(milliseconds: 300),
+                                            curve: Curves.easeInOut,
+                                          );
+                                        },
+                                        borderRadius: BorderRadius.circular(14),
+                                        child: Container(
+                                          width: 115,
+                                          height: 115,
+                                          decoration: BoxDecoration(
+                                            color: isSelected
+                                                ? const Color(0xFF6E6E6E)
+                                                : const Color(0xFFA6A6A6),
+                                            borderRadius: BorderRadius.circular(14),
+                                            border: isSelected
+                                                ? Border.all(color: const Color(0xFF7A4B29), width: 3)
+                                                : null,
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black.withValues(alpha: 0.08),
+                                                blurRadius: 6,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ],
+                                          ),
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(12),
+                                            child: cage.buildImage(
+                                              fit: BoxFit.cover,
+                                              placeholder: const Center(
+                                                child: Icon(
+                                                  Icons.add_photo_alternate_rounded,
+                                                  color: Colors.white,
+                                                  size: 40,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+
+                                    // Badge Edit Foto di pojok kanan bawah
+                                    Positioned(
+                                      bottom: 6,
+                                      right: 6,
+                                      child: InkWell(
+                                        onTap: () => _showEditPhotoDialog(isCage: true, cageIndex: index),
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Container(
+                                          padding: const EdgeInsets.all(5),
+                                          decoration: BoxDecoration(
+                                            color: Colors.black.withValues(alpha: 0.7),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Icon(
+                                            Icons.camera_alt_rounded,
+                                            size: 14,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
                                     ),
                                   ],
                                 ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: _mainImageUrl.isNotEmpty
-                                      ? Product.buildImageFromSource(
-                                          _mainImageUrl,
-                                          fit: BoxFit.cover,
-                                          placeholder: const Center(
-                                            child: Icon(
-                                              Icons.add_photo_alternate_rounded,
-                                              color: Colors.white,
-                                              size: 40,
-                                            ),
-                                          ),
-                                        )
-                                      : const Center(
-                                          child: Icon(
-                                            Icons.add_photo_alternate_rounded,
-                                            color: Colors.white,
-                                            size: 40,
-                                          ),
-                                        ),
+                              ),
+                              const SizedBox(height: 8),
+
+                              // Label Nama Sangkar (Maksimal 2 baris agar rapi dan tidak merenggangkan kotak)
+                              Text(
+                                cage.name,
+                                textAlign: TextAlign.center,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                                  color: isSelected ? const Color(0xFF2C1810) : const Color(0xFF555555),
                                 ),
                               ),
-                            ),
+                            ],
                           ),
-
-                          // Badge Edit Foto di pojok kanan bawah
-                          Positioned(
-                            bottom: 6,
-                            right: 6,
-                            child: InkWell(
-                              onTap: () => _showEditPhotoDialog(isCage: false),
-                              borderRadius: BorderRadius.circular(12),
-                              child: Container(
-                                padding: const EdgeInsets.all(5),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.7),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.camera_alt_rounded,
-                                  size: 14,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-
-                    // Label Logo Produk
-                    Text(
-                      'Logo Produk',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: _currentSlideIndex == 0 ? FontWeight.bold : FontWeight.w600,
-                        color: _currentSlideIndex == 0 ? const Color(0xFF2C1810) : const Color(0xFF555555),
-                      ),
-                    ),
+                        ),
+                      );
+                    }),
                   ],
                 ),
               ),
+            ),
 
-              // Thumbnail 2 dst: Bentuk Sangkar
-              ...List.generate(_cages.length, (index) {
-                final cage = _cages[index];
-                final isSelected = _currentSlideIndex == index + 1;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 16.0),
-                  child: Column(
-                    children: [
-                      // Kotak Sangkar (Klik langsung untuk geser ke slide atau ganti foto)
-                      SizedBox(
-                        width: 115,
-                        height: 115,
-                        child: Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            Tooltip(
-                              message: 'Lihat / Pilih ${cage.name}',
-                              child: InkWell(
-                                onTap: () {
-                                  _slideController.animateToPage(
-                                    index + 1,
-                                    duration: const Duration(milliseconds: 300),
-                                    curve: Curves.easeInOut,
-                                  );
-                                },
-                                borderRadius: BorderRadius.circular(14),
-                                child: Container(
-                                  width: 115,
-                                  height: 115,
-                                  decoration: BoxDecoration(
-                                    color: isSelected
-                                        ? const Color(0xFF6E6E6E)
-                                        : const Color(0xFFA6A6A6),
-                                    borderRadius: BorderRadius.circular(14),
-                                    border: isSelected
-                                        ? Border.all(color: const Color(0xFF7A4B29), width: 3)
-                                        : null,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(alpha: 0.08),
-                                        blurRadius: 6,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(12),
-                                    child: cage.buildImage(
-                                      fit: BoxFit.cover,
-                                      placeholder: const Center(
-                                        child: Icon(
-                                          Icons.add_photo_alternate_rounded,
-                                          color: Colors.white,
-                                          size: 40,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-
-                            // Badge Edit Foto di pojok kanan bawah
-                            Positioned(
-                              bottom: 6,
-                              right: 6,
-                              child: InkWell(
-                                onTap: () => _showEditPhotoDialog(isCage: true, cageIndex: index),
-                                borderRadius: BorderRadius.circular(12),
-                                child: Container(
-                                  padding: const EdgeInsets.all(5),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withValues(alpha: 0.7),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(
-                                    Icons.camera_alt_rounded,
-                                    size: 14,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+            // Tombol Next (>)
+            if (_cages.length > 3) ...[
+              const SizedBox(width: 8),
+              InkWell(
+                onTap: () {
+                  if (_cageScrollController.hasClients) {
+                    _cageScrollController.animateTo(
+                      (_cageScrollController.offset + 131).clamp(
+                        0.0,
+                        _cageScrollController.position.maxScrollExtent,
                       ),
-                      const SizedBox(height: 8),
-
-                      // Label Nama Sangkar (misal Sangkar 1, Sangkar 2)
-                      Text(
-                        cage.name,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                          color: isSelected ? const Color(0xFF2C1810) : const Color(0xFF555555),
-                        ),
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeInOut,
+                    );
+                  }
+                },
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
                       ),
                     ],
+                    border: Border.all(color: Colors.grey.shade300, width: 1),
                   ),
-                );
-              }),
+                  child: const Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 14,
+                    color: Color(0xFF2C1810),
+                  ),
+                ),
+              ),
             ],
-          ),
+          ],
         ),
       ],
     );
   }
 
-  Widget _buildPlaceholderIcon() {
-    return const Center(
-      child: Icon(
-        Icons.add_photo_alternate_rounded,
-        size: 78,
-        color: Colors.white,
+  Widget _buildPlaceholderIcon({String? label}) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.add_photo_alternate_rounded,
+            size: 64,
+            color: Colors.white.withValues(alpha: 0.8),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label ?? 'Belum ada foto',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Colors.white.withValues(alpha: 0.9),
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Klik untuk upload foto',
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.white.withValues(alpha: 0.65),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1322,22 +1323,81 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
         ),
         const SizedBox(height: 14),
 
-        // Input Field Hashtag / Kategori Produk
+        // Daftar Chip Hashtag Terpisah yang Sudah Ditambahkan
+        if (_hashtagsList.isNotEmpty) ...[
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: List.generate(_hashtagsList.length, (idx) {
+              final tag = _hashtagsList[idx];
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5ECD7),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: const Color(0xFF7A4B29).withValues(alpha: 0.35),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      tag,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF4A301E),
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    InkWell(
+                      onTap: () => _removeHashtag(idx),
+                      borderRadius: BorderRadius.circular(10),
+                      child: const Padding(
+                        padding: EdgeInsets.all(2.0),
+                        child: Icon(
+                          Icons.close_rounded,
+                          size: 13,
+                          color: Color(0xFF7A4B29),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ),
+          const SizedBox(height: 8),
+        ],
+
+        // Input Field untuk Memasukkan Hashtag Satu per Satu
         SizedBox(
           width: double.infinity,
           height: 38,
           child: TextField(
             key: const Key('admin_add_hashtag_field'),
-            controller: _hashtagController,
+            controller: _hashtagInputController,
+            onSubmitted: (_) => _addHashtag(),
             style: const TextStyle(
-              fontSize: 14,
+              fontSize: 13,
               fontWeight: FontWeight.w600,
               color: Color(0xFF4A4A4A),
             ),
             decoration: InputDecoration(
-              hintText: 'Hashtag (Contoh: #sangkar #jati #jepara)',
-              hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF9E9E9E)),
+              hintText: 'Ketik hashtag lalu tekan Enter atau ikon +',
+              hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF9E9E9E)),
               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              suffixIcon: IconButton(
+                icon: const Icon(
+                  Icons.add_circle_outline_rounded,
+                  size: 20,
+                  color: Color(0xFF7A4B29),
+                ),
+                tooltip: 'Tambahkan Hashtag',
+                onPressed: () => _addHashtag(),
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(6),
                 borderSide: const BorderSide(color: Color(0xFFAAAAAA)),

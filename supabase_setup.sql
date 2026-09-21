@@ -98,3 +98,50 @@ ALTER TABLE public.pesanan ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Akses penuh pesanan" ON public.pesanan;
 CREATE POLICY "Akses penuh pesanan" ON public.pesanan FOR ALL USING (true) WITH CHECK (true);
 GRANT ALL ON TABLE public.pesanan TO anon, authenticated;
+
+
+-- ------------------------------------------------------------------------------
+-- 5. TABEL PENGATURAN GLOBAL TOKO / APLIKASI (Logo, Banner, Login Wallpaper, WA, Akun)
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.app_settings (
+    id VARCHAR(50) PRIMARY KEY DEFAULT 'global_settings',
+    settings_json JSONB NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Akses penuh app_settings" ON public.app_settings;
+CREATE POLICY "Akses penuh app_settings" ON public.app_settings FOR ALL USING (true) WITH CHECK (true);
+GRANT ALL ON TABLE public.app_settings TO anon, authenticated;
+
+
+-- ------------------------------------------------------------------------------
+-- 6. SUPABASE STORAGE BUCKET & POLICIES (Bucket 'katalog' untuk Gambar & JSON)
+-- ------------------------------------------------------------------------------
+-- 1. Buat bucket 'katalog' jika belum ada dan pastikan publik
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('katalog', 'katalog', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+-- 2. Kebijakan RLS storage.objects agar publik/anon bisa melihat, mengunggah, memperbarui, & menghapus
+DROP POLICY IF EXISTS "Public Access Katalog Storage" ON storage.objects;
+CREATE POLICY "Public Access Katalog Storage" ON storage.objects
+FOR ALL USING (bucket_id = 'katalog') WITH CHECK (bucket_id = 'katalog');
+
+
+-- ------------------------------------------------------------------------------
+-- 7. TABEL BENTUK SANGKAR (Variasi Bentuk Sangkar di Dashboard Admin)
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.bentuk_sangkar (
+    id VARCHAR(255) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    image_url TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.bentuk_sangkar ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Akses penuh bentuk_sangkar" ON public.bentuk_sangkar;
+CREATE POLICY "Akses penuh bentuk_sangkar" ON public.bentuk_sangkar FOR ALL USING (true) WITH CHECK (true);
+GRANT ALL ON TABLE public.bentuk_sangkar TO anon, authenticated;
+
+

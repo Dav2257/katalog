@@ -24,8 +24,14 @@ Future<void> main() async {
     publishableKey: SupabaseConfig.supabaseAnonKey,
   );
 
+  // Muat status autentikasi yang tersimpan di perangkat (SharedPreferences)
+  await AuthService.instance.init();
+
   // Muat pengaturan toko (Banner, Logo, WhatsApp, Akun) yang tersimpan di Supabase
   await AppSettingsService.instance.loadSettings();
+
+  // Muat bentuk sangkar dari database Supabase (tabel bentuk_sangkar)
+  await CageService.instance.fetchCages();
 
   runApp(const MyApp());
 }
@@ -46,6 +52,17 @@ class NoTransitionsBuilder extends PageTransitionsBuilder {
   }
 }
 
+/// ============================================================================
+/// WARNA BACKGROUND HALAMAN UTAMA (KATALOG UMUM & KATALOG PRIVATE)
+/// Ganti kode HEX di bawah ini jika ingin mengubah warna background halaman:
+/// Contoh opsi warna:
+/// - Color(0xFFF5EBE1) : Krem Lembut Elegan (Default sekarang)
+/// - Color(0xFFF7EFE5) : Krem Hangat Cerah
+/// - Color(0xFFF5ECD7) : Krem Kuning Gading / Warm Ivory
+/// - Color(0xFFEDE4D3) : Krem Beige Klasik
+/// ============================================================================
+const Color kCatalogBackgroundColor = Color(0xFFF5ECD7);
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -61,7 +78,7 @@ class MyApp extends StatelessWidget {
             fontFamily: AppSettingsService.instance.fontFamily,
             colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
             useMaterial3: true,
-            scaffoldBackgroundColor: Colors.grey.shade50,
+            scaffoldBackgroundColor: kCatalogBackgroundColor,
             pageTransitionsTheme: const PageTransitionsTheme(
               builders: {
                 TargetPlatform.android: NoTransitionsBuilder(),
@@ -94,6 +111,10 @@ class _MyHomePageState extends State<MyHomePage> {
   final ScrollController _scrollController = ScrollController();
   String _searchQuery = '';
 
+  // Infinite Scroll state untuk Katalog Produk Standar (Mencegah frame drop)
+  int _publicProductLimit = 10;
+  bool _isLoadingMorePublic = false;
+
   // State Keranjang Belanja Terpisah (Guest vs Member Login)
   final List<CartItem> _guestCart = [];
   final List<CartItem> _userCart = [];
@@ -110,45 +131,76 @@ class _MyHomePageState extends State<MyHomePage> {
   // Status Tampilan Katalog Standar untuk Member (Toggle jika ingin lihat produk umum)
   bool _showStandardCatalogForUser = false;
 
-  // State Status Login Pengguna & Role Admin
-  bool _isLoggedIn = false;
-  bool _isAdmin = false;
+  // State Status Login Pengguna & Role Admin (Sinkron langsung dengan AuthService)
+  bool get _isLoggedIn => AuthService.instance.isLoggedIn;
+  bool get _isAdmin => AuthService.instance.isAdmin;
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onMainCatalogScroll);
     AuthService.instance.addListener(_handleAuthUpdate);
     ProductService.instance.addListener(_handleProductUpdate);
     UserService.instance.addListener(_handleUserUpdate);
-    _syncAuthFromService();
-    ProductService.instance.fetchProducts();
-    UserService.instance.fetchUsers();
-    OrderService.instance.fetchOrders();
-    CageService.instance.fetchCages();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ProductService.instance.fetchProducts();
+      UserService.instance.fetchUsers();
+      OrderService.instance.fetchOrders();
+      CageService.instance.fetchCages();
+    });
   }
 
-  void _syncAuthFromService() {
-    _isLoggedIn = AuthService.instance.isLoggedIn;
-    _isAdmin = AuthService.instance.isAdmin;
+  void _onMainCatalogScroll() {
+    if (!_scrollController.hasClients) return;
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 250) {
+      _loadMorePublicProducts();
+    }
+  }
+
+  void _loadMorePublicProducts([int? maxCount]) {
+    if (_isLoadingMorePublic) return;
+    final total = maxCount ?? ProductService.instance.products.length;
+    if (_publicProductLimit >= total) return;
+
+    setState(() {
+      _isLoadingMorePublic = true;
+    });
+
+    Future.delayed(const Duration(milliseconds: 250), () {
+      if (mounted) {
+        setState(() {
+          _publicProductLimit = _publicProductLimit + 10;
+          _isLoadingMorePublic = false;
+        });
+      }
+    });
   }
 
   void _handleAuthUpdate() {
     if (!mounted) return;
-    setState(() {
-      _syncAuthFromService();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() {});
     });
   }
 
   void _handleProductUpdate() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   void _handleUserUpdate() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onMainCatalogScroll);
     AuthService.instance.removeListener(_handleAuthUpdate);
     ProductService.instance.removeListener(_handleProductUpdate);
     UserService.instance.removeListener(_handleUserUpdate);
@@ -223,8 +275,6 @@ class _MyHomePageState extends State<MyHomePage> {
               email: email,
             );
             setState(() {
-              _isLoggedIn = true;
-              _isAdmin = isAdmin;
               _showStandardCatalogForUser = false;
             });
           },
@@ -238,14 +288,11 @@ class _MyHomePageState extends State<MyHomePage> {
       final email = result['email'] as String?;
       AuthService.instance.login(isAdmin: isAdmin, phone: phone, email: email);
       setState(() {
-        _isLoggedIn = true;
-        _isAdmin = isAdmin;
         _showStandardCatalogForUser = false;
       });
     } else if (result == true) {
       AuthService.instance.login(isAdmin: false);
       setState(() {
-        _isLoggedIn = true;
         _showStandardCatalogForUser = false;
       });
     }
@@ -307,8 +354,6 @@ class _MyHomePageState extends State<MyHomePage> {
   void _handleLogout() async {
     await AuthService.instance.logout();
     setState(() {
-      _isLoggedIn = false;
-      _isAdmin = false;
       _showStandardCatalogForUser = false;
     });
     if (mounted) {
@@ -355,6 +400,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }).toList();
 
     return Scaffold(
+      backgroundColor: kCatalogBackgroundColor,
       appBar: TopNavbar(
         searchController: _searchController,
         cartItemCount: _totalCartCount,
@@ -364,6 +410,7 @@ class _MyHomePageState extends State<MyHomePage> {
           setState(() {
             _searchController.clear();
             _searchQuery = '';
+            _publicProductLimit = 10;
             _showStandardCatalogForUser = false;
           });
           if (_scrollController.hasClients) {
@@ -377,6 +424,7 @@ class _MyHomePageState extends State<MyHomePage> {
         onSearchChanged: (value) {
           setState(() {
             _searchQuery = value;
+            _publicProductLimit = 10;
           });
         },
         onCartTap: _openCartPage,
@@ -534,6 +582,7 @@ class _MyHomePageState extends State<MyHomePage> {
                               setState(() {
                                 _searchController.clear();
                                 _searchQuery = '';
+                                _publicProductLimit = 10;
                               });
                             },
                             child: const Text('Reset'),
@@ -611,21 +660,87 @@ class _MyHomePageState extends State<MyHomePage> {
                             childAspectRatio = 0.73;
                           }
 
-                          return GridView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: filteredProducts.length,
-                            gridDelegate:
-                                SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: crossAxisCount,
-                                  crossAxisSpacing: 12,
-                                  mainAxisSpacing: 14,
-                                  childAspectRatio: childAspectRatio,
+                          final visibleProducts = filteredProducts
+                              .take(_publicProductLimit)
+                              .toList();
+                          final hasMore =
+                              filteredProducts.length > _publicProductLimit;
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              GridView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: visibleProducts.length,
+                                gridDelegate:
+                                    SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: crossAxisCount,
+                                      crossAxisSpacing: 12,
+                                      mainAxisSpacing: 14,
+                                      childAspectRatio: childAspectRatio,
+                                    ),
+                                itemBuilder: (context, index) {
+                                  final product = visibleProducts[index];
+                                  return _buildProductCard(product);
+                                },
+                              ),
+                              const SizedBox(height: 20),
+                              if (_isLoadingMorePublic)
+                                const Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      vertical: 16.0,
+                                    ),
+                                    child: CircularProgressIndicator(
+                                      color: Color(0xFF7A4B29),
+                                      strokeWidth: 2.5,
+                                    ),
+                                  ),
+                                )
+                              else if (hasMore)
+                                Center(
+                                  child: OutlinedButton.icon(
+                                    onPressed: () => _loadMorePublicProducts(
+                                      filteredProducts.length,
+                                    ),
+                                    icon: const Icon(
+                                      Icons.keyboard_arrow_down_rounded,
+                                      color: Color(0xFF7A4B29),
+                                    ),
+                                    label: Text(
+                                      'Muat Lebih Banyak (${filteredProducts.length - _publicProductLimit} lagi)',
+                                      style: const TextStyle(
+                                        color: Color(0xFF7A4B29),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      side: const BorderSide(
+                                        color: Color(0xFF7A4B29),
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 20,
+                                        vertical: 12,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              else if (filteredProducts.length > 10)
+                                Center(
+                                  child: Text(
+                                    'Semua ${filteredProducts.length} produk telah ditampilkan',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.grey.shade500,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
                                 ),
-                            itemBuilder: (context, index) {
-                              final product = filteredProducts[index];
-                              return _buildProductCard(product);
-                            },
+                            ],
                           );
                         },
                       ),
@@ -692,26 +807,39 @@ class _MyHomePageState extends State<MyHomePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Kategori Produk
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.primaryContainer.withValues(alpha: 0.6),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      product.category,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: Theme.of(context).colorScheme.primary,
-                        fontWeight: FontWeight.w600,
+                  // Kategori / Hashtag Produk Terpisah
+                  SizedBox(
+                    height: 20,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: (product.hashtagList.isNotEmpty
+                                ? product.hashtagList
+                                : [product.category])
+                            .map((tag) {
+                          return Container(
+                            margin: const EdgeInsets.only(right: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primaryContainer
+                                  .withValues(alpha: 0.6),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              tag,
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Theme.of(context).colorScheme.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          );
+                        }).toList(),
                       ),
                     ),
                   ),
@@ -721,7 +849,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   SizedBox(
                     height: 32,
                     child: Text(
-                      product.name,
+                      product.displayName,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(

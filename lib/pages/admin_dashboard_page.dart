@@ -15,6 +15,7 @@ import 'admin_edit_product_page.dart';
 import 'admin_order_detail_page.dart';
 import 'admin_settings_page.dart';
 import 'admin_user_detail_page.dart';
+import 'schedule_production_page.dart';
 
 /// Ikon circular pie-chart khas seperti di gambar referensi
 class PieChartIcon extends StatelessWidget {
@@ -145,11 +146,19 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   final ScrollController _cageScrollController = ScrollController();
   final ScrollController _mainScrollController = ScrollController();
 
+  // Kontrol Pagination untuk List Produk User Umum
+  int _productPageSize = 5;
+  int _productCurrentPage = 1;
+
+  final GlobalKey _dashboardKey = GlobalKey();
   final GlobalKey _pesananKey = GlobalKey();
   final GlobalKey _userPrivateKey = GlobalKey();
   final GlobalKey _produkKey = GlobalKey();
   final GlobalKey _sangkarKey = GlobalKey();
   final GlobalKey _riwayatKey = GlobalKey();
+
+  int? _hoveredMenuIndex;
+  bool _isManualScrolling = false;
 
   final List<String> _menuItems = [
     'Dashboard',
@@ -160,6 +169,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     'Riwayat',
     'Pengaturan',
     'Preview Umum',
+    'Schedule Proses Pembuatan',
   ];
 
   // Data Tabel Riwayat Pesanan yang Sudah Selesai dari Semua User (Dikosongkan dari data dummy)
@@ -300,17 +310,93 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   @override
   void initState() {
     super.initState();
+    _mainScrollController.addListener(_onMainScroll);
     CageService.instance.addListener(_handleCageUpdate);
     OrderService.instance.addListener(_handleOrderUpdate);
     UserService.instance.addListener(_handleUserUpdate);
     ProductService.instance.addListener(_handleProductUpdate);
-    ProductService.instance.fetchProducts();
-    UserService.instance.fetchUsers();
-    OrderService.instance.fetchOrders();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ProductService.instance.fetchProducts();
+      UserService.instance.fetchUsers();
+      OrderService.instance.fetchOrders();
+      CageService.instance.fetchCages();
+    });
+  }
+
+  void _onMainScroll() {
+    if (_isManualScrolling) return;
+    if (!_mainScrollController.hasClients) return;
+
+    final scrollOffset = _mainScrollController.offset;
+
+    // Jika scroll berada di paling atas, aktifkan Dashboard (index 0)
+    if (scrollOffset <= 80) {
+      if (_selectedMenuIndex != 0) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _selectedMenuIndex != 0) {
+            setState(() {
+              _selectedMenuIndex = 0;
+            });
+          }
+        });
+      }
+      return;
+    }
+
+    // Jika sudah mendekati paling bawah halaman, aktifkan Riwayat (index 5)
+    final maxScroll = _mainScrollController.position.maxScrollExtent;
+    if (scrollOffset >= maxScroll - 60) {
+      if (_selectedMenuIndex != 5) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _selectedMenuIndex != 5) {
+            setState(() {
+              _selectedMenuIndex = 5;
+            });
+          }
+        });
+      }
+      return;
+    }
+
+    // Daftar section berurutan dari atas ke bawah
+    final sections = [
+      MapEntry(0, _dashboardKey),
+      MapEntry(1, _pesananKey),
+      MapEntry(2, _userPrivateKey),
+      MapEntry(3, _produkKey),
+      MapEntry(4, _sangkarKey),
+      MapEntry(5, _riwayatKey),
+    ];
+
+    int currentActive = 0;
+    for (final entry in sections) {
+      final ctx = entry.value.currentContext;
+      if (ctx != null) {
+        final renderBox = ctx.findRenderObject() as RenderBox?;
+        if (renderBox != null && renderBox.hasSize) {
+          final dy = renderBox.localToGlobal(Offset.zero).dy;
+          // Elemen dianggap aktif jika posisinya sudah berada di area atas viewport
+          if (dy <= 280) {
+            currentActive = entry.key;
+          }
+        }
+      }
+    }
+
+    if (_selectedMenuIndex != currentActive && currentActive < 6) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _selectedMenuIndex != currentActive) {
+          setState(() {
+            _selectedMenuIndex = currentActive;
+          });
+        }
+      });
+    }
   }
 
   @override
   void dispose() {
+    _mainScrollController.removeListener(_onMainScroll);
     _nameFilterController.dispose();
     _codeFilterController.dispose();
     _cageScrollController.dispose();
@@ -323,29 +409,50 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   }
 
   void _handleCageUpdate() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   void _handleOrderUpdate() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   void _handleUserUpdate() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   void _handleProductUpdate() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   void _scrollToMenu(String title) {
+    _isManualScrolling = true;
     if (title == 'Dashboard') {
       if (_mainScrollController.hasClients) {
-        _mainScrollController.animateTo(
-          0,
-          duration: const Duration(milliseconds: 350),
-          curve: Curves.easeInOut,
-        );
+        _mainScrollController
+            .animateTo(
+              0,
+              duration: const Duration(milliseconds: 350),
+              curve: Curves.easeInOut,
+            )
+            .then((_) {
+              Future.delayed(const Duration(milliseconds: 150), () {
+                if (mounted) _isManualScrolling = false;
+              });
+            });
+      } else {
+        _isManualScrolling = false;
       }
       return;
     }
@@ -368,7 +475,13 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         targetKey!.currentContext!,
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeInOut,
-      );
+      ).then((_) {
+        Future.delayed(const Duration(milliseconds: 150), () {
+          if (mounted) _isManualScrolling = false;
+        });
+      });
+    } else {
+      _isManualScrolling = false;
     }
   }
 
@@ -731,63 +844,100 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               itemCount: _menuItems.length,
               itemBuilder: (context, index) {
                 final isSelected = _selectedMenuIndex == index;
+                final isHovered = _hoveredMenuIndex == index;
                 final title = _menuItems[index];
 
-                return InkWell(
-                  onTap: () {
-                    if (title == 'Preview Umum') {
+                return MouseRegion(
+                  onEnter: (_) => setState(() => _hoveredMenuIndex = index),
+                  onExit: (_) => setState(() => _hoveredMenuIndex = null),
+                  cursor: SystemMouseCursors.click,
+                  child: InkWell(
+                    onTap: () {
+                      if (title == 'Preview Umum') {
+                        if (inDrawer) Navigator.pop(context);
+                        widget.onPreviewUmum();
+                        return;
+                      }
+                      if (title == 'Schedule Proses Pembuatan') {
+                        if (inDrawer) Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ScheduleProductionPage(),
+                          ),
+                        );
+                        return;
+                      }
+                      if (title == 'Pengaturan') {
+                        if (inDrawer) Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const AdminSettingsPage(),
+                          ),
+                        );
+                        return;
+                      }
+                      setState(() {
+                        _selectedMenuIndex = index;
+                      });
                       if (inDrawer) Navigator.pop(context);
-                      widget.onPreviewUmum();
-                      return;
-                    }
-                    if (title == 'Pengaturan') {
-                      if (inDrawer) Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const AdminSettingsPage(),
-                        ),
-                      );
-                      return;
-                    }
-                    setState(() {
-                      _selectedMenuIndex = index;
-                    });
-                    if (inDrawer) Navigator.pop(context);
-                    _scrollToMenu(title);
-                  },
-                  child: Container(
-                    height: 42,
-                    color: isSelected
-                        ? const Color(0xFF5A3922)
-                        : Colors.transparent,
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    child: Row(
-                      children: [
-                        PieChartIcon(
-                          size: 16,
-                          color: isSelected
-                              ? Colors.white
-                              : const Color(0xFFE8DBD1),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: isSelected
-                                  ? Colors.white
-                                  : const Color(0xFFE8DBD1),
-                              fontWeight: isSelected
-                                  ? FontWeight.bold
-                                  : FontWeight.w500,
+                      _scrollToMenu(title);
+                    },
+                    hoverColor: Colors.transparent,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? const Color(0xFF5A3922)
+                            : isHovered
+                                ? const Color(0xFF4A2C18)
+                                : Colors.transparent,
+                        border: isSelected
+                            ? const Border(
+                                left: BorderSide(
+                                  color: Color(0xFFD4AF37),
+                                  width: 3.5,
+                                ),
+                              )
+                            : null,
+                      ),
+                      padding: EdgeInsets.only(
+                        left: isSelected ? 10.5 : 14,
+                        right: 14,
+                      ),
+                      child: Row(
+                        children: [
+                          PieChartIcon(
+                            size: 16,
+                            color: isSelected
+                                ? Colors.white
+                                : isHovered
+                                    ? const Color(0xFFFFF0E0)
+                                    : const Color(0xFFE8DBD1),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: isSelected
+                                    ? Colors.white
+                                    : isHovered
+                                        ? const Color(0xFFFFF0E0)
+                                        : const Color(0xFFE8DBD1),
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.w500,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 );
@@ -813,8 +963,10 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 1. Header Bar Akun Admin di Atas
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          KeyedSubtree(
+            key: _dashboardKey,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               // Info Admin di Kiri
               Row(
@@ -868,8 +1020,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               ),
             ],
           ),
+        ),
 
-          const SizedBox(height: 28),
+        const SizedBox(height: 28),
 
           // 2. Bagian: Analisis Data
           _buildSectionHeader('Analisis Data'),
@@ -1630,9 +1783,19 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     );
   }
 
-  /// List Produk yang akan ditampilkan di user umum persis seperti di gambar
+  /// List Produk yang akan ditampilkan di user umum dengan fitur Paginate
   Widget _buildPublicProductsSection() {
     final filteredList = _filteredPublicProducts;
+    final totalItems = filteredList.length;
+
+    // Hitung pembagian data berdasarkan pagination
+    final totalPages = (totalItems / _productPageSize).ceil().clamp(1, 999999);
+    final currentPage = _productCurrentPage.clamp(1, totalPages);
+    final startIndex = (currentPage - 1) * _productPageSize;
+
+    // Paginate: ambil sebanyak _productPageSize sesuai halaman saat ini
+    final displayList =
+        filteredList.skip(startIndex).take(_productPageSize).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1724,7 +1887,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                       alignment: Alignment.centerLeft,
                       child: TextField(
                         controller: _nameFilterController,
-                        onChanged: (_) => setState(() {}),
+                        onChanged: (_) => setState(() {
+                          _productCurrentPage = 1;
+                        }),
                         decoration: const InputDecoration(
                           border: InputBorder.none,
                           hintText: '.....',
@@ -1752,7 +1917,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                       alignment: Alignment.centerLeft,
                       child: TextField(
                         controller: _codeFilterController,
-                        onChanged: (_) => setState(() {}),
+                        onChanged: (_) => setState(() {
+                          _productCurrentPage = 1;
+                        }),
                         decoration: const InputDecoration(
                           border: InputBorder.none,
                           hintText: '...',
@@ -1769,7 +1936,80 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
+
+              // Toolbar Pengaturan Limit Per Halaman
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Batasi:',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF6E6E6E),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        height: 32,
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F1F1),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<int>(
+                            value: _productPageSize,
+                            icon: const Icon(Icons.arrow_drop_down,
+                                size: 18, color: Color(0xFF7A4B29)),
+                            isDense: true,
+                            items: const [
+                              DropdownMenuItem(
+                                  value: 3,
+                                  child: Text('3 per hal',
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600))),
+                              DropdownMenuItem(
+                                  value: 5,
+                                  child: Text('5 per hal',
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600))),
+                              DropdownMenuItem(
+                                  value: 10,
+                                  child: Text('10 per hal',
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600))),
+                              DropdownMenuItem(
+                                  value: 20,
+                                  child: Text('20 per hal',
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600))),
+                            ],
+                            onChanged: (val) {
+                              if (val != null) {
+                                setState(() {
+                                  _productPageSize = val;
+                                  _productCurrentPage = 1;
+                                });
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
 
               // Area Wadah List Produk Abu-Abu Persis di Gambar
               Container(
@@ -1829,108 +2069,177 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                           ),
                         ),
                       )
-                    : ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: filteredList.length,
-                        separatorBuilder: (context, index) => const Divider(
-                          color: Color(0xFFE4E4E4),
-                          height: 12,
-                          thickness: 1,
-                        ),
-                        itemBuilder: (context, index) {
-                          final product = filteredList[index];
-                          return InkWell(
-                            onTap: () {
-                              final targetProduct =
-                                  ProductService.instance.findProductById(
-                                    product.id,
-                                  ) ??
-                                  Product(
-                                    id: product.id,
-                                    name: product.name,
-                                    price: 0,
-                                    description: '',
-                                    imageUrl: product.imageUrl,
-                                    category: product.hashtags,
-                                    code: product.code,
-                                    hashtags: product.hashtags,
-                                    cageVariations: product.cageVariations,
-                                    lastEditedDate: product.lastEditedDate,
-                                  );
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => AdminEditProductPage(
-                                    product: targetProduct,
-                                    adminProduct: product,
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          ListView.separated(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: displayList.length,
+                            separatorBuilder: (context, index) => const Divider(
+                              color: Color(0xFFE4E4E4),
+                              height: 12,
+                              thickness: 1,
+                            ),
+                            itemBuilder: (context, index) {
+                              return _buildProductListItem(displayList[index]);
+                            },
+                          ),
+
+                          const Divider(
+                            color: Color(0xFFE0E0E0),
+                            height: 16,
+                            thickness: 1,
+                          ),
+
+                          // Bagian Bawah: Navigasi Pagination
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 4, vertical: 4),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Menampilkan ${totalItems == 0 ? 0 : startIndex + 1}-${startIndex + displayList.length} dari $totalItems produk',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF6E6E6E),
                                   ),
                                 ),
-                              ).then((_) {
-                                if (mounted) setState(() {});
-                              });
-                            },
-                            borderRadius: BorderRadius.circular(8),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 6,
-                                horizontal: 8,
-                              ),
-                              child: Row(
-                                children: [
-                                  // Thumbnail Kotak Abu-Abu Membulat dengan Gambar Logo Produk
-                                  Container(
-                                    width: 58,
-                                    height: 58,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFD2D2D2),
-                                      borderRadius: BorderRadius.circular(8),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    // Tombol Halaman Sebelumnya
+                                    InkWell(
+                                      onTap: currentPage > 1
+                                          ? () {
+                                              setState(() {
+                                                _productCurrentPage--;
+                                              });
+                                            }
+                                          : null,
+                                      borderRadius: BorderRadius.circular(6),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 10, vertical: 5),
+                                        decoration: BoxDecoration(
+                                          color: currentPage > 1
+                                              ? Colors.white
+                                              : Colors.grey.shade200,
+                                          borderRadius:
+                                              BorderRadius.circular(6),
+                                          border: Border.all(
+                                            color: currentPage > 1
+                                                ? const Color(0xFF7A4B29)
+                                                : Colors.grey.shade300,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.chevron_left_rounded,
+                                              size: 16,
+                                              color: currentPage > 1
+                                                  ? const Color(0xFF7A4B29)
+                                                  : Colors.grey,
+                                            ),
+                                            const SizedBox(width: 2),
+                                            Text(
+                                              'Sebelumnya',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                                color: currentPage > 1
+                                                    ? const Color(0xFF7A4B29)
+                                                    : Colors.grey,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
                                     ),
-                                    clipBehavior: Clip.antiAlias,
-                                    child: _buildPublicProductThumbnail(
-                                      product,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
+                                    const SizedBox(width: 8),
 
-                                  // Detail Judul dan Hashtag Produk
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Text(
-                                          product.displayName,
-                                          style: const TextStyle(
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.bold,
-                                            color: Color(0xFF4A4A4A),
-                                          ),
+                                    // Label Halaman X dari Y
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 10, vertical: 5),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius:
+                                            BorderRadius.circular(6),
+                                        border: Border.all(
+                                            color: Colors.grey.shade300),
+                                      ),
+                                      child: Text(
+                                        'Hal $currentPage / $totalPages',
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF4A4A4A),
                                         ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          product.hashtags,
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w500,
-                                            color: Color(0xFF757575),
-                                          ),
-                                        ),
-                                      ],
+                                      ),
                                     ),
-                                  ),
-                                  const Icon(
-                                    Icons.chevron_right_rounded,
-                                    color: Color(0xFF9E9E9E),
-                                    size: 22,
-                                  ),
-                                ],
-                              ),
+                                    const SizedBox(width: 8),
+
+                                    // Tombol Halaman Selanjutnya
+                                    InkWell(
+                                      onTap: currentPage < totalPages
+                                          ? () {
+                                              setState(() {
+                                                _productCurrentPage++;
+                                              });
+                                            }
+                                          : null,
+                                      borderRadius: BorderRadius.circular(6),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 10, vertical: 5),
+                                        decoration: BoxDecoration(
+                                          color: currentPage < totalPages
+                                              ? Colors.white
+                                              : Colors.grey.shade200,
+                                          borderRadius:
+                                              BorderRadius.circular(6),
+                                          border: Border.all(
+                                            color: currentPage < totalPages
+                                                ? const Color(0xFF7A4B29)
+                                                : Colors.grey.shade300,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              'Selanjutnya',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                                color: currentPage < totalPages
+                                                    ? const Color(0xFF7A4B29)
+                                                    : Colors.grey,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 2),
+                                            Icon(
+                                              Icons.chevron_right_rounded,
+                                              size: 16,
+                                              color: currentPage < totalPages
+                                                  ? const Color(0xFF7A4B29)
+                                                  : Colors.grey,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
-                          );
-                        },
+                          ),
+                        ],
                       ),
               ),
             ],
@@ -1969,14 +2278,110 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     );
   }
 
+  /// Item Baris Produk pada List User Umum di Dashboard Admin
+  Widget _buildProductListItem(AdminPublicProduct product) {
+    return InkWell(
+      onTap: () {
+        final targetProduct =
+            ProductService.instance.findProductById(
+              product.id,
+            ) ??
+            Product(
+              id: product.id,
+              name: product.name,
+              price: 0,
+              description: '',
+              imageUrl: product.imageUrl,
+              category: product.hashtags,
+              code: product.code,
+              hashtags: product.hashtags,
+              cageVariations: product.cageVariations,
+              lastEditedDate: product.lastEditedDate,
+            );
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => AdminEditProductPage(
+              product: targetProduct,
+              adminProduct: product,
+            ),
+          ),
+        ).then((_) {
+          if (mounted) setState(() {});
+        });
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          vertical: 6,
+          horizontal: 8,
+        ),
+        child: Row(
+          children: [
+            // Thumbnail Kotak Abu-Abu Membulat dengan Gambar Logo Produk
+            Container(
+              width: 58,
+              height: 58,
+              decoration: BoxDecoration(
+                color: const Color(0xFFD2D2D2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: _buildPublicProductThumbnail(
+                product,
+              ),
+            ),
+            const SizedBox(width: 16),
+
+            // Detail Judul dan Hashtag Produk
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    product.displayName,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF4A4A4A),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    product.hashtags,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF757575),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: Color(0xFF9E9E9E),
+              size: 22,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildPublicProductThumbnail(AdminPublicProduct product) {
     String imgUrl = product.imageUrl.trim();
+    if (imgUrl.contains('images.unsplash.com')) {
+      imgUrl = '';
+    }
 
     // 1. Cek dari variasi sangkar
     if (imgUrl.isEmpty && product.cageVariations != null) {
       for (final v in product.cageVariations!) {
-        if (v.imageUrl.trim().isNotEmpty) {
-          imgUrl = v.imageUrl.trim();
+        final clean = v.imageUrl.trim();
+        if (clean.isNotEmpty && !clean.contains('images.unsplash.com')) {
+          imgUrl = clean;
           break;
         }
       }
@@ -1985,7 +2390,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     // 2. Cek di ProductService catalog
     if (imgUrl.isEmpty) {
       final p = ProductService.instance.findProductById(product.id);
-      if (p != null && p.imageUrl.trim().isNotEmpty) {
+      if (p != null && p.imageUrl.trim().isNotEmpty && !p.imageUrl.contains('images.unsplash.com')) {
         imgUrl = p.imageUrl.trim();
       }
     }
@@ -1998,7 +2403,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         if ((item.name.trim().toLowerCase() == pName ||
                 (item.code != null &&
                     item.code!.trim().toLowerCase() == pCode)) &&
-            item.imageUrl.trim().isNotEmpty) {
+            item.imageUrl.trim().isNotEmpty &&
+            !item.imageUrl.contains('images.unsplash.com')) {
           imgUrl = item.imageUrl.trim();
           break;
         }
@@ -2011,7 +2417,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       for (final u in UserService.instance.users) {
         for (final cp in u.customProducts) {
           if (cp.name.trim().toLowerCase() == pName &&
-              cp.imageUrl.trim().isNotEmpty) {
+              cp.imageUrl.trim().isNotEmpty &&
+              !cp.imageUrl.contains('images.unsplash.com')) {
             imgUrl = cp.imageUrl.trim();
             break;
           }
@@ -2027,7 +2434,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         height: 58,
         fit: BoxFit.cover,
         placeholder: const Center(
-          child: Icon(Icons.image_outlined, color: Colors.white, size: 26),
+          child: Icon(Icons.add_photo_alternate_rounded, color: Colors.white, size: 26),
         ),
       );
     }
@@ -2106,33 +2513,62 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                   physics: const BouncingScrollPhysics(),
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Row(
-                    children: cages.isEmpty
+                    children: CageService.instance.isLoading && cages.isEmpty
                         ? [
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
+                            const Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 16,
                                 vertical: 12,
                               ),
                               child: Row(
                                 children: [
-                                  Icon(
-                                    Icons.info_outline,
-                                    size: 18,
-                                    color: Colors.grey.shade400,
+                                  SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Color(0xFF6D4C41),
+                                    ),
                                   ),
-                                  const SizedBox(width: 8),
+                                  SizedBox(width: 10),
                                   Text(
-                                    'Belum ada bentuk sangkar di database (0 data). Klik "+ Tambah Bentuk Sangkar" untuk membuatnya.',
+                                    'Memuat bentuk sangkar dari database...',
                                     style: TextStyle(
                                       fontSize: 13,
-                                      fontStyle: FontStyle.italic,
-                                      color: Colors.grey.shade600,
+                                      color: Colors.black54,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
                           ]
+                        : cages.isEmpty
+                            ? [
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 12,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.info_outline,
+                                        size: 18,
+                                        color: Colors.grey.shade400,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Belum ada bentuk sangkar di database (0 data). Klik "+ Tambah Bentuk Sangkar" untuk membuatnya.',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontStyle: FontStyle.italic,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ]
                         : cages.map((cage) {
                             return Container(
                               margin: const EdgeInsets.only(right: 12),

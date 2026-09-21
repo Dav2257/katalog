@@ -9,9 +9,10 @@ Dokumen ini mendokumentasikan secara rinci komponen-komponen antarmuka pengguna 
 ### A. `lib/main.dart` (`MyHomePage`)
 - **Tanggung Jawab**: Menampilkan katalog utama produk untuk publik/tamu, search bar dinamis, grid produk sangkar, dan routing cerdas berdasarkan role autentikasi.
 - **Fitur Utama**:
-  - **Top Navigation Bar Responsif**: Dilengkapi indikator badge angka belanjaan pada ikon keranjang yang otomatis muncul saat ada item di keranjang.
+  - **Latar Belakang Warna Krem Hangat (*Warm Cream / Ivory* - `#F8F4EA`)**: Warna background resmi aplikasi yang menyatukan katalog umum dan katalog khusus dalam nuansa hangat, elegan, dan harmonis dengan kerajinan kayu jati (*teak wood*).
+  - **Top Navigation Bar Responsif**: Dilengkapi emblem logo Jatimas Sangkar, pencarian instan, dan indikator badge angka belanjaan pada ikon keranjang.
   - **Hero Banner**: Header visual yang menampilkan keunggulan kerajinan sangkar jati pilihan.
-  - **Grid Katalog Produk Seragam**: Ukuran kartu produk (katalog 1, 2, 3, 4, 5) diseragamkan tinggi dan rasio gambarnya agar tampilan rapi dan proporsional di semua resolusi layar.
+  - **Grid Katalog Produk Seragam**: Ukuran kartu produk (katalog 1 s/d 5) diseragamkan tinggi dan rasio gambarnya dengan kartu berwarna putih di atas kanvas krem.
   - **Search Filter Dinamis**: Menyaring produk berdasarkan kecocokan nama dan kategori secara instan.
   - **Banner Mode Preview Admin**: Saat admin mengakses mode pratinjau publik ("Preview Umum"), banner khusus di bagian atas layar menyediakan tombol sekali klik "Kembali ke Dashboard".
   - **Transisi Halaman Instan**: Seluruh perpindahan halaman diatur tanpa animasi transisi (instant transition) untuk pengalaman navigasi yang cepat dan responsif.
@@ -41,25 +42,28 @@ Dokumen ini mendokumentasikan secara rinci komponen-komponen antarmuka pengguna 
     - Menampilkan katalog produk yang sedang tayang di sisi publik.
     - Header pencarian "Cari berdasarkan:" dengan tombol pill pilihan `Nama` (cokelat aktif) dan `Kode` (abu-abu), serta dua kolom input filter real-time (`.....` dan `...`).
     - Grid kartu produk berisi gambar thumbnail proporsional, nama produk (contoh: `A01-Batman Swing biru cantik`), dan tag produk (`#superhero #batman #DC`).
-  - **Section "Sangkar" (Manajemen Varian Bentuk Sangkar Ringkas)**:
-    - Deretan kartu bentuk sangkar minimalis dan bersih **tanpa gambar thumbnail** (hanya menampilkan ikon kategori, nama sangkar seperti *Sangkar 1*, *Sangkar 2*, dan tombol hapus `x`).
+  - **Section "Sangkar" (Manajemen Varian Bentuk Sangkar Mandiri Database)**:
+    - Terhubung langsung secara mandiri baris per baris ke tabel PostgreSQL `public.bentuk_sangkar` di Supabase.
+    - **Sinkronisasi Instan & Pemuatan Otomatis**: Dipanggil otomatis saat startup aplikasi di `main()` dan saat `AdminDashboardPage` dibuka, dilengkapi indikator loading halus saat data sedang diambil.
+    - Deretan kartu bentuk sangkar minimalis dan bersih (nama sangkar seperti *Bijian No.2 37x43 cm*, *Kosan R.10 40x40 cm*, dan tombol hapus `x`).
     - **Navigasi Multi-Input Lengkap**:
-      - Tombol panah navigasi `<` dan `>` pada header section.
+      - Tombol panah navigasi `<` dan `>` pada header section untuk memudahkan geser kiri/kanan.
       - **Dukungan Scroll Mouse Horisontal**: Dilengkapi pendeteksi event pointer wheel (`Listener.onPointerSignal`) yang mengonversi scroll vertikal roda mouse menjadi geseran horisontal secara mulus.
       - **Mouse Drag**: Mengaktifkan `PointerDeviceKind.mouse` dalam `ScrollConfiguration` sehingga admin dapat menggeser baris sangkar menggunakan drag kursor mouse di desktop dan web.
       - **Scrollbar Khusus**: Scrollbar horizontal dengan thumb selalu terlihat (`thumbVisibility: true`).
     - **Tombol "Tambah Sangkar" Cepat**:
       - Terletak di sudut kanan bawah section.
-      - Membuka modal dialog ringkas: **hanya menginput nama bentuk sangkar saja** (tanpa perlu upload foto atau menyalin link/URL).
-      - Menambahkan data ke `CageService` dan secara otomatis memicu **auto-scroll** ke ujung daftar item yang baru ditambahkan via `addPostFrameCallback`.
+      - Membuka modal dialog ringkas: menginput nama bentuk sangkar baru, langsung tersimpan ke Supabase `bentuk_sangkar`, cache lokal `SharedPreferences`, dan cadangan storage.
 
 ### C. `lib/pages/product_detail_page.dart` (`ProductDetailPage`)
 - **Tanggung Jawab**: Menyajikan detail lengkap mengenai sangkar burung yang dipilih pengguna dan konfigurasi pemesanan kustom.
 - **Fitur Utama**:
-  - **Tampilan Visual Produk Presisi (Sama seperti Admin)**:
+  - **Tampilan Visual Produk Presisi**:
     - Kotak foto utama berukuran **tinggi 350 px**, warna latar abu-abu halus (`#B0B0B0`), kelengkungan sudut **`borderRadius: 18`**, dan bayangan lembut.
     - Menggunakan properti **`fit: BoxFit.contain`** dan `Product.buildImageFromSource` sehingga logo/artwork persegi (seperti *Es Durian Shake*), landscape, maupun portrait **tampil 100% utuh tanpa terpotong (no-crop)**.
-  - **Navigasi Bentuk Sangkar dengan Tombol Next & Previous**: Dilengkapi tombol panah kiri (`<`) dan kanan (`>`) di samping deretan bentuk sangkar dinamis dari `CageService` (`Kotak`, `Bulat`, `Segi 8`, `Koper`, `Lovebird`, dst.).
+    - Tampilan bersih tanpa kotak thumbnail duplikat di samping sangkar (nama/label langsung fokus pada variasi).
+  - **Navigasi Bentuk Sangkar dengan Tombol Next & Previous**: Dilengkapi tombol panah kiri (`<`) dan kanan (`>`) di samping deretan bentuk sangkar dinamis dari `CageService` (`Bijian No.2`, `Kosan R.10`, `Sangkar isi 2`, dst.).
+  - **Dukungan Foto Sangkar Spesifik per Produk**: Setiap produk dapat memiliki foto sangkar yang berbeda-beda untuk variasi ukuran yang sama (disimpan pada kolom `variasi` di data produk).
   - **Counter Kuantitas per Bentuk**: Tombol `+` dan `-` kuantitas yang tersimpan secara terpisah untuk setiap bentuk sangkar.
   - **Catatan Dinamis per Bentuk**: Kolom catatan (*note*) berada di posisi yang konsisten, namun isi teks note dan batasan kata tersimpan secara independen untuk setiap bentuk sangkar yang dipilih.
   - **Tombol Keranjang**: Menambahkan pesanan setiap bentuk sangkar yang memiliki kuantitas > 0 ke keranjang belanja secara terpisah.
@@ -94,10 +98,12 @@ Dokumen ini mendokumentasikan secara rinci komponen-komponen antarmuka pengguna 
 ### F. `lib/pages/user_home_page.dart` (`UserHomePage`)
 - **Tanggung Jawab**: Halaman beranda khusus untuk pengguna yang telah login (Member Jatimas Sangkar).
 - **Fitur Utama**:
+  - **Latar Belakang Warna Krem (*#F8F4EA*)**: Memiliki background krem yang seragam dengan katalog umum sehingga visual aplikasi terasa selaras dan menenangkan.
   - **Pemisahan Data Total**: Keranjang belanja dan katalog member dipisahkan 100% dari pengguna tamu (guest).
+  - **Banner Ruang Kerja Member**: Banner gradien kayu jati elegan dengan ikon terverifikasi dan tombol beralih cepat ke "Katalog Umum".
   - **Tombol Request Logo Custom**: Tombol interaktif untuk mengajukan logo sangkar kustom baru.
-  - **Form Request dengan Fitur Insert Gambar**: Menginput gambar referensi desain kustom pelanggan.
-  - **Katalog Beranda Khusus Logo Custom**: Grid katalog beranda khusus yang hanya memuat logo custom buatan member yang bersangkutan.
+  - **Form Request dengan Fitur Insert Gambar**: Menginput gambar referensi desain kustom pelanggan langsung dari galeri/file lokal.
+  - **Katalog Beranda Khusus Logo Custom**: Grid kartu logo custom berlatar putih dengan border aksen amber halus di atas kanvas krem.
 
 ### G. `lib/pages/admin_order_detail_page.dart` (`AdminOrderDetailPage`)
 - **Tanggung Jawab**: Menampilkan dan mengelola rincian pesanan masuk yang dibuat oleh pelanggan.
@@ -142,7 +148,7 @@ Dokumen ini mendokumentasikan secara rinci komponen-komponen antarmuka pengguna 
 | Service | File | Peran & Tanggung Jawab |
 | :--- | :--- | :--- |
 | `AuthService` | `lib/services/auth_service.dart` | Mengelola status login, identitas pengguna, dan pemisahan role antara Tamu (*Guest*), Member (`davin@gmail.com`), dan Admin (`admin@gmail.com` / `Admin 1`). |
-| `CageService` | `lib/services/cage_service.dart` | State manager berbasis `ChangeNotifier` yang menyimpan daftar bentuk sangkar aktif, menangani penambahan sangkar baru secara reaktif, dan menyinkronkannya ke seluruh halaman (Admin Dashboard & Product Detail). |
+| `CageService` | `lib/services/cage_service.dart` | State manager berbasis `ChangeNotifier` yang mengelola variasi bentuk sangkar secara mandiri baris per baris ke tabel PostgreSQL `public.bentuk_sangkar`, cache offline instan `SharedPreferences`, dan cadangan storage. Dipanggil otomatis pada startup aplikasi dan saat admin dashboard dibuka. |
 | `OrderService` | `lib/services/order_service.dart` | Mengelola antrean pesanan masuk (`incomingOrders`), riwayat pesanan selesai (`completedOrders`), update 4 tahapan produksi custom, dan pelacakan pesanan aktif member di keranjang. |
 | `ProductService` | `lib/services/product_service.dart` | Mengelola data katalog produk umum secara reaktif (`ChangeNotifier`), sinkronisasi tambah/edit produk admin ke katalog publik. |
 | `AppSettingsService` | `lib/services/settings_service.dart` | Mengelola nomor WhatsApp tujuan pesanan (`adminWhatsApp`), banner kustom, style navbar (1-3), font katalog, pembentukan link pesanan WhatsApp berfoto, serta penyedia logo terpadu (`buildLogoWidget`) yang dioptimasi dengan varian resolusi (1.0x, 2.0x, 3.0x), auto downsampling `cacheWidth`/`cacheHeight`, dan anti-aliasing `FilterQuality.medium`. |

@@ -351,18 +351,20 @@ class _LoginPageState extends State<LoginPage> {
               Text(
                 'JATIMAS ',
                 style: TextStyle(
+                  fontFamily: 'LemonMilk',
                   color: Colors.white,
                   fontSize: 24,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.bold,
                   letterSpacing: 1.5,
                 ),
               ),
               Text(
                 'SANGKAR',
                 style: TextStyle(
+                  fontFamily: 'LemonMilk',
                   color: Color(0xFFFFD900),
                   fontSize: 24,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.bold,
                   letterSpacing: 1.5,
                 ),
               ),
@@ -375,9 +377,11 @@ class _LoginPageState extends State<LoginPage> {
         const Text(
           'Sangkar Burung Pilihan',
           style: TextStyle(
+            fontFamily: 'LemonMilk',
             color: Colors.white,
-            fontSize: 14,
+            fontSize: 13,
             fontWeight: FontWeight.w400,
+            letterSpacing: 0.8,
           ),
         ),
 
@@ -406,10 +410,11 @@ class _LoginPageState extends State<LoginPage> {
                     child: Text(
                       'Masuk',
                       style: TextStyle(
+                        fontFamily: 'LemonMilk',
                         color: !_isRegisterMode ? const Color(0xFF382314) : Colors.white70,
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
+                        letterSpacing: 0.8,
                       ),
                     ),
                   ),
@@ -429,10 +434,11 @@ class _LoginPageState extends State<LoginPage> {
                     child: Text(
                       'Registrasi',
                       style: TextStyle(
+                        fontFamily: 'LemonMilk',
                         color: _isRegisterMode ? const Color(0xFF382314) : Colors.white70,
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
+                        letterSpacing: 0.8,
                       ),
                     ),
                   ),
@@ -449,9 +455,11 @@ class _LoginPageState extends State<LoginPage> {
           const Text(
             'Registrasi Akun Baru',
             style: TextStyle(
+              fontFamily: 'LemonMilk',
               color: Colors.white,
-              fontSize: 15,
+              fontSize: 14,
               fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
             ),
           ),
           const SizedBox(height: 2),
@@ -469,9 +477,11 @@ class _LoginPageState extends State<LoginPage> {
           const Text(
             'No. Telepon / WhatsApp *',
             style: TextStyle(
+              fontFamily: 'LemonMilk',
               color: Colors.white,
-              fontSize: 13,
+              fontSize: 12,
               fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
             ),
           ),
           const SizedBox(height: 6),
@@ -499,9 +509,11 @@ class _LoginPageState extends State<LoginPage> {
           const Text(
             'E-mail (Opsional)',
             style: TextStyle(
+              fontFamily: 'LemonMilk',
               color: Colors.white,
-              fontSize: 13,
+              fontSize: 12,
               fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
             ),
           ),
           const SizedBox(height: 6),
@@ -529,9 +541,11 @@ class _LoginPageState extends State<LoginPage> {
           const Text(
             'Password *',
             style: TextStyle(
+              fontFamily: 'LemonMilk',
               color: Colors.white,
-              fontSize: 13,
+              fontSize: 12,
               fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
             ),
           ),
           const SizedBox(height: 6),
@@ -598,10 +612,11 @@ class _LoginPageState extends State<LoginPage> {
                   : const Text(
                       'DAFTAR SEKARANG',
                       style: TextStyle(
+                        fontFamily: 'LemonMilk',
                         color: Color(0xFF382314),
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
-                        letterSpacing: 0.8,
+                        letterSpacing: 1.0,
                       ),
                     ),
             ),
@@ -618,7 +633,12 @@ class _LoginPageState extends State<LoginPage> {
               ),
               child: const Text(
                 'Sudah punya akun? Masuk di sini',
-                style: TextStyle(fontSize: 12, color: Colors.white70),
+                style: TextStyle(
+                  fontFamily: 'LemonMilk',
+                  fontSize: 11,
+                  color: Colors.white70,
+                  letterSpacing: 0.5,
+                ),
               ),
             ),
           ),
@@ -627,9 +647,11 @@ class _LoginPageState extends State<LoginPage> {
           const Text(
             'Masuk ke akun anda',
             style: TextStyle(
+              fontFamily: 'LemonMilk',
               color: Colors.white,
-              fontSize: 15,
+              fontSize: 14,
               fontWeight: FontWeight.w500,
+              letterSpacing: 0.5,
             ),
           ),
 
@@ -639,9 +661,11 @@ class _LoginPageState extends State<LoginPage> {
           const Text(
             'E-mail',
             style: TextStyle(
+              fontFamily: 'LemonMilk',
               color: Colors.white,
-              fontSize: 13,
+              fontSize: 12,
               fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
             ),
           ),
           const SizedBox(height: 6),
@@ -673,9 +697,11 @@ class _LoginPageState extends State<LoginPage> {
           const Text(
             'Password',
             style: TextStyle(
+              fontFamily: 'LemonMilk',
               color: Colors.white,
-              fontSize: 13,
+              fontSize: 12,
               fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
             ),
           ),
           const SizedBox(height: 6),
@@ -740,10 +766,11 @@ class _LoginPageState extends State<LoginPage> {
                   : const Text(
                       'MASUK',
                       style: TextStyle(
+                        fontFamily: 'LemonMilk',
                         color: Color(0xFF444444),
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
-                        letterSpacing: 0.8,
+                        letterSpacing: 1.2,
                       ),
                     ),
             ),
@@ -760,7 +787,13 @@ class _LoginPageState extends State<LoginPage> {
               ),
               child: const Text(
                 'Belum punya akun? Registrasi Sekarang',
-                style: TextStyle(fontSize: 12, color: Color(0xFFFFD900), fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontFamily: 'LemonMilk',
+                  fontSize: 11,
+                  color: Color(0xFFFFD900),
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
               ),
             ),
           ),

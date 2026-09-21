@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../supabase_config.dart';
 
@@ -91,8 +92,10 @@ class CageData {
 class CageService extends ChangeNotifier {
   static final CageService instance = CageService._internal();
 
+  static const String _prefCagesKey = 'app_cached_cages_list';
+
   CageService._internal() {
-    fetchCages();
+    _loadFromLocalPrefs().then((_) => fetchCages());
   }
 
   // Dimulai dari 0 data (kosong, tanpa dummy)
@@ -104,70 +107,143 @@ class CageService extends ChangeNotifier {
   int get count => _cages.length;
   bool get isLoading => _isLoading;
 
-  /// Mengambil data bentuk sangkar langsung dari database Supabase
+  /// Memuat sangkar dari cache SharedPreferences lokal (sangat cepat & aman offline)
+  Future<void> _loadFromLocalPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_prefCagesKey);
+      if (raw != null && raw.trim().isNotEmpty) {
+        final list = jsonDecode(raw) as List<dynamic>;
+        if (list.isNotEmpty && _cages.isEmpty) {
+          _cages.clear();
+          for (final item in list) {
+            if (item is Map) {
+              _cages.add(CageData.fromMap(Map<String, dynamic>.from(item)));
+            }
+          }
+          notifyListeners();
+        }
+      }
+    } catch (_) {}
+  }
+
+  /// Menyimpan sangkar ke SharedPreferences lokal
+  Future<void> _saveToLocalPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final jsonString = jsonEncode(_cages.map((c) => c.toMap()).toList());
+      await prefs.setString(_prefCagesKey, jsonString);
+    } catch (_) {}
+  }
+
+  /// Mengambil data bentuk sangkar langsung dari database Supabase / Storage / Local cache
+  /// Mengambil data bentuk sangkar langsung dari database Supabase / Storage / Local cache
   Future<void> fetchCages() async {
     _isLoading = true;
     notifyListeners();
 
     try {
       List<dynamic> rows = [];
-      String activeTable = 'bentuk_sangkar';
+      String activeSource = 'none';
 
+      // 1. Prioritas Utama: Baca dari tabel terpisah public.bentuk_sangkar (tiap sangkar = 1 baris mandiri)
       try {
-        rows = await supabase
+        final tableResult = await supabase
             .from('bentuk_sangkar')
             .select()
             .order('created_at', ascending: true);
-      } catch (_) {
-        // Fallback jika pengguna menggunakan nama tabel cage_shapes
-        try {
-          rows = await supabase
-              .from('cage_shapes')
-              .select()
-              .order('created_at', ascending: true);
-          activeTable = 'cage_shapes';
-        } catch (_) {
-          // Jika tabel database belum dibuat, coba baca dari app_settings.json di Storage
-          rows = await _loadCagesFromStorage();
+        if (tableResult.isNotEmpty) {
+          rows = tableResult;
+          activeSource = 'public.bentuk_sangkar (Tabel Mandiri)';
         }
+      } catch (_) {}
+
+      // 2. Fallback: Baca dari tabel database public.app_settings jika tabel bentuk_sangkar belum dibuat/masih kosong
+      if (rows.isEmpty) {
+        try {
+          final dbResult = await supabase
+              .from('app_settings')
+              .select('settings_json')
+              .eq('id', 'global_settings')
+              .maybeSingle();
+          if (dbResult != null && dbResult['settings_json'] is Map) {
+            final sJson = dbResult['settings_json'] as Map;
+            if (sJson['cages'] is List && (sJson['cages'] as List).isNotEmpty) {
+              rows = sJson['cages'] as List;
+              activeSource = 'public.app_settings (Fallback)';
+            }
+          }
+        } catch (_) {}
       }
 
-      _cages.clear();
-      for (final r in rows) {
-        if (r is Map<String, dynamic>) {
-          _cages.add(CageData.fromMap(r));
-        } else if (r is Map) {
-          _cages.add(CageData.fromMap(Map<String, dynamic>.from(r)));
-        }
+      // 3. Fallback: Baca dari app_settings.json di Storage
+      if (rows.isEmpty) {
+        rows = await _loadCagesFromStorage();
+        if (rows.isNotEmpty) activeSource = 'app_settings.json (Storage)';
       }
-      debugPrint('SUKSES: Berhasil memuat ${_cages.length} bentuk sangkar dari Supabase ($activeTable).');
+
+      // Terapkan data yang didapat
+      if (rows.isNotEmpty) {
+        _cages.clear();
+        for (final r in rows) {
+          if (r is Map<String, dynamic>) {
+            _cages.add(CageData.fromMap(r));
+          } else if (r is Map) {
+            _cages.add(CageData.fromMap(Map<String, dynamic>.from(r)));
+          }
+        }
+        await _saveToLocalPrefs();
+
+        // Jika data didapat dari fallback (bukan tabel bentuk_sangkar), coba migrasi otomatis ke bentuk_sangkar
+        if (activeSource != 'public.bentuk_sangkar (Tabel Mandiri)') {
+          _migrateToBentukSangkarTable();
+        }
+      } else if (_cages.isEmpty) {
+        // Jika cloud kosong tapi lokal punya cache, gunakan cache lokal
+        await _loadFromLocalPrefs();
+      }
+      debugPrint('SUKSES: Berhasil memuat ${_cages.length} bentuk sangkar ($activeSource).');
     } catch (e) {
       debugPrint('Catatan: Tidak dapat memuat bentuk sangkar dari Supabase: $e');
+      if (_cages.isEmpty) {
+        await _loadFromLocalPrefs();
+      }
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  /// Tambah sangkar baru oleh Admin (tersinkronisasi ke memori dan database Supabase)
+  /// Migrasi otomatis baris per baris ke tabel bentuk_sangkar jika tabel sudah dibuat
+  Future<void> _migrateToBentukSangkarTable() async {
+    try {
+      for (final cage in _cages) {
+        await supabase.from('bentuk_sangkar').upsert({
+          'id': cage.id,
+          'name': cage.name,
+          'image_url': cage.imageUrl ?? '',
+        });
+      }
+    } catch (_) {}
+  }
+
+  /// Tambah sangkar baru oleh Admin (tersinkronisasi ke memori, lokal prefs, dan database Supabase)
   CageData addCage({String? name, String? imageUrl, Uint8List? imageBytes}) {
     final nextNumber = _cages.length + 1;
     final generatedId = 'cage_${DateTime.now().millisecondsSinceEpoch}_$nextNumber';
-    final cleanName = (name != null && name.trim().isNotEmpty) ? name.trim() : 'Sangkar $nextNumber';
-
     final newCage = CageData(
       id: generatedId,
-      name: cleanName,
+      name: (name != null && name.trim().isNotEmpty) ? name.trim() : 'Sangkar No.$nextNumber',
       imageUrl: imageUrl?.trim(),
       imageBytes: imageBytes,
     );
 
     _cages.add(newCage);
+    _saveToLocalPrefs();
     notifyListeners();
 
-    // Simpan asinkron ke database Supabase
-    _syncAddCageToSupabase(newCage);
-
+    // Sinkronkan ke database Supabase
+    _syncCagesToCloud();
     return newCage;
   }
 
@@ -176,11 +252,17 @@ class CageService extends ChangeNotifier {
     if (_cages.isEmpty) return false;
     final index = _cages.indexWhere((c) => c.id == id);
     if (index >= 0) {
-      final removed = _cages.removeAt(index);
+      _cages.removeAt(index);
+      _saveToLocalPrefs();
       notifyListeners();
 
-      // Hapus dari database Supabase
-      _syncDeleteCageFromSupabase(removed.id, removed.name);
+      // Hapus baris dari tabel bentuk_sangkar jika ada
+      try {
+        supabase.from('bentuk_sangkar').delete().eq('id', id);
+      } catch (_) {}
+
+      // Sinkronkan ke database Supabase
+      _syncCagesToCloud();
       return true;
     }
     return false;
@@ -192,10 +274,16 @@ class CageService extends ChangeNotifier {
     final cleanName = name.trim().toLowerCase();
     final index = _cages.indexWhere((c) => c.name.trim().toLowerCase() == cleanName);
     if (index >= 0) {
-      final removed = _cages.removeAt(index);
+      final removedId = _cages[index].id;
+      _cages.removeAt(index);
+      _saveToLocalPrefs();
       notifyListeners();
 
-      _syncDeleteCageFromSupabase(removed.id, removed.name);
+      try {
+        supabase.from('bentuk_sangkar').delete().eq('id', removedId);
+      } catch (_) {}
+
+      _syncCagesToCloud();
       return true;
     }
     return false;
@@ -212,9 +300,10 @@ class CageService extends ChangeNotifier {
         imageBytes: imageBytes,
       );
       _cages[index] = updated;
+      _saveToLocalPrefs();
       notifyListeners();
 
-      _syncUpdateCageToSupabase(updated);
+      _syncCagesToCloud();
     }
   }
 
@@ -229,72 +318,43 @@ class CageService extends ChangeNotifier {
         imageBytes: imageBytes,
       );
       _cages[index] = updated;
+      _saveToLocalPrefs();
       notifyListeners();
 
-      _syncUpdateCageToSupabase(updated);
+      _syncCagesToCloud();
     }
   }
 
   /// Reset data sangkar ke kondisi awal (kosong / 0 data)
   void resetToDefault() {
     _cages.clear();
+    _saveToLocalPrefs();
     notifyListeners();
+    _syncCagesToCloud();
   }
 
   // ===========================================================================
   // SINKRONISASI SUPABASE (DATABASE & STORAGE)
   // ===========================================================================
 
-  Future<void> _syncAddCageToSupabase(CageData cage) async {
+  Future<void> _syncCagesToCloud() async {
+    // 1. Simpan langsung ke tabel public.bentuk_sangkar (tiap sangkar = 1 baris mandiri di Supabase)
     try {
-      try {
-        await supabase.from('bentuk_sangkar').insert({
-          'id': cage.id,
-          'name': cage.name,
-          'image_url': cage.imageUrl ?? '',
-        });
-      } catch (_) {
-        await supabase.from('cage_shapes').insert({
-          'id': cage.id,
-          'name': cage.name,
-          'image_url': cage.imageUrl ?? '',
-        });
+      for (final cage in _cages) {
+        try {
+          await supabase.from('bentuk_sangkar').upsert({
+            'id': cage.id,
+            'name': cage.name,
+            'image_url': cage.imageUrl ?? '',
+          });
+        } catch (_) {}
       }
+      debugPrint('SUKSES: Cages berhasil disimpan ke tabel public.bentuk_sangkar');
     } catch (e) {
-      debugPrint('Catatan insert bentuk_sangkar di Supabase: $e');
+      debugPrint('Catatan simpan cages ke public.bentuk_sangkar: $e');
     }
-    _backupCagesToStorage();
-  }
 
-  Future<void> _syncDeleteCageFromSupabase(String id, String name) async {
-    try {
-      try {
-        await supabase.from('bentuk_sangkar').delete().match({'id': id});
-      } catch (_) {
-        await supabase.from('cage_shapes').delete().match({'id': id});
-      }
-    } catch (e) {
-      debugPrint('Catatan delete bentuk_sangkar di Supabase: $e');
-    }
-    _backupCagesToStorage();
-  }
-
-  Future<void> _syncUpdateCageToSupabase(CageData cage) async {
-    try {
-      try {
-        await supabase.from('bentuk_sangkar').update({
-          'name': cage.name,
-          'image_url': cage.imageUrl ?? '',
-        }).match({'id': cage.id});
-      } catch (_) {
-        await supabase.from('cage_shapes').update({
-          'name': cage.name,
-          'image_url': cage.imageUrl ?? '',
-        }).match({'id': cage.id});
-      }
-    } catch (e) {
-      debugPrint('Catatan update bentuk_sangkar di Supabase: $e');
-    }
+    // 2. Backup ke Supabase Storage (app_settings.json) sebagai lapisan cadangan aman
     _backupCagesToStorage();
   }
 

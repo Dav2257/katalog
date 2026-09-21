@@ -1,3 +1,4 @@
+import 'dart:ui' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import '../models/product.dart';
 import '../services/user_service.dart';
@@ -171,135 +172,138 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Baris Navigasi Breadcrumb & Tombol Aksi (Preview Katalog & Simpan)
-            Wrap(
-              alignment: WrapAlignment.spaceBetween,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                // Breadcrumb Navigasi: Kembali / Detail User Private
-                Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 6,
-                  runSpacing: 4,
-                  children: [
-                    InkWell(
-                      onTap: () => Navigator.pop(context),
-                      borderRadius: BorderRadius.circular(4),
-                      child: const Padding(
-                        padding: EdgeInsets.symmetric(
-                          vertical: 4,
-                          horizontal: 2,
-                        ),
-                        child: Text(
-                          'Kembali',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF4A4A4A),
+            SizedBox(
+              width: double.infinity,
+              child: Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  // Breadcrumb Navigasi: Kembali / Detail User Private
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: [
+                      InkWell(
+                        onTap: () => Navigator.pop(context),
+                        borderRadius: BorderRadius.circular(4),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(
+                            vertical: 4,
+                            horizontal: 2,
+                          ),
+                          child: Text(
+                            'Kembali',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF4A4A4A),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    const Text(
-                      '/',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF7A7A7A),
-                        fontWeight: FontWeight.normal,
-                      ),
-                    ),
-                    const Text(
-                      'Detail User Private',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF4A4A4A),
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF5A3825).withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFF5A3825).withValues(alpha: 0.25)),
-                      ),
-                      child: Text(
-                        '${_currentUser.customLogoCount} Logo Custom',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF5A3825),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                // Tombol Preview Katalog & Simpan
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 8,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    // Tombol Preview Katalog (Outlined Button)
-                    OutlinedButton(
-                      key: const ValueKey('preview_katalog_button'),
-                      onPressed: _openCatalogPreview,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF4A4A4A),
-                        side: const BorderSide(color: Color(0xFFC0C0C0)),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                      ),
-                      child: const Text(
-                        'Preview Katalog',
+                      const Text(
+                        '/',
                         style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: Color(0xFF7A7A7A),
+                          fontWeight: FontWeight.normal,
                         ),
                       ),
-                    ),
-
-                    // Tombol Simpan (Red Button)
-                    ElevatedButton(
-                      key: const ValueKey('simpan_user_button'),
-                      onPressed: _saveUserData,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFE52525),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 28,
-                          vertical: 12,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                      ),
-                      child: const Text(
-                        'Simpan',
+                      const Text(
+                        'Detail User Private',
                         style: TextStyle(
-                          fontSize: 13,
+                          fontSize: 14,
                           fontWeight: FontWeight.bold,
+                          color: Color(0xFF4A4A4A),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF5A3825).withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFF5A3825).withValues(alpha: 0.25)),
+                        ),
+                        child: Text(
+                          '${_currentUser.customLogoCount} Logo Custom',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF5A3825),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // Tombol Preview Katalog & Simpan
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      // Tombol Preview Katalog (Outlined Button)
+                      OutlinedButton(
+                        key: const ValueKey('preview_katalog_button'),
+                        onPressed: _openCatalogPreview,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF4A4A4A),
+                          side: const BorderSide(color: Color(0xFFC0C0C0)),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                        child: const Text(
+                          'Preview Katalog',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+
+                      // Tombol Simpan (Red Button)
+                      ElevatedButton(
+                        key: const ValueKey('simpan_user_button'),
+                        onPressed: _saveUserData,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFE52525),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 28,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                        child: const Text(
+                          'Simpan',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
 
             const SizedBox(height: 32),
 
             // Form Input No. HP, Email, & Password
             ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
+              constraints: const BoxConstraints(maxWidth: 480),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -438,10 +442,20 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage> {
                       ),
                     ),
                   ),
+                ],
+              ),
+            ),
 
-                  const SizedBox(height: 32),
+            const SizedBox(height: 36),
+            const Divider(color: Color(0xFFE8E8E8), thickness: 1),
+            const SizedBox(height: 24),
 
-                  // Bagian Produk Costum Pribadi
+            // Bagian Produk Custom Pribadi (Responsif Full-Width di Desktop Web & HP)
+            SizedBox(
+              width: double.infinity,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Wrap(
                     alignment: WrapAlignment.spaceBetween,
                     crossAxisAlignment: WrapCrossAlignment.center,
@@ -451,7 +465,7 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage> {
                       Text(
                         'Produk Custom Pribadi (${_currentUser.customLogoCount} Logo)',
                         style: const TextStyle(
-                          fontSize: 14,
+                          fontSize: 15,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF4A4A4A),
                         ),
@@ -525,108 +539,118 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage> {
                       ),
                     )
                   else
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ..._currentUser.customProducts.map((product) {
-                            return Padding(
-                              padding: const EdgeInsets.only(right: 18),
-                              child: InkWell(
-                                onTap: () => _editCustomProduct(product),
-                                borderRadius: BorderRadius.circular(10),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // Kotak Abu-abu Membulat Persis di Gambar Referensi
-                                    Container(
-                                      width: 110,
-                                      height: 110,
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFA6A6A6),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      clipBehavior: Clip.antiAlias,
-                                      child: product.buildImage(
-                                        fit: BoxFit.cover,
-                                        placeholder: const Center(
-                                          child: Icon(
-                                            Icons.image_outlined,
-                                            size: 40,
-                                            color: Colors.white70,
+                    ScrollConfiguration(
+                      behavior: ScrollConfiguration.of(context).copyWith(
+                        dragDevices: {
+                          PointerDeviceKind.touch,
+                          PointerDeviceKind.mouse,
+                          PointerDeviceKind.trackpad,
+                        },
+                      ),
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ..._currentUser.customProducts.map((product) {
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 18),
+                                child: InkWell(
+                                  onTap: () => _editCustomProduct(product),
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      // Kotak Abu-abu Membulat Persis di Gambar Referensi
+                                      Container(
+                                        width: 120,
+                                        height: 120,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFA6A6A6),
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        clipBehavior: Clip.antiAlias,
+                                        child: product.buildImage(
+                                          fit: BoxFit.cover,
+                                          placeholder: const Center(
+                                            child: Icon(
+                                              Icons.image_outlined,
+                                              size: 40,
+                                              color: Colors.white70,
+                                            ),
                                           ),
                                         ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    SizedBox(
-                                      width: 110,
-                                      child: Text(
-                                        product.name,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                          color: Color(0xFF4A4A4A),
+                                      const SizedBox(height: 8),
+                                      SizedBox(
+                                        width: 120,
+                                        child: Text(
+                                          product.name,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color: Color(0xFF4A4A4A),
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                    if (product.code != null &&
-                                        product.code!.isNotEmpty)
-                                      Text(
-                                        product.code!,
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          color: Color(0xFF888888),
-                                          fontWeight: FontWeight.w500,
+                                      if (product.code != null &&
+                                          product.code!.isNotEmpty)
+                                        Text(
+                                          product.code!,
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            color: Color(0xFF888888),
+                                            fontWeight: FontWeight.w500,
+                                          ),
                                         ),
-                                      ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            );
-                          }),
+                              );
+                            }),
 
-                          // Tombol Tambah Produk Custom Tambahan
-                          InkWell(
-                            onTap: _addNewCustomProductForUser,
-                            borderRadius: BorderRadius.circular(10),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Container(
-                                  width: 110,
-                                  height: 110,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF0F0F0),
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(
-                                      color: const Color(0xFFCCCCCC),
+                            // Tombol Tambah Produk Custom Tambahan
+                            InkWell(
+                              onTap: _addNewCustomProductForUser,
+                              borderRadius: BorderRadius.circular(10),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    width: 120,
+                                    height: 120,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF0F0F0),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: const Color(0xFFCCCCCC),
+                                      ),
+                                    ),
+                                    child: const Center(
+                                      child: Icon(
+                                        Icons.add_rounded,
+                                        size: 38,
+                                        color: Color(0xFF7A4B29),
+                                      ),
                                     ),
                                   ),
-                                  child: const Center(
-                                    child: Icon(
-                                      Icons.add_rounded,
-                                      size: 38,
+                                  const SizedBox(height: 8),
+                                  const Text(
+                                    '+ Tambah',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
                                       color: Color(0xFF7A4B29),
                                     ),
                                   ),
-                                ),
-                                const SizedBox(height: 8),
-                                const Text(
-                                  '+ Tambah',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF7A4B29),
-                                  ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                 ],
@@ -792,7 +816,7 @@ class AdminUserCatalogPreviewPage extends StatelessWidget {
     final previewProducts = user.customProducts;
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: const Color(0xFFF5ECD7),
       appBar: AppBar(
         backgroundColor: const Color(0xFF382314),
         foregroundColor: Colors.white,

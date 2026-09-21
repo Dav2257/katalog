@@ -157,42 +157,47 @@ class TopNavbar extends StatelessWidget implements PreferredSizeWidget {
                   alignment: Alignment.centerRight,
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 400),
-                    child: SizedBox(
+                    child: Container(
                       height: 38,
-                      child: TextField(
-                        controller: searchController,
-                        onChanged: onSearchChanged,
-                        onSubmitted: onSearchSubmitted,
-                        textInputAction: TextInputAction.search,
-                        style: const TextStyle(fontSize: 13, color: Colors.black87),
-                        decoration: InputDecoration(
-                          hintText: 'Superhero',
-                          hintStyle: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey.shade400,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF5ECD7), // <-- Background warna krem gading
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: const Color(0xFFD4AF37).withValues(alpha: 0.45),
+                          width: 1.2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.12),
+                            blurRadius: 4,
+                            offset: const Offset(0, 1),
                           ),
-                          suffixIcon: Icon(
-                            Icons.search_rounded,
-                            color: Colors.grey.shade400,
-                            size: 20,
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: BorderSide.none,
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: BorderSide.none,
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: const BorderSide(
-                              color: Colors.white,
-                              width: 1.5,
+                        ],
+                      ),
+                      child: Center(
+                        child: TextField(
+                          controller: searchController,
+                          onChanged: onSearchChanged,
+                          onSubmitted: onSearchSubmitted,
+                          textInputAction: TextInputAction.search,
+                          textAlignVertical: TextAlignVertical.center,
+                          style: const TextStyle(fontSize: 13, color: Colors.black87),
+                          decoration: const InputDecoration(
+                            isDense: true,
+                            hintText: 'Superhero',
+                            hintStyle: TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF8C7355),
                             ),
+                            suffixIcon: Icon(
+                              Icons.search_rounded,
+                              color: Color(0xFF7A4B29),
+                              size: 20,
+                            ),
+                            contentPadding: EdgeInsets.only(left: 16, right: 8),
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
                           ),
                         ),
                       ),

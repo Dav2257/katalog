@@ -80,7 +80,7 @@ Pastikan telah menginstal:
 - **Palet Warna**:
   - *Teakwood Brown*: `#382314` (sidebar admin & aksen gelap) dan `#7A4B29` / `#8B5328` (indikator metrik & tombol utama).
   - *WhatsApp Green*: `#25D366` (tombol pesan WA & badge selesai).
-  - *Latar Belakang*: `Colors.grey.shade50` dan `#F5F6F8` (kontras lembut dan bersih).
+  - *Latar Belakang*: **Warna Krem Hangat (*Warm Cream / Ivory* - `#F8F4EA`)** pada katalog umum, katalog khusus, dan `web/index.html` yang berpadu serasi dengan nuansa kayu jati.
 - **Page Transitions**: Dikonfigurasi tanpa animasi transisi (*instant transition*) via custom `PageTransitionsTheme` untuk navigasi cepat dan responsif.
 - **Dukungan Scrolling Desktop**:
   - `ScrollConfiguration` dengan `PointerDeviceKind.mouse` aktif.
@@ -96,7 +96,9 @@ Aplikasi menggunakan arsitektur modular yang rapi dengan kombinasi **StatefulWid
   - Mengarahkan akun admin (`admin@gmail.com`) ke `AdminDashboardPage`, dan member ke `UserHomePage`.
 - **`CageService`**:
   - State manager terpusat menggunakan `ChangeNotifier`.
-  - Sinkronisasi instan jumlah bentuk sangkar ke kartu metrik dashboard admin (`JUMLAH BENTUK SANGKAR`) dan pilihan sangkar pada halaman detail produk.
+  - Mengelola data master bentuk sangkar secara mandiri baris per baris ke tabel PostgreSQL `public.bentuk_sangkar` di Supabase, cache lokal `SharedPreferences`, dan cadangan storage.
+  - Sinkronisasi instan jumlah bentuk sangkar ke kartu metrik dashboard admin (`JUMLAH BENTUK SANGKAR`) dan pilihan variasi bentuk sangkar di detail produk.
+  - Otomatis dipanggil saat inisialisasi aplikasi (`main()`) dan saat halaman admin dibuka.
 - **`OrderService`**:
   - Mengelola pesanan masuk (`incomingOrders`) dan riwayat pesanan selesai (`completedOrders`).
   - Mendukung update progres 4 tahap produksi (*Verifikasi Desain*, *Kayu Jati*, *Ukir/Grafir*, *Perakitan & Finishing*) dan aksi penyelesaian pesanan (`completeOrder()`).
