@@ -15,6 +15,7 @@ import 'admin_edit_product_page.dart';
 import 'admin_order_detail_page.dart';
 import 'admin_settings_page.dart';
 import 'admin_user_detail_page.dart';
+import 'schedule_production_page.dart';
 
 /// Ikon circular pie-chart khas seperti di gambar referensi
 class PieChartIcon extends StatelessWidget {
@@ -168,6 +169,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     'Riwayat',
     'Pengaturan',
     'Preview Umum',
+    'Schedule Proses Pembuatan',
   ];
 
   // Data Tabel Riwayat Pesanan yang Sudah Selesai dari Semua User (Dikosongkan dari data dummy)
@@ -854,6 +856,16 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                       if (title == 'Preview Umum') {
                         if (inDrawer) Navigator.pop(context);
                         widget.onPreviewUmum();
+                        return;
+                      }
+                      if (title == 'Schedule Proses Pembuatan') {
+                        if (inDrawer) Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ScheduleProductionPage(),
+                          ),
+                        );
                         return;
                       }
                       if (title == 'Pengaturan') {
