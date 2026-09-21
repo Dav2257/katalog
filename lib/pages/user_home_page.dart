@@ -1140,29 +1140,44 @@ class _UserHomePageState extends State<UserHomePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.amber.shade50,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: Colors.amber.shade200,
-                        width: 0.8,
-                      ),
-                    ),
-                    child: Text(
-                      product.category.startsWith('#')
-                          ? product.category
-                          : '#${product.category}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: Colors.brown.shade800,
-                        fontWeight: FontWeight.w600,
+                  // Daftar Hashtag Terpisah (Pill/Chip Mandiri untuk Katalog Private)
+                  SizedBox(
+                    height: 20,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: (product.hashtagList.isNotEmpty
+                                ? product.hashtagList
+                                : [
+                                    product.category.startsWith('#')
+                                        ? product.category
+                                        : '#${product.category}'
+                                  ])
+                            .map((tag) {
+                          return Container(
+                            margin: const EdgeInsets.only(right: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.shade50,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: Colors.amber.shade200,
+                                width: 0.8,
+                              ),
+                            ),
+                            child: Text(
+                              tag,
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.brown.shade800,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          );
+                        }).toList(),
                       ),
                     ),
                   ),
@@ -1172,7 +1187,7 @@ class _UserHomePageState extends State<UserHomePage> {
                   SizedBox(
                     height: 32,
                     child: Text(
-                      product.name,
+                      product.displayName,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(

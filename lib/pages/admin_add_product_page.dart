@@ -18,7 +18,8 @@ class AdminAddProductPage extends StatefulWidget {
 class _AdminAddProductPageState extends State<AdminAddProductPage> {
   late TextEditingController _codeController;
   late TextEditingController _nameController;
-  late TextEditingController _hashtagController;
+  final TextEditingController _hashtagInputController = TextEditingController();
+  final List<String> _hashtagsList = ['#sangkar', '#jati'];
 
   late final PageController _slideController;
   final ScrollController _cageScrollController = ScrollController();
@@ -36,7 +37,6 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
     final defaultCode = nextNum < 10 ? 'A0$nextNum' : 'A$nextNum';
     _codeController = TextEditingController(text: defaultCode);
     _nameController = TextEditingController();
-    _hashtagController = TextEditingController(text: '#sangkar #jati #jepara');
 
     final serviceCages = CageService.instance.cages;
     if (serviceCages.isNotEmpty) {
@@ -86,11 +86,38 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
     } catch (_) {}
   }
 
+  void _addHashtag([String? directValue]) {
+    final val = (directValue ?? _hashtagInputController.text).trim();
+    if (val.isEmpty) return;
+    final items = val
+        .split(RegExp(r'[\s,]+'))
+        .map((t) => t.trim())
+        .where((t) => t.isNotEmpty)
+        .map((t) => t.startsWith('#') ? t : '#$t');
+
+    setState(() {
+      for (final item in items) {
+        if (!_hashtagsList.contains(item)) {
+          _hashtagsList.add(item);
+        }
+      }
+      _hashtagInputController.clear();
+    });
+  }
+
+  void _removeHashtag(int index) {
+    setState(() {
+      if (index >= 0 && index < _hashtagsList.length) {
+        _hashtagsList.removeAt(index);
+      }
+    });
+  }
+
   @override
   void dispose() {
     _codeController.dispose();
     _nameController.dispose();
-    _hashtagController.dispose();
+    _hashtagInputController.dispose();
     _slideController.dispose();
     _cageScrollController.dispose();
     super.dispose();
@@ -113,7 +140,12 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
   Future<void> _createProduct() async {
     final code = _codeController.text.trim();
     final name = _nameController.text.trim();
-    final hashtags = _hashtagController.text.trim();
+    if (_hashtagInputController.text.trim().isNotEmpty) {
+      _addHashtag();
+    }
+    final cleanHashtags = _hashtagsList.isNotEmpty
+        ? _hashtagsList.join(' ')
+        : '#sangkar #jati';
 
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -127,7 +159,6 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
     });
 
     final cleanCode = code.isNotEmpty ? code : 'A01';
-    final cleanHashtags = hashtags.isNotEmpty ? hashtags : '#sangkar #jati #jepara';
 
     try {
       await ProductService.instance.addProduct(
@@ -1292,22 +1323,81 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
         ),
         const SizedBox(height: 14),
 
-        // Input Field Hashtag / Kategori Produk
+        // Daftar Chip Hashtag Terpisah yang Sudah Ditambahkan
+        if (_hashtagsList.isNotEmpty) ...[
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: List.generate(_hashtagsList.length, (idx) {
+              final tag = _hashtagsList[idx];
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5ECD7),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: const Color(0xFF7A4B29).withValues(alpha: 0.35),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      tag,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF4A301E),
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    InkWell(
+                      onTap: () => _removeHashtag(idx),
+                      borderRadius: BorderRadius.circular(10),
+                      child: const Padding(
+                        padding: EdgeInsets.all(2.0),
+                        child: Icon(
+                          Icons.close_rounded,
+                          size: 13,
+                          color: Color(0xFF7A4B29),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ),
+          const SizedBox(height: 8),
+        ],
+
+        // Input Field untuk Memasukkan Hashtag Satu per Satu
         SizedBox(
           width: double.infinity,
           height: 38,
           child: TextField(
             key: const Key('admin_add_hashtag_field'),
-            controller: _hashtagController,
+            controller: _hashtagInputController,
+            onSubmitted: (_) => _addHashtag(),
             style: const TextStyle(
-              fontSize: 14,
+              fontSize: 13,
               fontWeight: FontWeight.w600,
               color: Color(0xFF4A4A4A),
             ),
             decoration: InputDecoration(
-              hintText: 'Hashtag (Contoh: #sangkar #jati #jepara)',
-              hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF9E9E9E)),
+              hintText: 'Ketik hashtag lalu tekan Enter atau ikon +',
+              hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF9E9E9E)),
               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              suffixIcon: IconButton(
+                icon: const Icon(
+                  Icons.add_circle_outline_rounded,
+                  size: 20,
+                  color: Color(0xFF7A4B29),
+                ),
+                tooltip: 'Tambahkan Hashtag',
+                onPressed: () => _addHashtag(),
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(6),
                 borderSide: const BorderSide(color: Color(0xFFAAAAAA)),

@@ -52,6 +52,17 @@ class NoTransitionsBuilder extends PageTransitionsBuilder {
   }
 }
 
+/// ============================================================================
+/// WARNA BACKGROUND HALAMAN UTAMA (KATALOG UMUM & KATALOG PRIVATE)
+/// Ganti kode HEX di bawah ini jika ingin mengubah warna background halaman:
+/// Contoh opsi warna:
+/// - Color(0xFFF5EBE1) : Krem Lembut Elegan (Default sekarang)
+/// - Color(0xFFF7EFE5) : Krem Hangat Cerah
+/// - Color(0xFFF5ECD7) : Krem Kuning Gading / Warm Ivory
+/// - Color(0xFFEDE4D3) : Krem Beige Klasik
+/// ============================================================================
+const Color kCatalogBackgroundColor = Color(0xFFF5ECD7);
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -67,7 +78,7 @@ class MyApp extends StatelessWidget {
             fontFamily: AppSettingsService.instance.fontFamily,
             colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
             useMaterial3: true,
-            scaffoldBackgroundColor: const Color(0xFFF8F4EA),
+            scaffoldBackgroundColor: kCatalogBackgroundColor,
             pageTransitionsTheme: const PageTransitionsTheme(
               builders: {
                 TargetPlatform.android: NoTransitionsBuilder(),
@@ -389,7 +400,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }).toList();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F4EA),
+      backgroundColor: kCatalogBackgroundColor,
       appBar: TopNavbar(
         searchController: _searchController,
         cartItemCount: _totalCartCount,
@@ -664,11 +675,11 @@ class _MyHomePageState extends State<MyHomePage> {
                                 itemCount: visibleProducts.length,
                                 gridDelegate:
                                     SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: crossAxisCount,
-                                  crossAxisSpacing: 12,
-                                  mainAxisSpacing: 14,
-                                  childAspectRatio: childAspectRatio,
-                                ),
+                                      crossAxisCount: crossAxisCount,
+                                      crossAxisSpacing: 12,
+                                      mainAxisSpacing: 14,
+                                      childAspectRatio: childAspectRatio,
+                                    ),
                                 itemBuilder: (context, index) {
                                   final product = visibleProducts[index];
                                   return _buildProductCard(product);
@@ -678,8 +689,9 @@ class _MyHomePageState extends State<MyHomePage> {
                               if (_isLoadingMorePublic)
                                 const Center(
                                   child: Padding(
-                                    padding:
-                                        EdgeInsets.symmetric(vertical: 16.0),
+                                    padding: EdgeInsets.symmetric(
+                                      vertical: 16.0,
+                                    ),
                                     child: CircularProgressIndicator(
                                       color: Color(0xFF7A4B29),
                                       strokeWidth: 2.5,
@@ -690,7 +702,8 @@ class _MyHomePageState extends State<MyHomePage> {
                                 Center(
                                   child: OutlinedButton.icon(
                                     onPressed: () => _loadMorePublicProducts(
-                                        filteredProducts.length),
+                                      filteredProducts.length,
+                                    ),
                                     icon: const Icon(
                                       Icons.keyboard_arrow_down_rounded,
                                       color: Color(0xFF7A4B29),
@@ -704,10 +717,10 @@ class _MyHomePageState extends State<MyHomePage> {
                                     ),
                                     style: OutlinedButton.styleFrom(
                                       side: const BorderSide(
-                                          color: Color(0xFF7A4B29)),
+                                        color: Color(0xFF7A4B29),
+                                      ),
                                       shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(10),
+                                        borderRadius: BorderRadius.circular(10),
                                       ),
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: 20,
@@ -794,26 +807,39 @@ class _MyHomePageState extends State<MyHomePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Kategori Produk
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.primaryContainer.withValues(alpha: 0.6),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      product.category,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: Theme.of(context).colorScheme.primary,
-                        fontWeight: FontWeight.w600,
+                  // Kategori / Hashtag Produk Terpisah
+                  SizedBox(
+                    height: 20,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: (product.hashtagList.isNotEmpty
+                                ? product.hashtagList
+                                : [product.category])
+                            .map((tag) {
+                          return Container(
+                            margin: const EdgeInsets.only(right: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primaryContainer
+                                  .withValues(alpha: 0.6),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              tag,
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Theme.of(context).colorScheme.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          );
+                        }).toList(),
                       ),
                     ),
                   ),
@@ -823,7 +849,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   SizedBox(
                     height: 32,
                     child: Text(
-                      product.name,
+                      product.displayName,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(

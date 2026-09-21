@@ -203,7 +203,26 @@ class Product {
     );
   }
 
-  String get displayName => code != null && code!.isNotEmpty ? '$code-$name' : name;
+  /// Mengembalikan daftar hashtag terpisah (misal: ['#sangkar', '#jati', '#serdadu', '#carbon'])
+  List<String> get hashtagList {
+    final text = (hashtags != null && hashtags!.trim().isNotEmpty)
+        ? hashtags!
+        : category;
+    if (text.trim().isEmpty) return [];
+    return text
+        .split(RegExp(r'[\s,]+'))
+        .map((tag) => tag.trim())
+        .where((tag) => tag.isNotEmpty)
+        .map((tag) => tag.startsWith('#') ? tag : '#$tag')
+        .toList();
+  }
+
+  String get displayName {
+    if (code == null || code!.trim().isEmpty) return name;
+    final c = code!.trim();
+    if (name.trim().startsWith(c)) return name;
+    return '$c-$name';
+  }
 
   String get formattedPrice {
     // Format harga ke Rupiah
