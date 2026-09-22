@@ -14,6 +14,7 @@ class ProductionScheduleItem {
   final String? description;
   final String status; // "Belum dimulai", "Sedang berlangsung", "Siap Cetak", "Di Cetak", "Selesai"
   final String? pic; // Penanggung jawab / tukang
+  final String? imageUrl; // Cover / file media desain
   final DateTime createdAt;
 
   ProductionScheduleItem({
@@ -27,6 +28,7 @@ class ProductionScheduleItem {
     this.description,
     this.status = 'Sedang berlangsung',
     this.pic,
+    this.imageUrl,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
@@ -43,6 +45,7 @@ class ProductionScheduleItem {
     String? description,
     String? status,
     String? pic,
+    String? imageUrl,
     DateTime? createdAt,
   }) {
     return ProductionScheduleItem(
@@ -56,6 +59,7 @@ class ProductionScheduleItem {
       description: description ?? this.description,
       status: status ?? this.status,
       pic: pic ?? this.pic,
+      imageUrl: imageUrl ?? this.imageUrl,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -72,6 +76,7 @@ class ProductionScheduleItem {
       'description': description,
       'status': status,
       'pic': pic,
+      'imageUrl': imageUrl,
       'createdAt': createdAt.toIso8601String(),
     };
   }
@@ -104,6 +109,7 @@ class ProductionScheduleItem {
       description: map['description']?.toString(),
       status: map['status']?.toString() ?? 'Sedang berlangsung',
       pic: map['pic']?.toString(),
+      imageUrl: (map['imageUrl'] ?? map['image_url'] ?? map['gambar_url'])?.toString(),
       createdAt: map['createdAt'] != null
           ? DateTime.tryParse(map['createdAt'].toString()) ?? DateTime.now()
           : DateTime.now(),

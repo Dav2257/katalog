@@ -145,3 +145,43 @@ CREATE POLICY "Akses penuh bentuk_sangkar" ON public.bentuk_sangkar FOR ALL USIN
 GRANT ALL ON TABLE public.bentuk_sangkar TO anon, authenticated;
 
 
+-- ------------------------------------------------------------------------------
+-- 8. TABEL HASHTAGS (Database Hashtag untuk Auto-Complete Produk Admin)
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.hashtags (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    name VARCHAR(100) UNIQUE NOT NULL,
+    use_count INT DEFAULT 1,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.hashtags ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Akses penuh hashtags" ON public.hashtags;
+CREATE POLICY "Akses penuh hashtags" ON public.hashtags FOR ALL USING (true) WITH CHECK (true);
+GRANT ALL ON TABLE public.hashtags TO anon, authenticated;
+
+-- Masukkan hashtag awal default Jatimas Sangkar (jika belum ada)
+INSERT INTO public.hashtags (name)
+VALUES
+    ('#sangkar'),
+    ('#jati'),
+    ('#jepara'),
+    ('#ukir'),
+    ('#cungkok'),
+    ('#kacer'),
+    ('#murai'),
+    ('#kenari'),
+    ('#pleci'),
+    ('#kosan'),
+    ('#replika'),
+    ('#finishing'),
+    ('#natural'),
+    ('#mentahan'),
+    ('#kayu'),
+    ('#bambu'),
+    ('#serdadu'),
+    ('#carbon')
+ON CONFLICT (name) DO NOTHING;
+
+

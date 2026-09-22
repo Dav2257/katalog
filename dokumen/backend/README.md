@@ -7,16 +7,20 @@ Dokumen ini menjelaskan arsitektur backend, konfigurasi layanan **Supabase (Back
 ## 1. ⚙️ Ringkasan Layanan Backend
 
 Aplikasi Katalog memanfaatkan platform cloud **Supabase** yang menyediakan:
-- **PostgreSQL Database (6 Tabel Inti Aktif)**:
+- **PostgreSQL Database (8 Tabel Inti Aktif)**:
   1. `produk`: Katalog produk sangkar publik beserta variasi bentuk sangkar (JSONB).
   2. `produk_custom`: Katalog desain custom khusus milik member/user tertentu.
   3. `user_private`: Rekap akun member, kredensial, dan penghitung request desain custom.
   4. `pesanan`: Tracking pesanan 4 tahap pengerjaan, rincian barang belanjaan (JSONB `items`), kontak pemesan, dan riwayat pesanan selesai.
   5. `bentuk_sangkar`: Master varian bentuk & ukuran sangkar tersimpan mandiri baris per baris (`id`, `name`, `image_url`, `created_at`).
   6. `app_settings`: Pengaturan toko global tersentralisasi di database (`id: global_settings`, `settings_json`: banner, logo, WA, navbar, font).
+  7. `hashtags`: Database kamus tagar (#) terpusat untuk auto-complete cepat dan auto-harvesting tagar baru (`id`, `name`, `use_count`).
+  8. `production_schedules`: Jadwal proses pembuatan sangkar bertingkat enterprise dengan format antarmuka 5 mode tampilan Notion-style (`id`, `title`, `category`, `start_date`, `end_date`, `status`, `image_url`, `notes`).
 - **Supabase Auth**: Manajemen sesi login akun pengguna dan administrator.
 - **Supabase Storage**:
   - Bucket `katalog`: Menyimpan file gambar produk/sangkar dan file cadangan sinkronisasi (`app_settings.json`).
+  - Bucket `schedules`: Menyimpan berkas foto jadwal produksi yang diunggah langsung dari perangkat pengguna (laptop/smartphone).
+  - Bucket `products`: Menyimpan foto produk baru dan upload desain kustom.
 - **Row Level Security (RLS)**: Kontrol akses keamanan langsung di tingkat baris database PostgreSQL.
 
 ---
@@ -144,6 +148,56 @@ await supabase.from('bentuk_sangkar').upsert({
 
 // Hapus bentuk sangkar berdasarkan ID
 await supabase.from('bentuk_sangkar').delete().eq('id', cageId);
+```
+
+### F. Database Tagar Terpusat & Auto-Complete (`HashtagService`)
+```dart
+// Fetch kamus hashtag dari database terpusat
+final rows = await supabase
+    .from('hashtags')
+    .select('name')
+    .order('use_count', ascending: false);
+
+// Auto-harvest hashtag baru saat disimpan
+await supabase.from('hashtags').upsert({
+  'name': cleanTag,
+  'updated_at': DateTime.now().toIso8601String(),
+}, onConflict: 'name');
+```
+
+### G. Jadwal Proses Produksi Multi-View Notion-Style (`ProductionScheduleService`)
+```dart
+// Fetch daftar jadwal produksi
+final rows = await supabase
+    .from('production_schedules')
+    .select()
+    .order('start_date', ascending: true);
+
+// Tambah/Update item jadwal produksi dengan foto wajib
+await supabase.from('production_schedules').upsert({
+  'id': item.id,
+  'title': item.title,
+  'category': item.category,
+  'start_date': item.startDate.toIso8601String().split('T').first,
+  'end_date': item.endDate.toIso8601String().split('T').first,
+  'status': item.status,
+  'image_url': item.imageUrl,
+  'notes': item.notes,
+  'updated_at': DateTime.now().toIso8601String(),
+});
+
+// Hapus item jadwal
+await supabase.from('production_schedules').delete().eq('id', id);
+```
+
+### H. Unggah Berkas & Storage (`StorageService`)
+```dart
+// Unggah file foto langsung dari memori/perangkat pengguna
+final String path = 'schedules/${DateTime.now().millisecondsSinceEpoch}_$fileName';
+await supabase.storage.from('schedules').uploadBinary(path, fileBytes);
+
+// Dapatkan Public URL instan
+final publicUrl = supabase.storage.from('schedules').getPublicUrl(path);
 ```
 
 ---

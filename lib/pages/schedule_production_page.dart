@@ -1,6 +1,13 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../services/schedule_service.dart';
+import '../services/storage_service.dart';
+import '../widgets/schedule/schedule_board_view.dart';
+import '../widgets/schedule/schedule_gallery_view.dart';
+import '../widgets/schedule/schedule_image_helper.dart';
+import '../widgets/schedule/schedule_table_view.dart';
 
 /// Halaman Schedule Proses Pembuatan (Khusus Admin)
 /// Mengadopsi sistem Workspace Jatimas Design (Notion-style) dari https://jatimas.beelink.web.id/
@@ -275,9 +282,11 @@ class _ScheduleProductionPageState extends State<ScheduleProductionPage> {
         ),
       ),
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // 1. Notion-style Tabs Bar (Bulanan vs Mingguan) & Filter Controls
+          // 1. Notion-style Tabs Bar (Bulanan, Mingguan, Gallery, Board, Table) & Filter Controls
           Container(
+            width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
             decoration: const BoxDecoration(
               color: Colors.white,
@@ -285,63 +294,83 @@ class _ScheduleProductionPageState extends State<ScheduleProductionPage> {
                 bottom: BorderSide(color: Color(0xFFE5E7EB), width: 1),
               ),
             ),
-            child: Row(
-              children: [
-                // Tab Buttons: Bulanan & Mingguan
-                Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF3F4F6),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  padding: const EdgeInsets.all(3),
-                  child: Row(
-                    children: [
-                      _buildViewTabButton(
-                        viewName: 'Bulanan',
-                        icon: '📅',
-                        label: 'Bulanan',
-                      ),
-                      const SizedBox(width: 4),
-                      _buildViewTabButton(
-                        viewName: 'Mingguan',
-                        icon: '📆',
-                        label: 'Mingguan',
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(width: 14),
-
-                // Filter Status Dropdown
-                Container(
-                  height: 34,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: const Color(0xFFE5E7EB)),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: _statusFilter,
-                      icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: Color(0xFF6B7280)),
-                      style: const TextStyle(fontSize: 12, color: Color(0xFF374151), fontWeight: FontWeight.w600),
-                      onChanged: (val) {
-                        if (val != null) setState(() => _statusFilter = val);
-                      },
-                      items: [
-                        const DropdownMenuItem(value: 'all', child: Text('Semua Status')),
-                        ..._statusOptions.map((st) => DropdownMenuItem(value: st, child: Text(st))),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isWide = constraints.maxWidth >= 960;
+                final rowChildren = [
+                  // Tab Buttons: Bulanan, Mingguan, Gallery, Board, Table
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF3F4F6),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: const EdgeInsets.all(3),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildViewTabButton(
+                          viewName: 'Bulanan',
+                          icon: '📅',
+                          label: 'Bulanan',
+                        ),
+                        const SizedBox(width: 4),
+                        _buildViewTabButton(
+                          viewName: 'Mingguan',
+                          icon: '📆',
+                          label: 'Mingguan',
+                        ),
+                        const SizedBox(width: 4),
+                        _buildViewTabButton(
+                          viewName: 'Gallery',
+                          icon: '🖼️',
+                          label: 'Gallery',
+                        ),
+                        const SizedBox(width: 4),
+                        _buildViewTabButton(
+                          viewName: 'Board',
+                          icon: '📋',
+                          label: 'Board',
+                        ),
+                        const SizedBox(width: 4),
+                        _buildViewTabButton(
+                          viewName: 'Table',
+                          icon: '📊',
+                          label: 'Table',
+                        ),
                       ],
                     ),
                   ),
-                ),
 
-                const Spacer(),
+                  const SizedBox(width: 14),
 
-                // Search Box
-                if (isDesktop)
+                  // Filter Status Dropdown
+                  Container(
+                    height: 34,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFFE5E7EB)),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: _statusFilter,
+                        icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: Color(0xFF6B7280)),
+                        style: const TextStyle(fontSize: 12, color: Color(0xFF374151), fontWeight: FontWeight.w600),
+                        onChanged: (val) {
+                          if (val != null) setState(() => _statusFilter = val);
+                        },
+                        items: [
+                          const DropdownMenuItem(value: 'all', child: Text('Semua Status')),
+                          ..._statusOptions.map((st) => DropdownMenuItem(value: st, child: Text(st))),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  if (isWide) const Spacer() else const SizedBox(width: 14),
+
+                  // Search Box
                   SizedBox(
                     width: 200,
                     height: 34,
@@ -368,37 +397,82 @@ class _ScheduleProductionPageState extends State<ScheduleProductionPage> {
                     ),
                   ),
 
-                const SizedBox(width: 10),
+                  const SizedBox(width: 10),
 
-                // Tombol New Page / Tambah
-                ElevatedButton.icon(
-                  onPressed: () => _showAddOrEditDialog(initialDate: _selectedDate),
-                  icon: const Icon(Icons.add, size: 15),
-                  label: const Text('New'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF7A4B29),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    minimumSize: const Size(0, 34),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(6),
+                  // Tombol New Page / Tambah
+                  ElevatedButton.icon(
+                    onPressed: () => _showAddOrEditDialog(initialDate: _selectedDate),
+                    icon: const Icon(Icons.add, size: 15),
+                    label: const Text('New'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF7A4B29),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      minimumSize: const Size(0, 34),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ];
+
+                if (isWide) {
+                  return Row(children: rowChildren);
+                } else {
+                  return SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(children: rowChildren),
+                  );
+                }
+              },
             ),
           ),
 
-          // 2. Konten Tampilan: Bulanan ATAU Mingguan
+          // 2. Konten Tampilan Aktif (Bulanan, Mingguan, Gallery, Board, Table)
           Expanded(
-            child: _activeView == 'Bulanan'
-                ? _buildBulananView(isDesktop)
-                : _buildMingguanView(isDesktop),
+            child: _buildCurrentView(isDesktop),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildCurrentView(bool isDesktop) {
+    switch (_activeView) {
+      case 'Mingguan':
+        return _buildMingguanView(isDesktop);
+      case 'Gallery':
+        return ScheduleGalleryView(
+          items: _filteredItems,
+          onItemTap: (item) => _showAddOrEditDialog(existingItem: item),
+          onAddNew: () => _showAddOrEditDialog(initialDate: _selectedDate),
+          getStatusBgColor: _getStatusBgColor,
+          getStatusTextColor: _getStatusTextColor,
+        );
+      case 'Board':
+        return ScheduleBoardView(
+          items: _filteredItems,
+          onItemTap: (item) => _showAddOrEditDialog(existingItem: item),
+          onAddNewWithStatus: (status) => _showAddOrEditDialog(
+            initialDate: _selectedDate,
+            defaultStatus: status,
+          ),
+          getStatusBgColor: _getStatusBgColor,
+          getStatusTextColor: _getStatusTextColor,
+        );
+      case 'Table':
+        return ScheduleTableView(
+          items: _filteredItems,
+          onItemTap: (item) => _showAddOrEditDialog(existingItem: item),
+          onAddNew: () => _showAddOrEditDialog(initialDate: _selectedDate),
+          getStatusBgColor: _getStatusBgColor,
+          getStatusTextColor: _getStatusTextColor,
+        );
+      case 'Bulanan':
+      default:
+        return _buildBulananView(isDesktop);
+    }
   }
 
   Widget _buildViewTabButton({
@@ -1354,7 +1428,11 @@ class _ScheduleProductionPageState extends State<ScheduleProductionPage> {
   // ===========================================================================
   // 3. DIALOG TAMBAH & EDIT KEGIATAN (NOTION STYLE)
   // ===========================================================================
-  void _showAddOrEditDialog({ProductionScheduleItem? existingItem, DateTime? initialDate}) {
+  void _showAddOrEditDialog({
+    ProductionScheduleItem? existingItem,
+    DateTime? initialDate,
+    String? defaultStatus,
+  }) {
     final isEdit = existingItem != null;
     final titleCtrl = TextEditingController(text: existingItem?.title ?? '');
     final customerCtrl = TextEditingController(text: existingItem?.customer ?? '');
@@ -1362,8 +1440,11 @@ class _ScheduleProductionPageState extends State<ScheduleProductionPage> {
     final qtyCtrl = TextEditingController(text: existingItem?.qty?.toString() ?? '');
     final timeCtrl = TextEditingController(text: existingItem?.time ?? '');
     final descCtrl = TextEditingController(text: existingItem?.description ?? '');
+    final imageUrlCtrl = TextEditingController(text: existingItem?.imageUrl ?? '');
+    String? uploadedFileName;
+    bool isUploadingImage = false;
     DateTime dialogDate = existingItem?.date ?? initialDate ?? _selectedDate;
-    String selectedStatus = existingItem?.status ?? 'Sedang berlangsung';
+    String selectedStatus = existingItem?.status ?? defaultStatus ?? 'Sedang berlangsung';
 
     InputDecoration formInputDecoration({required String hintText}) {
       return InputDecoration(
@@ -1604,6 +1685,168 @@ class _ScheduleProductionPageState extends State<ScheduleProductionPage> {
 
                     const SizedBox(height: 12),
 
+                    // File & Media / Foto Desain (Wajib)
+                    RichText(
+                      text: const TextSpan(
+                        text: 'File & Media / Foto Desain ',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF374151)),
+                        children: [
+                          TextSpan(text: '*', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                          TextSpan(text: ' (Wajib)', style: TextStyle(color: Colors.red, fontSize: 11, fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+
+                    // Tombol Upload dari Laptop / HP
+                    InkWell(
+                      onTap: isUploadingImage
+                          ? null
+                          : () async {
+                              try {
+                                final picker = ImagePicker();
+                                final picked = await picker.pickImage(
+                                  source: ImageSource.gallery,
+                                  maxWidth: 1600,
+                                  maxHeight: 1600,
+                                  imageQuality: 85,
+                                );
+                                if (picked != null) {
+                                  setDialogState(() => isUploadingImage = true);
+                                  final bytes = await picked.readAsBytes();
+                                  final ext = picked.name.toLowerCase().endsWith('.png') ? 'png' : 'jpeg';
+                                  final base64Fallback = 'data:image/$ext;base64,${base64Encode(bytes)}';
+
+                                  String finalUrl = base64Fallback;
+                                  try {
+                                    final uploaded = await StorageService.instance.uploadBytes(
+                                      bytes: bytes,
+                                      prefix: 'schedule',
+                                      originalFilename: picked.name,
+                                    );
+                                    if (uploaded != null && uploaded.isNotEmpty) {
+                                      finalUrl = uploaded;
+                                    }
+                                  } catch (_) {}
+
+                                  setDialogState(() {
+                                    isUploadingImage = false;
+                                    uploadedFileName = picked.name;
+                                    imageUrlCtrl.text = finalUrl;
+                                  });
+                                }
+                              } catch (e) {
+                                setDialogState(() => isUploadingImage = false);
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Gagal memilih gambar: $e'), backgroundColor: Colors.redAccent),
+                                  );
+                                }
+                              }
+                            },
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF6E3D20).withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFF6E3D20).withValues(alpha: 0.3), width: 1.2),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            if (isUploadingImage) ...[
+                              const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF6E3D20)),
+                              ),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Mengunggah gambar...',
+                                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF6E3D20)),
+                              ),
+                            ] else ...[
+                              const Icon(Icons.cloud_upload_outlined, size: 19, color: Color(0xFF6E3D20)),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Upload Foto dari Laptop / HP',
+                                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Color(0xFF6E3D20)),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Preview foto jika sudah ada
+                    if (imageUrlCtrl.text.trim().isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFC6C3CF)),
+                        ),
+                        child: Row(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(6),
+                              child: buildScheduleImage(
+                                imageUrlCtrl.text.trim(),
+                                width: 46,
+                                height: 46,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    uploadedFileName ?? 'Foto Desain Terpasang',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  const Text(
+                                    'Siap tampil di Gallery, Board & Table',
+                                    style: TextStyle(fontSize: 11, color: Color(0xFF10B981), fontWeight: FontWeight.w500),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: () {
+                                setDialogState(() {
+                                  imageUrlCtrl.clear();
+                                  uploadedFileName = null;
+                                });
+                              },
+                              icon: const Icon(Icons.delete_outline_rounded, color: Colors.red, size: 18),
+                              tooltip: 'Hapus Foto',
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 8),
+
+                    // Atau Tempel Link/URL
+                    TextField(
+                      controller: imageUrlCtrl,
+                      onChanged: (_) => setDialogState(() {}),
+                      style: const TextStyle(fontSize: 12, color: Color(0xFF1F2937), fontWeight: FontWeight.w500),
+                      decoration: formInputDecoration(hintText: 'Atau tempel URL gambar foto desain (https://...)'),
+                    ),
+
+                    const SizedBox(height: 12),
+
                     // Catatan
                     const Text('Catatan', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF374151))),
                     const SizedBox(height: 6),
@@ -1637,81 +1880,98 @@ class _ScheduleProductionPageState extends State<ScheduleProductionPage> {
             ),
             actionsPadding: const EdgeInsets.fromLTRB(22, 4, 22, 20),
             actions: [
-              if (isEdit)
-                TextButton.icon(
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    _confirmDelete(existingItem);
-                  },
-                  icon: const Icon(Icons.delete_outline, size: 16, color: Colors.red),
-                  label: const Text('Hapus', style: TextStyle(color: Colors.red, fontSize: 13, fontWeight: FontWeight.w600)),
-                ),
-              const Spacer(),
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text(
-                  'Cancel',
-                  style: TextStyle(color: Color(0xFF5B6170), fontSize: 13, fontWeight: FontWeight.w600),
-                ),
-              ),
-              const SizedBox(width: 8),
-              ElevatedButton(
-                onPressed: () {
-                  final title = titleCtrl.text.trim();
-                  if (title.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Nama kegiatan tidak boleh kosong!'), backgroundColor: Colors.redAccent),
-                    );
-                    return;
-                  }
+              Row(
+                children: [
+                  if (isEdit)
+                    TextButton.icon(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _confirmDelete(existingItem);
+                      },
+                      icon: const Icon(Icons.delete_outline, size: 16, color: Colors.red),
+                      label: const Text('Hapus', style: TextStyle(color: Colors.red, fontSize: 13, fontWeight: FontWeight.w600)),
+                    ),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(color: Color(0xFF5B6170), fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: () {
+                      final title = titleCtrl.text.trim();
+                      if (title.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Nama kegiatan tidak boleh kosong!'), backgroundColor: Colors.redAccent),
+                        );
+                        return;
+                      }
 
-                  final qtyVal = int.tryParse(qtyCtrl.text.trim());
+                      final imageUrl = imageUrlCtrl.text.trim();
+                      if (imageUrl.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Foto atau gambar desain wajib diunggah atau diisi!'),
+                            backgroundColor: Colors.redAccent,
+                          ),
+                        );
+                        return;
+                      }
 
-                  if (isEdit) {
-                    final updated = existingItem.copyWith(
-                      title: title,
-                      customer: customerCtrl.text.trim().isNotEmpty ? customerCtrl.text.trim() : null,
-                      cageType: cageTypeCtrl.text.trim().isNotEmpty ? cageTypeCtrl.text.trim() : null,
-                      qty: qtyVal,
-                      date: dialogDate,
-                      time: timeCtrl.text.trim().isNotEmpty ? timeCtrl.text.trim() : null,
-                      description: descCtrl.text.trim().isNotEmpty ? descCtrl.text.trim() : null,
-                      status: selectedStatus,
-                    );
-                    ProductionScheduleService.instance.updateItem(updated);
-                  } else {
-                    final newItem = ProductionScheduleItem(
-                      id: 'sched_${DateTime.now().millisecondsSinceEpoch}',
-                      title: title,
-                      customer: customerCtrl.text.trim().isNotEmpty ? customerCtrl.text.trim() : null,
-                      cageType: cageTypeCtrl.text.trim().isNotEmpty ? cageTypeCtrl.text.trim() : null,
-                      qty: qtyVal,
-                      date: dialogDate,
-                      time: timeCtrl.text.trim().isNotEmpty ? timeCtrl.text.trim() : null,
-                      description: descCtrl.text.trim().isNotEmpty ? descCtrl.text.trim() : null,
-                      status: selectedStatus,
-                    );
-                    ProductionScheduleService.instance.addItem(newItem);
-                  }
+                      final qtyVal = int.tryParse(qtyCtrl.text.trim());
 
-                  setState(() {
-                    _currentDate = dialogDate;
-                    _selectedDate = dialogDate;
-                  });
+                      if (isEdit) {
+                        final updated = existingItem.copyWith(
+                          title: title,
+                          customer: customerCtrl.text.trim().isNotEmpty ? customerCtrl.text.trim() : null,
+                          cageType: cageTypeCtrl.text.trim().isNotEmpty ? cageTypeCtrl.text.trim() : null,
+                          qty: qtyVal,
+                          date: dialogDate,
+                          time: timeCtrl.text.trim().isNotEmpty ? timeCtrl.text.trim() : null,
+                          description: descCtrl.text.trim().isNotEmpty ? descCtrl.text.trim() : null,
+                          status: selectedStatus,
+                          imageUrl: imageUrlCtrl.text.trim().isNotEmpty ? imageUrlCtrl.text.trim() : null,
+                        );
+                        ProductionScheduleService.instance.updateItem(updated);
+                      } else {
+                        final newItem = ProductionScheduleItem(
+                          id: 'sched_${DateTime.now().millisecondsSinceEpoch}',
+                          title: title,
+                          customer: customerCtrl.text.trim().isNotEmpty ? customerCtrl.text.trim() : null,
+                          cageType: cageTypeCtrl.text.trim().isNotEmpty ? cageTypeCtrl.text.trim() : null,
+                          qty: qtyVal,
+                          date: dialogDate,
+                          time: timeCtrl.text.trim().isNotEmpty ? timeCtrl.text.trim() : null,
+                          description: descCtrl.text.trim().isNotEmpty ? descCtrl.text.trim() : null,
+                          status: selectedStatus,
+                          imageUrl: imageUrlCtrl.text.trim().isNotEmpty ? imageUrlCtrl.text.trim() : null,
+                        );
+                        ProductionScheduleService.instance.addItem(newItem);
+                      }
 
-                  Navigator.pop(ctx);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF6E3D20),
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                child: Text(
-                  isEdit ? 'Save Changes' : 'Save to Schedule',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                ),
+                      setState(() {
+                        _currentDate = dialogDate;
+                        _selectedDate = dialogDate;
+                      });
+
+                      Navigator.pop(ctx);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF6E3D20),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    child: Text(
+                      isEdit ? 'Save Changes' : 'Save to Schedule',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                  ),
+                ],
               ),
             ],
           );

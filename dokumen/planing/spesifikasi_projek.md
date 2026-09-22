@@ -32,6 +32,8 @@ Dokumen ini mendefinisikan kebutuhan fungsional, non-fungsional, use case, dan b
 | **FR-22** | Brand Identity & Tampilan Foto Anti-Crop | Logo brand transparan (`logo.png`) dilengkapi varian multi-resolusi (1.0x, 2.0x, 3.0x), auto downsampling cache di `AppSettingsService`, teks *JATIMAS SANGKAR* pada TopNavbar, serta wadah foto utama produk presisi 350px berproperti `BoxFit.contain` pada detail user maupun admin agar desain/logo tidak terpotong (*no-crop*). |
 | **FR-23** | Master Varian Bentuk Sangkar Relasional | Pengelolaan varian bentuk sangkar terhubung langsung secara mandiri baris per baris ke tabel database PostgreSQL `public.bentuk_sangkar` di Supabase, dengan persistensi lokal `SharedPreferences`, sinkronisasi otomatis saat startup, dan navigasi panah geser `<` / `>`. |
 | **FR-24** | Tema Latar Belakang Warna Krem Hangat | Seluruh antarmuka Katalog Umum dan Katalog Khusus mengadopsi latar belakang warna krem hangat (*Warm Cream / Ivory* - `#F8F4EA`) untuk kenyamanan visual dan keselarasan estetika dengan ukiran kayu jati Jepara. |
+| **FR-25** | Jadwal Produksi Multi-View Notion-Style & Upload Perangkat | Pengelolaan jadwal proses produksi terpadu dengan 5 mode tampilan (*Bulanan*, *Mingguan*, *Gallery*, *Board*, *Table*) yang meniru referensi `https://jatimas.beelink.web.id/`. Seluruh tampilan mengadopsi tata letak rata kiri konsisten (*left-aligned* full-width), mendukung pemilihan file gambar langsung dari memori komputer/laptop atau galeri smartphone pengguna via `image_picker` + Supabase Storage (`StorageService`), pratinjau foto interaktif, serta validasi wajib (*mandatory*) di mana formulir tidak dapat disimpan jika foto belum diunggah. |
+| **FR-26** | Database & Auto-Complete Tagar Terpusat | Pengelolaan tagar (#) terintegrasi ke database terpusat (`public.hashtags`) melalui `HashtagService`. Saat admin menambah atau menyunting produk di `AdminAddProductPage` / `AdminEditProductPage`, komponen `HashtagAutocompleteField` secara otomatis menampilkan daftar rekomendasi tagar relevan yang sudah ada saat mengetik `#`, menghindarkan pengetikan berulang, serta memanen tagar baru secara otomatis ke database. |
 
 ---
 
@@ -40,7 +42,7 @@ Dokumen ini mendefinisikan kebutuhan fungsional, non-fungsional, use case, dan b
 | Aspek | Spesifikasi |
 | :--- | :--- |
 | **Performa** | Aplikasi dapat melakukan rendering UI pada 60 fps secara halus di perangkat mobile maupun desktop, dengan transisi instan antar layar. |
-| **Keandalan Aset (Reliability)** | Aset brand penting seperti logo WhatsApp di-embed langsung ke memori (Base64) sehingga 100% bebas dari risiko kegagalan muat (asset load/cache error). |
+| **Keandalan Aset (Reliability)** | Aset brand penting seperti logo WhatsApp di-embed langsung ke memori (Base64) sehingga 100% bebas dari risiko kegagalan muat (asset load/cache error). Pemuatan gambar jadwal produksi didukung universal renderer `buildScheduleImage` yang tangguh memuat URL Supabase, Web HTTPS, Base64 URI, dan Asset lokal. |
 | **Interaksi Scrolling Desktop & Web** | Komponen horizontal scrolling (seperti baris bentuk sangkar) mendukung scroll mouse-wheel vertikal yang dikonversikan menjadi pergeseran horizontal, tombol panah `<` dan `>`, serta mouse drag (`PointerDeviceKind.mouse`) agar tidak macet di layar desktop. |
 | **Kompatibilitas** | Mendukung multiplatform: Android (API 21+), iOS, Web (Chrome, Firefox, Safari, Edge), Windows Desktop. |
 | **Desain Antarmuka (UI/UX)** | Menggunakan Material Design 3 bernuansa kayu jati Jepara (*Teakwood* `#382314`, `#7A4B29`, `#8B5328`), latar belakang krem hangat (*Warm Cream* `#F8F4EA`), kartu proporsional seragam, pill-shaped button, dan responsif terhadap variasi ukuran layar. |
@@ -76,6 +78,8 @@ flowchart LR
         UC14(Preview Mode Publik)
         UC15(Pantau Riwayat Pesanan Selesai)
         UC16(Pengaturan Toko, Nomor WA & Tampilan)
+        UC17(Kelola Jadwal Produksi 5-View Notion Style)
+        UC18(Auto-Complete Tagar Produk Terpusat)
     end
 
     User --> UC1
@@ -101,6 +105,8 @@ flowchart LR
     Admin --> UC14
     Admin --> UC15
     Admin --> UC16
+    Admin --> UC17
+    Admin --> UC18
 ```
 
 ---
@@ -136,7 +142,11 @@ stateDiagram-v2
         PantauAnalisisData --> CekUserPrivate : Detail Profil & Logo Member
         PantauAnalisisData --> CekRiwayatSelesai : Riwayat Pesanan
         PantauAnalisisData --> PengaturanToko : Nomor WA, Font, Banner, Navbar
+        PantauAnalisisData --> JadwalProduksi : Buka Jadwal Proses Pembuatan
+        JadwalProduksi --> MultiViewNotion : Pilih Bulanan, Mingguan, Gallery, Board, Table
+        MultiViewNotion --> UnggahFotoWajib : Upload Foto dari Laptop/HP (Mandatory)
         CariListProdukUmum --> TambahEditProduk : Form Tambah/Edit Produk
+        TambahEditProduk --> AutoCompleteTagar : Rekomendasi Tagar Terpusat
         CariListProdukUmum --> TambahBentukSangkar : Form Dialog & Auto Scroll
         TambahBentukSangkar --> PreviewUmum : Mode Pratinjau Publik
         PreviewUmum --> KembaliKeDashboard : Banner Kembali

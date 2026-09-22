@@ -6,7 +6,9 @@ import 'package:image_picker/image_picker.dart';
 import '../models/product.dart';
 import '../services/auth_service.dart';
 import '../services/cage_service.dart';
+import '../services/hashtag_service.dart';
 import '../services/product_service.dart';
+import '../widgets/hashtag_autocomplete_field.dart';
 
 class AdminAddProductPage extends StatefulWidget {
   const AdminAddProductPage({super.key});
@@ -93,7 +95,8 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
         .split(RegExp(r'[\s,]+'))
         .map((t) => t.trim())
         .where((t) => t.isNotEmpty)
-        .map((t) => t.startsWith('#') ? t : '#$t');
+        .map((t) => t.startsWith('#') ? t : '#$t')
+        .toList();
 
     setState(() {
       for (final item in items) {
@@ -103,6 +106,9 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
       }
       _hashtagInputController.clear();
     });
+
+    // Daftarkan ke database HashtagService
+    HashtagService.instance.addHashtags(items);
   }
 
   void _removeHashtag(int index) {
@@ -146,6 +152,10 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
     final cleanHashtags = _hashtagsList.isNotEmpty
         ? _hashtagsList.join(' ')
         : '#sangkar #jati';
+
+    if (_hashtagsList.isNotEmpty) {
+      HashtagService.instance.addHashtags(_hashtagsList);
+    }
 
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1372,47 +1382,14 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
           const SizedBox(height: 8),
         ],
 
-        // Input Field untuk Memasukkan Hashtag Satu per Satu
-        SizedBox(
-          width: double.infinity,
-          height: 38,
-          child: TextField(
-            key: const Key('admin_add_hashtag_field'),
-            controller: _hashtagInputController,
-            onSubmitted: (_) => _addHashtag(),
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF4A4A4A),
-            ),
-            decoration: InputDecoration(
-              hintText: 'Ketik hashtag lalu tekan Enter atau ikon +',
-              hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF9E9E9E)),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              suffixIcon: IconButton(
-                icon: const Icon(
-                  Icons.add_circle_outline_rounded,
-                  size: 20,
-                  color: Color(0xFF7A4B29),
-                ),
-                tooltip: 'Tambahkan Hashtag',
-                onPressed: () => _addHashtag(),
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(6),
-                borderSide: const BorderSide(color: Color(0xFFAAAAAA)),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(6),
-                borderSide: const BorderSide(color: Color(0xFFAAAAAA)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(6),
-                borderSide: const BorderSide(color: Color(0xFF7A4B29), width: 1.5),
-              ),
-              isDense: true,
-            ),
-          ),
+        // Input Field dengan Auto-Complete untuk Memasukkan Hashtag
+        HashtagAutocompleteField(
+          fieldKey: const Key('admin_add_hashtag_field'),
+          controller: _hashtagInputController,
+          currentHashtags: _hashtagsList,
+          onHashtagSelected: (tag) => _addHashtag(tag),
+          onSubmitted: () => _addHashtag(),
+          hintText: 'Ketik hashtag lalu tekan Enter atau pilih saran...',
         ),
         const SizedBox(height: 18),
 

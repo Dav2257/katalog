@@ -58,10 +58,11 @@ Dokumen ini mendokumentasikan secara rinci komponen-komponen antarmuka pengguna 
 ### C. `lib/pages/product_detail_page.dart` (`ProductDetailPage`)
 - **Tanggung Jawab**: Menyajikan detail lengkap mengenai sangkar burung yang dipilih pengguna dan konfigurasi pemesanan kustom.
 - **Fitur Utama**:
-  - **Tampilan Visual Produk Presisi**:
+  - **Tampilan Visual Produk Presisi & Minimalis**:
     - Kotak foto utama berukuran **tinggi 350 px**, warna latar abu-abu halus (`#B0B0B0`), kelengkungan sudut **`borderRadius: 18`**, dan bayangan lembut.
     - Menggunakan properti **`fit: BoxFit.contain`** dan `Product.buildImageFromSource` sehingga logo/artwork persegi (seperti *Es Durian Shake*), landscape, maupun portrait **tampil 100% utuh tanpa terpotong (no-crop)**.
     - Tampilan bersih tanpa kotak thumbnail duplikat di samping sangkar (nama/label langsung fokus pada variasi).
+    - **Peniadaan Ikon Bintang Rating**: Ikon bintang rating review dihilangkan demi antarmuka yang bersih, profesional, dan fokus pada keindahan ukiran serta spesifikasi sangkar.
   - **Navigasi Bentuk Sangkar dengan Tombol Next & Previous**: Dilengkapi tombol panah kiri (`<`) dan kanan (`>`) di samping deretan bentuk sangkar dinamis dari `CageService` (`Bijian No.2`, `Kosan R.10`, `Sangkar isi 2`, dst.).
   - **Dukungan Foto Sangkar Spesifik per Produk**: Setiap produk dapat memiliki foto sangkar yang berbeda-beda untuk variasi ukuran yang sama (disimpan pada kolom `variasi` di data produk).
   - **Counter Kuantitas per Bentuk**: Tombol `+` dan `-` kuantitas yang tersimpan secara terpisah untuk setiap bentuk sangkar.
@@ -131,6 +132,7 @@ Dokumen ini mendokumentasikan secara rinci komponen-komponen antarmuka pengguna 
 - **Tanggung Jawab**: Menambah produk baru ke katalog publik atau menyunting detail produk yang sudah ada.
 - **Fitur Utama**:
   - Input nama produk, kategori, harga, kode produk, tagar (#), dan URL gambar.
+  - **Auto-Complete Tagar Terpusat**: Menggunakan `HashtagAutocompleteField` yang terhubung dengan `HashtagService`. Saat admin mengetik tanda pagar `#` atau kata kunci tagar, sistem menampilkan daftar rekomendasi tagar dari database terpusat (`public.hashtags`), memanen tagar baru secara otomatis, dan menghindarkan pengetikan berulang.
   - **Sinkronisasi Bentuk Sangkar**: Mengintegrasikan pilihan variasi bentuk sangkar (`ProductCageVariation`) dengan foto kustom yang tersinkronisasi dua arah ke `CageService`.
 
 ### K. `lib/pages/admin_settings_page.dart` (`AdminSettingsPage`)
@@ -140,6 +142,20 @@ Dokumen ini mendokumentasikan secara rinci komponen-komponen antarmuka pengguna 
   - **Banner Katalog Kustom**: Pilihan sampel banner siap pakai atau input URL gambar banner kustom.
   - **Layout Navbar**: Pilihan 3 variasi tata letak Top Navbar katalog umum (Style 1, Style 2, Style 3).
   - **Jenis Font Katalog**: Pilihan tipografi (`Times New Roman`, `Outfit`, `Poppins`, `Roboto`, `Playfair Display`).
+
+### L. `lib/pages/schedule_production_page.dart` (`ScheduleProductionPage`)
+- **Tanggung Jawab**: Manajemen jadwal proses produksi sangkar bertingkat enterprise dengan format antarmuka serbaguna ala Notion database yang meniru referensi `https://jatimas.beelink.web.id/`.
+- **Fitur Utama**:
+  - **5 Mode Tampilan (Multi-View Toolbar)**:
+    1. **Bulanan**: Tampilan kalender grid bulanan lengkap dengan filter tanggal dan indikator status produksi.
+    2. **Mingguan**: Tampilan kalender per pekan dengan slot waktu dan penjadwalan harian.
+    3. **Gallery**: Grid kartu visual berukuran konsisten (300px) dengan cover foto produk, badge status warna, deskripsi, dan tanggal target.
+    4. **Board (Kanban)**: Kolom alur status vertikal (*Direncanakan*, *Proses Produksi*, *Finishing*, *Selesai*) dengan drag/klik pemindahan status.
+    5. **Table**: Tabel data terstruktur dengan kolom Foto, Judul Tugas, Kategori, Target Selesai, Status, Catatan, dan Tombol Aksi Cepat.
+  - **Tata Letak Rata Kiri Konsisten**: Menggunakan `crossAxisAlignment: CrossAxisAlignment.stretch`, container full-width (`width: double.infinity`), dan pembungkus `Align(alignment: Alignment.topLeft)` pada seluruh view sehingga kartu dan baris data tersusun rapi dari sisi kiri layar ke kanan tanpa ada tampilan yang memusat canggung ke tengah.
+  - **Upload Gambar Perangkat (Laptop & HP)**: Admin dapat memilih file foto langsung dari galeri smartphone atau file browser komputer via `image_picker` yang otomatis diunggah ke Supabase Storage via `StorageService` (dengan fallback aman Base64 Data URI).
+  - **Pratinjau Gambar Real-Time & Validasi Wajib**: Menyediakan kartu preview foto interaktif dengan tombol hapus/ganti. Foto jadwal produksi bersifat **wajib (mandatory)**; form modal secara ketat menolak penyimpanan jika foto belum diunggah atau URL kosong.
+  - **Universal Image Renderer**: Didukung `buildScheduleImage` di `schedule_image_helper.dart` yang secara tangguh menangani Supabase Storage URL, Web HTTP/HTTPS, Base64 Data URI, maupun Asset Image lokal.
 
 ---
 
@@ -152,6 +168,9 @@ Dokumen ini mendokumentasikan secara rinci komponen-komponen antarmuka pengguna 
 | `OrderService` | `lib/services/order_service.dart` | Mengelola antrean pesanan masuk (`incomingOrders`), riwayat pesanan selesai (`completedOrders`), update 4 tahapan produksi custom, dan pelacakan pesanan aktif member di keranjang. |
 | `ProductService` | `lib/services/product_service.dart` | Mengelola data katalog produk umum secara reaktif (`ChangeNotifier`), sinkronisasi tambah/edit produk admin ke katalog publik. |
 | `AppSettingsService` | `lib/services/settings_service.dart` | Mengelola nomor WhatsApp tujuan pesanan (`adminWhatsApp`), banner kustom, style navbar (1-3), font katalog, pembentukan link pesanan WhatsApp berfoto, serta penyedia logo terpadu (`buildLogoWidget`) yang dioptimasi dengan varian resolusi (1.0x, 2.0x, 3.0x), auto downsampling `cacheWidth`/`cacheHeight`, dan anti-aliasing `FilterQuality.medium`. |
+| `ProductionScheduleService` | `lib/services/schedule_service.dart` | Mengelola CRUD data jadwal proses produksi (`ProductionScheduleItem`) dengan sinkronisasi ke tabel Supabase `public.production_schedules`, cache lokal offline, filter rentang tanggal, filter status, dan dukungan multi-view. |
+| `HashtagService` | `lib/services/hashtag_service.dart` | Mengelola kamus database tagar terpusat (`public.hashtags`), memfasilitasi pencarian auto-complete cerdas saat pengetikan produk di admin, cache memori instan, dan auto-harvesting tagar baru yang otomatis didaftarkan ke database. |
+| `StorageService` | `lib/services/storage_service.dart` | Menangani proses upload berkas gambar dari memori/perangkat pengguna (Web, Windows, Android, iOS) ke bucket Supabase Storage (`schedules` / `products`) dengan pengembalian Public URL instan dan fallback Base64. |
 
 ---
 
@@ -161,6 +180,11 @@ Dokumen ini mendokumentasikan secara rinci komponen-komponen antarmuka pengguna 
 | :--- | :--- | :--- |
 | `TopNavbar` | `widgets/top_navbar.dart` | Bilah navigasi atas yang memuat emblem logo lingkaran 44px bersanding dengan teks merek elegan `JATIMAS SANGKAR` (kombinasi putih tebal & kuning emas), search input dinamis, ikon keranjang belanja dengan badge counter, dan tombol profil/login. |
 | `HeroBanner` | `widgets/hero_banner.dart` | Banner visual di bagian atas halaman katalog untuk memperkuat identitas brand Jatimas Sangkar, mendukung gambar bawaan maupun banner kustom admin. |
+| `HashtagAutocompleteField` | `widgets/hashtag_autocomplete_field.dart` | Input textfield cerdas dengan dropdown overlay dinamis untuk rekomendasi tagar otomatis (#kayujati, #sangkar, dll.) dengan sinkronisasi database terpusat. |
+| `ScheduleGalleryView` | `widgets/schedule/schedule_gallery_view.dart` | Tampilan kartu galeri visual Notion-style dengan cover gambar wajib, status badge, dan layout rata kiri responsif. |
+| `ScheduleBoardView` | `widgets/schedule/schedule_board_view.dart` | Tampilan Kanban board alur kerja produksi (Direncanakan, Proses, Finishing, Selesai) dengan layout kolom rata kiri full-width. |
+| `ScheduleTableView` | `widgets/schedule/schedule_table_view.dart` | Tampilan tabel database terstruktur rapi dengan baris bergantian, badge status, thumbnail foto, dan aksi CRUD. |
+| `buildScheduleImage` | `widgets/schedule/schedule_image_helper.dart` | Helper utilitas universal untuk merender gambar jadwal dari berbagai sumber (Network, Supabase Storage, Base64 Data URI, Asset) secara aman tanpa crash. |
 | `WhatsAppLogo` | `pages/cart_page.dart` | Komponen logo resmi WhatsApp berbasis Base64 memory image untuk tombol Pesan. |
 | `WhatsAppIcon` | `pages/admin_order_detail_page.dart` | Komponen ikon WhatsApp presisi berbasis CustomPainter untuk tombol hubungi pembeli di halaman admin. |
 
@@ -182,8 +206,9 @@ graph TD
     O1 -->|Selesaikan Pesanan| O2[AdminCompletedOrderDetailPage - Riwayat Selesai]
     AD -->|Tab Riwayat Selesai| O2
     AD -->|Aksi Detail User Private| U1[AdminUserDetailPage - Profil & Desain Member]
-    AD -->|Tambah Produk Baru| P1[AdminAddProductPage]
-    AD -->|Edit Produk Eksisting| P2[AdminEditProductPage]
+    AD -->|Tambah Produk Baru| P1[AdminAddProductPage - Auto-Complete Hashtag]
+    AD -->|Edit Produk Eksisting| P2[AdminEditProductPage - Auto-Complete Hashtag]
+    AD -->|Menu Jadwal Produksi| SC[ScheduleProductionPage - 5 View Notion Style]
     AD -->|Menu Pengaturan Toko| S1[AdminSettingsPage - WA, Font, Banner, Navbar]
 
     A2 -->|Tombol Request| R[Modal Request: Insert Gambar Desain]

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../models/product.dart';
 import '../supabase_config.dart';
+import 'hashtag_service.dart';
 
 /// Model Produk Khusus Tampilan List Produk User Umum di Dashboard Admin
 class AdminPublicProduct {
@@ -100,6 +101,12 @@ class ProductService extends ChangeNotifier {
           );
         }
       }
+
+      // Sinkronkan hashtag unik dari produk ke HashtagService
+      final allTags = _products.expand((p) => p.hashtagList).toSet();
+      if (allTags.isNotEmpty) {
+        HashtagService.instance.addHashtags(allTags);
+      }
     } catch (e) {
       debugPrint('ProductService.fetchProducts error: $e');
       _errorMessage = e.toString();
@@ -187,6 +194,9 @@ class ProductService extends ChangeNotifier {
       lastEditedDate: editDate,
     );
 
+    // Daftarkan hashtag ke database HashtagService
+    HashtagService.instance.addHashtags(newProduct.hashtagList);
+
     // 2. Tambahkan ke urutan terdepan katalog user umum agar langsung muncul
     _products.insert(0, newProduct);
 
@@ -253,6 +263,14 @@ class ProductService extends ChangeNotifier {
       };
 
       await supabase.from('produk').update(updateData).eq('id', id);
+
+      if (cleanHashtags != null && cleanHashtags.isNotEmpty) {
+        final tags = cleanHashtags
+            .split(RegExp(r'[\s,]+'))
+            .map((t) => t.trim())
+            .where((t) => t.isNotEmpty);
+        HashtagService.instance.addHashtags(tags);
+      }
     } catch (e) {
       debugPrint('Error updating product in Supabase: $e');
       rethrow;

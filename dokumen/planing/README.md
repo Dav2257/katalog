@@ -54,6 +54,10 @@ gantt
     section Fase 5: Integrasi Cloud & Backend Lanjutan
     Sinkronisasi Realtime Supabase Database :done,    be1,  2026-09-13, 2026-09-17
     Deployment Web via Firebase Hosting     :done,    fe6,  2026-09-17, 2026-09-17
+    section Fase 6: Jadwal Produksi Notion-Style & Database Tagar
+    Database & Auto-Complete Tagar Terpusat :done,    fe7,  2026-09-18, 2026-09-20
+    Jadwal Produksi 5-View Notion & Upload  :done,    fe8,  2026-09-21, 2026-09-22
+    section Fase 7: Rencana Lanjutan
     Payment Gateway Otomatis                :         be2,  2026-09-29, 2026-10-15
 ```
 
@@ -86,11 +90,16 @@ gantt
 - [x] **Peremajaan Tema Warna Krem Hangat (*Warm Cream / Ivory* - `#F8F4EA`)**: Mengubah background katalog umum dan katalog khusus menjadi warna krem hangat yang estetik dan selaras dengan kayu jati Jepara.
 - [x] **Cloud Storage Pengaturan Toko**: Konfigurasi global admin disimpan langsung pada tabel `app_settings` dan file cadangan `app_settings.json` di bucket Supabase Storage `katalog`.
 - [x] **Hosting Web Otomatis**: Integrasi konfigurasi hosting `firebase.json` untuk rilis Flutter Web ke Firebase Hosting.
+- [x] **Jadwal Produksi Multi-View Notion-Style (`ScheduleProductionPage`)**: Pengelolaan jadwal produksi komprehensif dengan 5 mode tampilan (*Bulanan*, *Mingguan*, *Gallery*, *Board/Kanban*, *Table*) yang mereplikasi referensi `https://jatimas.beelink.web.id/`.
+- [x] **Upload Gambar Perangkat & Validasi Wajib**: Fitur pemilihan gambar langsung dari galeri smartphone atau file browser komputer via `image_picker` + Supabase Storage (`StorageService`), live preview card interaktif, dan validasi wajib (*mandatory image*) saat menyimpan jadwal.
+- [x] **Tata Letak Rata Kiri Konsisten**: Standardisasi struktur antarmuka jadwal produksi menggunakan `crossAxisAlignment: CrossAxisAlignment.stretch`, container full-width (`width: double.infinity`), dan `Align(alignment: Alignment.topLeft)`.
+- [x] **Database & Auto-Complete Tagar Terpusat (`HashtagService` & `HashtagAutocompleteField`)**: Kamus tagar terpusat di `public.hashtags` dengan pencarian auto-complete cerdas saat pengetikan di form admin dan pemanenan tagar baru secara otomatis.
+- [x] **Penyegaran Tampilan Detail Produk Bersih**: Menghilangkan bintang rating dan label ulasan dari `ProductDetailPage` agar tampilan katalog tetap bersih, elegan, dan fokus pada keunggulan spesifikasi sangkar jati.
 
 ### B. Fitur Prioritas Menengah (Medium Priority)
 - [x] Sinkronisasi otomatis daftar produk langsung dari database Supabase (`produk` table).
 - [x] Integrasi pemesanan WhatsApp lengkap dengan format rincian produk, tautan foto produk, bentuk sangkar, dan catatan pemesan.
-- [x] Manajemen state terpusat via Service Layer (`AuthService`, `CageService`, `OrderService`, `ProductService`, `AppSettingsService`).
+- [x] Manajemen state terpusat via Service Layer (`AuthService`, `CageService`, `OrderService`, `ProductService`, `AppSettingsService`, `ProductionScheduleService`, `HashtagService`, `StorageService`).
 - [ ] Integrasi Supabase Auth penuh (Register akun mandiri, Forgot Password, OAuth Google).
 
 ### C. Fitur Prioritas Rendah (Future Enhancements)

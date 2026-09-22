@@ -14,25 +14,35 @@ lib/
 │   └── product.dart                      # Model Product, CartItem, & ProductCageVariation
 ├── pages/                                # Halaman-halaman antarmuka pengguna
 │   ├── admin_dashboard_page.dart         # Dashboard admin (analisis data, pesanan, user private, produk umum, sangkar)
+│   ├── schedule_production_page.dart     # Jadwal proses pembuatan (Notion-style: Bulanan, Mingguan, Gallery, Board, Table)
 │   ├── admin_order_detail_page.dart      # Detail pesanan masuk, kontak WA pembeli, & 4 tahapan produksi custom
 │   ├── admin_completed_order_detail_page.dart # Riwayat pesanan selesai dengan tanggal penyelesaian & status
 │   ├── admin_user_detail_page.dart       # Detail profil & logo custom Member Private
-│   ├── admin_add_product_page.dart       # Tambah produk baru publik dengan foto & bentuk sangkar
-│   ├── admin_edit_product_page.dart      # Edit produk publik dengan sinkronisasi dua arah ke CageService
+│   ├── admin_add_product_page.dart       # Tambah produk baru publik dengan auto-complete hashtag & variasi bentuk
+│   ├── admin_edit_product_page.dart      # Edit produk publik dengan auto-complete hashtag & sinkronisasi CageService
 │   ├── admin_settings_page.dart          # Pengaturan nomor WhatsApp tujuan pesanan, banner, navbar style, & font
 │   ├── cart_page.dart                    # Keranjang belanja, tracking pesanan, konfirmasi berfoto, & Pesan WA
 │   ├── login_page.dart                   # Halaman login pengguna bertema Jatimas Sangkar (Member & Admin)
-│   ├── product_detail_page.dart          # Detail produk, navigasi bentuk sangkar < >, catatan, & kuantitas
+│   ├── product_detail_page.dart          # Detail produk bersih (tanpa bintang rating), variasi bentuk sangkar < >, catatan
 │   └── user_home_page.dart               # Beranda khusus member (katalog logo custom & request desain)
 ├── services/                             # Lapisan bisnis & manajemen state terpusat
 │   ├── auth_service.dart                 # Layanan autentikasi & pemisahan role (Guest, Member, Admin)
 │   ├── cage_service.dart                 # Layanan reaktif manajemen varian bentuk sangkar (ChangeNotifier)
 │   ├── order_service.dart                # Layanan pesanan masuk, progres 4 tahap, riwayat selesai, & tracking
 │   ├── product_service.dart              # Layanan sinkronisasi data produk katalog publik (tambah/edit/hapus)
+│   ├── schedule_service.dart             # Layanan terpusat jadwal proses pembuatan (ProductionScheduleService)
+│   ├── hashtag_service.dart              # Layanan database & auto-complete hashtag (SharedPreferences + Supabase)
+│   ├── storage_service.dart              # Layanan upload media gambar ke Supabase Storage
 │   └── settings_service.dart             # Layanan pengaturan toko, nomor WhatsApp wa.me, banner, style, & font
 └── widgets/                              # Komponen UI yang dapat digunakan kembali (reusable)
     ├── hero_banner.dart                  # Komponen visual header dinamis Jatimas Sangkar
-    └── top_navbar.dart                   # Bilah navigasi atas responsif dengan variasi style layout (1-3)
+    ├── top_navbar.dart                   # Bilah navigasi atas responsif dengan variasi style layout (1-3)
+    ├── hashtag_autocomplete_field.dart   # Input hashtag pintar dengan dropdown auto-complete & quick chips
+    └── schedule/                         # Komponen tampilan jadwal produksi Notion-style
+        ├── schedule_gallery_view.dart    # Tampilan Gallery Notion dengan cover image & status pill
+        ├── schedule_board_view.dart      # Tampilan Kanban Board 5 kolom status Notion-style
+        ├── schedule_table_view.dart      # Tampilan Grouped Table mingguan Notion-style
+        └── schedule_image_helper.dart    # Helper universal render gambar URL & upload Base64 perangkat
 ```
 
 ---
@@ -106,9 +116,17 @@ Aplikasi menggunakan arsitektur modular yang rapi dengan kombinasi **StatefulWid
 - **`ProductService`**:
   - State manager reaktif untuk katalog produk publik (`ChangeNotifier`).
   - Menyediakan fungsi penambahan produk baru (`addProduct`), pengeditan produk (`updateProduct`), serta penghapusan produk secara langsung disinkronkan dengan tampilan katalog umum.
-- **`AppSettingsService`**:
-  - Mengelola preferensi toko oleh Admin: nomor WhatsApp tujuan pesanan (`adminWhatsApp`), banner kustom, style navbar (1-3), dan font katalog.
-  - Membentuk link pemesanan WhatsApp (`createOrderWhatsAppUri`) berformat rapi yang otomatis menyematkan **nama produk, bentuk sangkar, kuantitas, catatan, dan link foto produk**.
+- **`ProductionScheduleService`**:
+  - State manager terpusat untuk agenda jadwal proses pembuatan produk/pesanan.
+  - Berbagi satu basis data reaktif (`items`) untuk semua mode tampilan: Bulanan, Mingguan, Gallery, Board (Kanban), dan Table.
+  - Menyediakan operasi CRUD (`addItem`, `updateItem`, `deleteItem`) dan penyimpanan permanen lokal serta cloud.
+- **`HashtagService`**:
+  - Arsitektur hybrid untuk auto-complete tagar produk.
+  - Menyimpan cache lokal instan di `SharedPreferences` (`cached_hashtags_list_v1`), tersinkronisasi dengan tabel `public.hashtags` di Supabase, dan auto-harvesting seluruh tag unik dari produk eksisting.
+  - Mendukung pencarian instan (`getSuggestions`), pencegahan duplikasi, dan pembuatan tagar baru secara otomatis.
+- **`StorageService`**:
+  - Layanan unggah media gambar ke Supabase Storage bucket (`katalog`).
+  - Mendukung konversi upload file lokal perangkat (laptop/HP) menjadi URL publik permanen dengan fallback data URI Base64.
 - **Pemisahan Keranjang Tamu vs Member**:
   - `_guestCart`: Keranjang belanja terisolasi saat bertindak sebagai tamu.
   - `_userCart`: Keranjang belanja terisolasi untuk member login.

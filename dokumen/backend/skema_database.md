@@ -90,6 +90,27 @@ erDiagram
         jsonb settings_json "Konfigurasi Toko (logo, banner, wa, navbar, font)"
         timestamp updated_at
     }
+
+    HASHTAGS {
+        uuid id PK "gen_random_uuid()"
+        string name UK "Nama Hashtag (#jati, #sangkar, dll)"
+        int use_count "Frekuensi Penggunaan"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    PRODUCTION_SCHEDULES {
+        uuid id PK "gen_random_uuid()"
+        string title "Nama Proyek / Item Produksi"
+        string category "Kategori Sangkar / Produk"
+        date start_date "Tanggal Mulai Produksi"
+        date end_date "Target Tanggal Selesai"
+        string status "Direncanakan / Proses Produksi / Finishing / Selesai"
+        text image_url "URL Foto Wajib (Storage/Base64/Network)"
+        text notes "Catatan Tambahan & Progres"
+        timestamp created_at
+        timestamp updated_at
+    }
 ```
 
 ---
@@ -196,18 +217,50 @@ CREATE TABLE IF NOT EXISTS public.app_settings (
     settings_json JSONB NOT NULL DEFAULT '{}'::jsonb,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+-- ==============================================================================
+-- 7. TABEL HASHTAGS (DATABASE HASHTAG UNTUK AUTO-COMPLETE PRODUK ADMIN)
+-- Dikelola oleh HashtagService (Auto-complete, Auto-harvest, Sinkronisasi)
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS public.hashtags (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    name VARCHAR(100) UNIQUE NOT NULL,
+    use_count INT DEFAULT 1,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- ==============================================================================
+-- 8. TABEL PRODUCTION SCHEDULES (JADWAL PROSES PRODUKSI NOTION-STYLE)
+-- Dikelola oleh ProductionScheduleService (Multi-view 5 Mode, CRUD, Foto Wajib)
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS public.production_schedules (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    category VARCHAR(100) DEFAULT 'Sangkar Jati',
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    status VARCHAR(50) DEFAULT 'Proses Produksi',
+    image_url TEXT NOT NULL,
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
 ```
 
 ---
 
-## 4. 🗄️ Supabase Storage Bucket (`katalog`)
+## 4. 🗄️ Supabase Storage Buckets
 
-Selain tabel PostgreSQL di atas, aplikasi menggunakan **Supabase Storage Bucket** bernama `katalog`:
+Aplikasi menggunakan beberapa **Storage Bucket** di Supabase untuk pengelolaan aset berkas:
 
-1. **`app_settings.json`**:
-   - Berisi file cadangan konfigurasi global aplikasi dan persistensi offline yang dikelola oleh `AppSettingsService` dan `CageService`.
-2. **Aset Gambar**:
-   - Menampung file gambar produk publik, foto request logo custom member, dan gambar sangkar yang diunggah oleh admin maupun user.
+1. **Bucket `katalog`**:
+   - **`app_settings.json`**: Berisi file cadangan konfigurasi global toko (nomor WA, banner, navbar, font) dan persistensi offline yang dikelola oleh `AppSettingsService` dan `CageService`.
+   - Menampung gambar produk katalog publik dan varian bentuk sangkar.
+2. **Bucket `schedules`**:
+   - Dikelola oleh `StorageService` untuk menampung gambar jadwal proses pembuatan yang diunggah langsung oleh pengguna dari laptop atau galeri handphone.
+3. **Bucket `products`**:
+   - Menampung foto produk baru dan upload desain kustom pengguna.
 
 ---
 
@@ -221,6 +274,8 @@ ALTER TABLE public.produk_custom ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pesanan ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.bentuk_sangkar ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.hashtags ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.production_schedules ENABLE ROW LEVEL SECURITY;
 
 -- 1. Kebijakan Produk Publik
 CREATE POLICY "Publik dapat melihat produk" ON public.produk 
@@ -255,17 +310,26 @@ GRANT ALL ON TABLE public.bentuk_sangkar TO anon, authenticated;
 CREATE POLICY "Akses penuh app_settings" ON public.app_settings 
     FOR ALL USING (true) WITH CHECK (true);
 GRANT ALL ON TABLE public.app_settings TO anon, authenticated;
+
+-- 7. Kebijakan Hashtags Terpusat
+CREATE POLICY "Akses penuh hashtags" ON public.hashtags 
+    FOR ALL USING (true) WITH CHECK (true);
+GRANT ALL ON TABLE public.hashtags TO anon, authenticated;
+
+-- 8. Kebijakan Jadwal Produksi (Production Schedules)
+CREATE POLICY "Akses penuh production_schedules" ON public.production_schedules 
+    FOR ALL USING (true) WITH CHECK (true);
+GRANT ALL ON TABLE public.production_schedules TO anon, authenticated;
 ```
 
 ---
 
 ## 6. 🧹 Pembersihan Tabel Lama (Legacy Clean-Up)
 
-Bagi database yang sebelumnya telah terbuat tabel bawaan template lama yang tidak lagi digunakan, pembersihan dapat dieksekusi dengan perintah SQL berikut (tabel aktif `produk`, `user_private`, `produk_custom`, `pesanan`, `bentuk_sangkar`, dan `app_settings` tetap dipertahankan):
+Bagi database yang sebelumnya telah terbuat tabel bawaan template lama yang tidak lagi digunakan, pembersihan dapat dieksekusi dengan perintah SQL berikut (tabel aktif `produk`, `user_private`, `produk_custom`, `pesanan`, `bentuk_sangkar`, `app_settings`, `hashtags`, dan `production_schedules` tetap dipertahankan):
 
 ```sql
 DROP TABLE IF EXISTS public.logo_hashtags CASCADE;
-DROP TABLE IF EXISTS public.hashtags CASCADE;
 DROP TABLE IF EXISTS public.logos CASCADE;
 DROP TABLE IF EXISTS public.cart_items CASCADE;
 DROP TABLE IF EXISTS public.carts CASCADE;
