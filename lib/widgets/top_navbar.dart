@@ -25,7 +25,10 @@ class TopNavbar extends StatelessWidget implements PreferredSizeWidget {
     this.onSearchSubmitted,
     this.searchController,
     this.cartItemCount = 0,
+    this.hideActionsOnMobile = false,
   });
+
+  final bool hideActionsOnMobile;
 
   @override
   Size get preferredSize => const Size.fromHeight(70);
@@ -36,28 +39,29 @@ class TopNavbar extends StatelessWidget implements PreferredSizeWidget {
     final List<Color> gradientColors = style == 2
         ? const [Color(0xFF231812), Color(0xFF1B110B), Color(0xFF2A1C13)]
         : style == 3
-            ? const [Color(0xFF5C3C22), Color(0xFF3B2414), Color(0xFF50321B)]
-            : const [
-                Color(0xFF4A301E),
-                Color(0xFF382314),
-                Color(0xFF2C190E),
-                Color(0xFF482E1C),
-                Color(0xFF5A3922),
-              ];
+        ? const [Color(0xFF5C3C22), Color(0xFF3B2414), Color(0xFF50321B)]
+        : const [
+            Color(0xFF4A301E),
+            Color(0xFF382314),
+            Color(0xFF2C190E),
+            Color(0xFF482E1C),
+            Color(0xFF5A3922),
+          ];
 
-    return Container(
-      decoration: BoxDecoration(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 650;
+        final showActions = !hideActionsOnMobile || !isMobile;
+
+        return Container(
+          decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: gradientColors,
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
         boxShadow: const [
-          BoxShadow(
-            color: Colors.black26,
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
+          BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 2)),
         ],
       ),
       child: SafeArea(
@@ -69,7 +73,8 @@ class TopNavbar extends StatelessWidget implements PreferredSizeWidget {
             children: [
               // 1. Logo di sebelah kiri (Brand Jatimas Sangkar menggantikan tulisan Katalog)
               InkWell(
-                onTap: onLogoTap ??
+                onTap:
+                    onLogoTap ??
                     () {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
@@ -80,7 +85,10 @@ class TopNavbar extends StatelessWidget implements PreferredSizeWidget {
                     },
                 borderRadius: BorderRadius.circular(24),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4.0,
+                    vertical: 2.0,
+                  ),
                   child: ListenableBuilder(
                     listenable: AppSettingsService.instance,
                     builder: (context, _) {
@@ -108,11 +116,12 @@ class TopNavbar extends StatelessWidget implements PreferredSizeWidget {
                             clipBehavior: Clip.antiAlias,
                             child: Padding(
                               padding: const EdgeInsets.all(1.0),
-                              child: AppSettingsService.instance.buildLogoWidget(
-                                width: 44,
-                                height: 44,
-                                fit: BoxFit.contain,
-                              ),
+                              child: AppSettingsService.instance
+                                  .buildLogoWidget(
+                                    width: 44,
+                                    height: 44,
+                                    fit: BoxFit.contain,
+                                  ),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -121,7 +130,7 @@ class TopNavbar extends StatelessWidget implements PreferredSizeWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: const [
                               Text(
-                                'JATIMAS',
+                                'JatiMas',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 13,
@@ -154,16 +163,22 @@ class TopNavbar extends StatelessWidget implements PreferredSizeWidget {
               // 2. Search bar putih kapsul sesuai referensi gambar
               Expanded(
                 child: Align(
-                  alignment: Alignment.centerRight,
+                  alignment: showActions ? Alignment.centerRight : Alignment.centerLeft,
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 400),
+                    constraints: BoxConstraints(
+                      maxWidth: showActions ? 400 : double.infinity,
+                    ),
                     child: Container(
                       height: 38,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF5ECD7), // <-- Background warna krem gading
+                        color: const Color(
+                          0xFFF5ECD7,
+                        ), // <-- Background warna krem gading
                         borderRadius: BorderRadius.circular(24),
                         border: Border.all(
-                          color: const Color(0xFFD4AF37).withValues(alpha: 0.45),
+                          color: const Color(
+                            0xFFD4AF37,
+                          ).withValues(alpha: 0.45),
                           width: 1.2,
                         ),
                         boxShadow: [
@@ -181,7 +196,10 @@ class TopNavbar extends StatelessWidget implements PreferredSizeWidget {
                           onSubmitted: onSearchSubmitted,
                           textInputAction: TextInputAction.search,
                           textAlignVertical: TextAlignVertical.center,
-                          style: const TextStyle(fontSize: 13, color: Colors.black87),
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Colors.black87,
+                          ),
                           decoration: const InputDecoration(
                             isDense: true,
                             hintText: 'Superhero',
@@ -206,10 +224,11 @@ class TopNavbar extends StatelessWidget implements PreferredSizeWidget {
                 ),
               ),
 
-              const SizedBox(width: 10),
+              if (showActions) ...[
+                const SizedBox(width: 10),
 
-              // 3. Ikon Keranjang Putih dengan Indikator Badge yang Jelas
-              Badge.count(
+                // 3. Ikon Keranjang Putih dengan Indikator Badge yang Jelas
+                Badge.count(
                 count: cartItemCount,
                 isLabelVisible: cartItemCount > 0,
                 backgroundColor: const Color(0xFFD32F2F),
@@ -219,7 +238,8 @@ class TopNavbar extends StatelessWidget implements PreferredSizeWidget {
                   fontWeight: FontWeight.bold,
                 ),
                 child: IconButton(
-                  onPressed: onCartTap ??
+                  onPressed:
+                      onCartTap ??
                       () {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -248,11 +268,16 @@ class TopNavbar extends StatelessWidget implements PreferredSizeWidget {
                     showModalBottomSheet(
                       context: context,
                       shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(20),
+                        ),
                       ),
                       builder: (ctx) => SafeArea(
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 16.0,
+                            horizontal: 16.0,
+                          ),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -271,10 +296,14 @@ class TopNavbar extends StatelessWidget implements PreferredSizeWidget {
                                 width: double.infinity,
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: isAdmin ? const Color(0xFFFFF8E1) : const Color(0xFFF5F5F5),
+                                  color: isAdmin
+                                      ? const Color(0xFFFFF8E1)
+                                      : const Color(0xFFF5F5F5),
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color: isAdmin ? Colors.amber.shade300 : Colors.grey.shade300,
+                                    color: isAdmin
+                                        ? Colors.amber.shade300
+                                        : Colors.grey.shade300,
                                   ),
                                 ),
                                 child: Row(
@@ -282,11 +311,15 @@ class TopNavbar extends StatelessWidget implements PreferredSizeWidget {
                                     Container(
                                       padding: const EdgeInsets.all(8),
                                       decoration: BoxDecoration(
-                                        color: isAdmin ? Colors.amber.shade700 : const Color(0xFF4A301E),
+                                        color: isAdmin
+                                            ? Colors.amber.shade700
+                                            : const Color(0xFF4A301E),
                                         shape: BoxShape.circle,
                                       ),
                                       child: Icon(
-                                        isAdmin ? Icons.admin_panel_settings_rounded : Icons.person_rounded,
+                                        isAdmin
+                                            ? Icons.admin_panel_settings_rounded
+                                            : Icons.person_rounded,
                                         color: Colors.white,
                                         size: 20,
                                       ),
@@ -294,12 +327,15 @@ class TopNavbar extends StatelessWidget implements PreferredSizeWidget {
                                     const SizedBox(width: 12),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Row(
                                             children: [
                                               Text(
-                                                isAdmin ? 'Administrator' : 'Member / Pengguna',
+                                                isAdmin
+                                                    ? 'Administrator'
+                                                    : 'Member / Pengguna',
                                                 style: const TextStyle(
                                                   fontWeight: FontWeight.bold,
                                                   fontSize: 15,
@@ -307,10 +343,17 @@ class TopNavbar extends StatelessWidget implements PreferredSizeWidget {
                                               ),
                                               const SizedBox(width: 8),
                                               Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 6,
+                                                      vertical: 2,
+                                                    ),
                                                 decoration: BoxDecoration(
-                                                  color: isAdmin ? Colors.amber.shade800 : Colors.blue.shade700,
-                                                  borderRadius: BorderRadius.circular(4),
+                                                  color: isAdmin
+                                                      ? Colors.amber.shade800
+                                                      : Colors.blue.shade700,
+                                                  borderRadius:
+                                                      BorderRadius.circular(4),
                                                 ),
                                                 child: Text(
                                                   isAdmin ? 'ADMIN' : 'MEMBER',
@@ -340,7 +383,6 @@ class TopNavbar extends StatelessWidget implements PreferredSizeWidget {
                                 ),
                               ),
 
-
                               const SizedBox(height: 6),
                               ListTile(
                                 leading: Container(
@@ -349,7 +391,10 @@ class TopNavbar extends StatelessWidget implements PreferredSizeWidget {
                                     color: Colors.red.shade50,
                                     shape: BoxShape.circle,
                                   ),
-                                  child: const Icon(Icons.logout_rounded, color: Colors.red),
+                                  child: const Icon(
+                                    Icons.logout_rounded,
+                                    color: Colors.red,
+                                  ),
                                 ),
                                 title: const Text(
                                   'Keluar dari akun',
@@ -381,8 +426,12 @@ class TopNavbar extends StatelessWidget implements PreferredSizeWidget {
                         alignment: Alignment.bottomRight,
                         children: [
                           Icon(
-                            isAdmin ? Icons.admin_panel_settings_rounded : Icons.account_circle,
-                            color: isAdmin ? const Color(0xFFFFD900) : Colors.white,
+                            isAdmin
+                                ? Icons.admin_panel_settings_rounded
+                                : Icons.account_circle,
+                            color: isAdmin
+                                ? const Color(0xFFFFD900)
+                                : Colors.white,
                             size: 28,
                           ),
                           if (isLoggedIn)
@@ -390,9 +439,14 @@ class TopNavbar extends StatelessWidget implements PreferredSizeWidget {
                               width: 8,
                               height: 8,
                               decoration: BoxDecoration(
-                                color: isAdmin ? const Color(0xFFFFD900) : Colors.greenAccent,
+                                color: isAdmin
+                                    ? const Color(0xFFFFD900)
+                                    : Colors.greenAccent,
                                 shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white, width: 1.5),
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 1.5,
+                                ),
                               ),
                             ),
                         ],
@@ -400,7 +454,10 @@ class TopNavbar extends StatelessWidget implements PreferredSizeWidget {
                       if (isAdmin) ...[
                         const SizedBox(width: 4),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 5,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFFFD900),
                             borderRadius: BorderRadius.circular(4),
@@ -421,9 +478,12 @@ class TopNavbar extends StatelessWidget implements PreferredSizeWidget {
                 ),
               ),
             ],
-          ),
+          ],
         ),
       ),
-    );
+    ),
+  );
+},
+);
   }
 }

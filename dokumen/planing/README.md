@@ -54,11 +54,16 @@ gantt
     section Fase 5: Integrasi Cloud & Backend Lanjutan
     Sinkronisasi Realtime Supabase Database :done,    be1,  2026-09-13, 2026-09-17
     Deployment Web via Firebase Hosting     :done,    fe6,  2026-09-17, 2026-09-17
-    section Fase 6: Jadwal Produksi Notion-Style & Database Tagar
+    section Fase 6: Database Tagar & Clean Detail
     Database & Auto-Complete Tagar Terpusat :done,    fe7,  2026-09-18, 2026-09-20
-    Jadwal Produksi 5-View Notion & Upload  :done,    fe8,  2026-09-21, 2026-09-22
-    section Fase 7: Rencana Lanjutan
-    Payment Gateway Otomatis                :         be2,  2026-09-29, 2026-10-15
+    Detail Produk Bersih & No-Rating        :done,    fe8,  2026-09-21, 2026-09-22
+    section Fase 7: Optimalisasi Mobile, Fullscreen Viewer & Dual Hosting
+    Pembersihan Master Bentuk Sangkar Cloud :done,    be2,  2026-09-22, 2026-09-23
+    Viewer Gambar Fullscreen Interaktif     :done,    fe9,  2026-09-23, 2026-09-23
+    Navigasi Footer & Header Mobile Bersih  :done,    fe10, 2026-09-23, 2026-09-23
+    Dual Deployment (Firebase & Cloudflare) :done,    fe11, 2026-09-23, 2026-09-23
+    section Fase 8: Rencana Lanjutan
+    Payment Gateway Otomatis                :         be3,  2026-09-29, 2026-10-15
 ```
 
 ---
@@ -87,19 +92,20 @@ gantt
 - [x] Bagian "List Produk User Umum" di dashboard admin dengan pencarian berdasarkan Nama/Kode.
 - [x] **Sinkronisasi Supabase Database 6 Tabel Inti Aktif**: Produk publik (`produk`), katalog kustom (`produk_custom`), user private (`user_private`), pesanan 4 tahap (`pesanan`), master bentuk sangkar mandiri (`bentuk_sangkar`), dan pengaturan toko (`app_settings`).
 - [x] **Master Bentuk Sangkar Relasional Mandiri (`public.bentuk_sangkar`)**: Variasi bentuk sangkar dikelola mandiri baris per baris di database Supabase dengan sinkronisasi startup otomatis, loading state halus, dan cache lokal `SharedPreferences`.
+- [x] **Pembersihan Master Bentuk Sangkar**: Membersihkan 8 data dummy lama dan duplikat dari Supabase, menyisakan 4 bentuk sangkar aktif toko, deduplikasi nama/ID saat fetch, dan penghapusan cloud terjamin (`await`).
 - [x] **Peremajaan Tema Warna Krem Hangat (*Warm Cream / Ivory* - `#F8F4EA`)**: Mengubah background katalog umum dan katalog khusus menjadi warna krem hangat yang estetik dan selaras dengan kayu jati Jepara.
 - [x] **Cloud Storage Pengaturan Toko**: Konfigurasi global admin disimpan langsung pada tabel `app_settings` dan file cadangan `app_settings.json` di bucket Supabase Storage `katalog`.
-- [x] **Hosting Web Otomatis**: Integrasi konfigurasi hosting `firebase.json` untuk rilis Flutter Web ke Firebase Hosting.
-- [x] **Jadwal Produksi Multi-View Notion-Style (`ScheduleProductionPage`)**: Pengelolaan jadwal produksi komprehensif dengan 5 mode tampilan (*Bulanan*, *Mingguan*, *Gallery*, *Board/Kanban*, *Table*) yang mereplikasi referensi `https://jatimas.beelink.web.id/`.
-- [x] **Upload Gambar Perangkat & Validasi Wajib**: Fitur pemilihan gambar langsung dari galeri smartphone atau file browser komputer via `image_picker` + Supabase Storage (`StorageService`), live preview card interaktif, dan validasi wajib (*mandatory image*) saat menyimpan jadwal.
-- [x] **Tata Letak Rata Kiri Konsisten**: Standardisasi struktur antarmuka jadwal produksi menggunakan `crossAxisAlignment: CrossAxisAlignment.stretch`, container full-width (`width: double.infinity`), dan `Align(alignment: Alignment.topLeft)`.
+- [x] **Dual Hosting Web Otomatis**: Integrasi hosting [Firebase Hosting](https://katalog-jatimas-2257.web.app) dan [Cloudflare Pages](https://jatimas.derylandri.my.id) via Wrangler.
+- [x] **Navigasi Footer Mobile Responsif**: Footer bar bawah layar (`bottomNavigationBar`) pada katalog umum/member: Keranjang (badge count) - Beranda (tombol bulat emas di tengah) - Profil.
+- [x] **Header Mobile Bersih & Footer Admin Mobile**: TopNavbar mobile menyembunyikan tombol keranjang & profil agar search bar lega. Header Admin mobile bersih tanpa tombol hamburger `☰` dan tanpa ikon profil di header; dipindahkan ke footer admin: Setting - Preview Umum (Marketplace) - Profil.
+- [x] **Interactive Fullscreen Product Viewer (`ProductFullscreenViewer`)**: Fitur klik gambar produk dan bentuk sangkar membuka dialog viewer layar penuh dengan zoom multi-input (pinch, double-tap, mouse drag & wheel) dan navigasi slide.
 - [x] **Database & Auto-Complete Tagar Terpusat (`HashtagService` & `HashtagAutocompleteField`)**: Kamus tagar terpusat di `public.hashtags` dengan pencarian auto-complete cerdas saat pengetikan di form admin dan pemanenan tagar baru secara otomatis.
 - [x] **Penyegaran Tampilan Detail Produk Bersih**: Menghilangkan bintang rating dan label ulasan dari `ProductDetailPage` agar tampilan katalog tetap bersih, elegan, dan fokus pada keunggulan spesifikasi sangkar jati.
 
 ### B. Fitur Prioritas Menengah (Medium Priority)
 - [x] Sinkronisasi otomatis daftar produk langsung dari database Supabase (`produk` table).
 - [x] Integrasi pemesanan WhatsApp lengkap dengan format rincian produk, tautan foto produk, bentuk sangkar, dan catatan pemesan.
-- [x] Manajemen state terpusat via Service Layer (`AuthService`, `CageService`, `OrderService`, `ProductService`, `AppSettingsService`, `ProductionScheduleService`, `HashtagService`, `StorageService`).
+- [x] Manajemen state terpusat via Service Layer (`AuthService`, `CageService`, `OrderService`, `ProductService`, `AppSettingsService`, `HashtagService`, `StorageService`).
 - [ ] Integrasi Supabase Auth penuh (Register akun mandiri, Forgot Password, OAuth Google).
 
 ### C. Fitur Prioritas Rendah (Future Enhancements)

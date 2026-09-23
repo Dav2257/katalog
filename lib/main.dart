@@ -73,7 +73,7 @@ class MyApp extends StatelessWidget {
       animation: AppSettingsService.instance,
       builder: (context, _) {
         return MaterialApp(
-          title: 'Jatimas',
+          title: 'JatiMas',
           debugShowCheckedModeBanner: false,
           theme: ThemeData(
             fontFamily: AppSettingsService.instance.fontFamily,
@@ -368,6 +368,350 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  void _handleHomeTap() {
+    setState(() {
+      _searchController.clear();
+      _searchQuery = '';
+      _publicProductLimit = 10;
+      _showStandardCatalogForUser = false;
+    });
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
+
+  void _showProfileBottomSheet() {
+    if (!_isLoggedIn) {
+      _openLoginPage();
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(20),
+        ),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            vertical: 16.0,
+            horizontal: 16.0,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // Info Role Pengguna
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: _isAdmin
+                      ? const Color(0xFFFFF8E1)
+                      : const Color(0xFFF5F5F5),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: _isAdmin
+                        ? Colors.amber.shade300
+                        : Colors.grey.shade300,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: _isAdmin
+                            ? Colors.amber.shade700
+                            : const Color(0xFF4A301E),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        _isAdmin
+                            ? Icons.admin_panel_settings_rounded
+                            : Icons.person_rounded,
+                        color: Colors.white,
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  AuthService.instance.userPhone.isNotEmpty
+                                      ? AuthService.instance.userPhone
+                                      : (AuthService.instance.userEmail.isNotEmpty
+                                          ? AuthService.instance.userEmail
+                                          : (_isAdmin ? 'Admin' : 'Member')),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: _isAdmin
+                                      ? Colors.amber.shade800
+                                      : Colors.blue.shade700,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  _isAdmin ? 'ADMIN' : 'MEMBER',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            _isAdmin
+                                ? 'Memiliki hak akses penuh untuk mengatur varian sangkar'
+                                : 'Melihat varian sangkar & melakukan pemesanan',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 6),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.logout_rounded,
+                    color: Colors.red,
+                  ),
+                ),
+                title: const Text(
+                  'Keluar dari akun',
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _handleLogout();
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMobileFooterNavigation() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF2C1A0E),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.35),
+            blurRadius: 10,
+            offset: const Offset(0, -3),
+          ),
+        ],
+        border: Border(
+          top: BorderSide(
+            color: const Color(0xFFD4AF37).withValues(alpha: 0.35),
+            width: 1.2,
+          ),
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 64,
+          child: Row(
+            children: [
+              // 1. KIRI: KERANJANG
+              Expanded(
+                child: InkWell(
+                  onTap: _openCartPage,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Badge.count(
+                        count: _totalCartCount,
+                        isLabelVisible: _totalCartCount > 0,
+                        backgroundColor: const Color(0xFFD32F2F),
+                        textColor: Colors.white,
+                        textStyle: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        child: const Icon(
+                          Icons.shopping_cart_rounded,
+                          color: Color(0xFFF5ECD7),
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      const Text(
+                        'Keranjang',
+                        style: TextStyle(
+                          color: Color(0xFFF5ECD7),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // 2. TENGAH: BERANDA (RUMAH)
+              Expanded(
+                child: InkWell(
+                  onTap: _handleHomeTap,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFFFDF00), Color(0xFFD4AF37)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFFFD900).withValues(alpha: 0.45),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Center(
+                          child: Icon(
+                            Icons.home_rounded,
+                            color: Color(0xFF382314),
+                            size: 26,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      const Text(
+                        'Beranda',
+                        style: TextStyle(
+                          color: Color(0xFFFFD900),
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // 3. KANAN: PROFIL
+              Expanded(
+                child: InkWell(
+                  onTap: _showProfileBottomSheet,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Stack(
+                        alignment: Alignment.bottomRight,
+                        children: [
+                          Icon(
+                            _isAdmin
+                                ? Icons.admin_panel_settings_rounded
+                                : (_isLoggedIn
+                                    ? Icons.account_circle_rounded
+                                    : Icons.person_outline_rounded),
+                            color: _isAdmin
+                                ? const Color(0xFFFFD900)
+                                : const Color(0xFFF5ECD7),
+                            size: 24,
+                          ),
+                          if (_isLoggedIn)
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: _isAdmin
+                                    ? const Color(0xFFFFD900)
+                                    : Colors.greenAccent,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: const Color(0xFF2C1A0E),
+                                  width: 1.5,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        _isAdmin
+                            ? 'Admin'
+                            : (_isLoggedIn ? 'Profil' : 'Profil'),
+                        style: TextStyle(
+                          color: _isAdmin
+                              ? const Color(0xFFFFD900)
+                              : const Color(0xFFF5ECD7),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // 1. Jika Akun Admin Login dan tidak sedang dalam mode preview umum:
@@ -382,6 +726,8 @@ class _MyHomePageState extends State<MyHomePage> {
         onLogout: _handleLogout,
       );
     }
+
+    final isMobile = MediaQuery.of(context).size.width < 650;
 
     final filteredProducts = ProductService.instance.products.where((p) {
       if (_searchQuery.isEmpty) return true;
@@ -408,21 +754,8 @@ class _MyHomePageState extends State<MyHomePage> {
         cartItemCount: _totalCartCount,
         isLoggedIn: _isLoggedIn,
         isAdmin: _isAdmin,
-        onLogoTap: () {
-          setState(() {
-            _searchController.clear();
-            _searchQuery = '';
-            _publicProductLimit = 10;
-            _showStandardCatalogForUser = false;
-          });
-          if (_scrollController.hasClients) {
-            _scrollController.animateTo(
-              0,
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeOut,
-            );
-          }
-        },
+        hideActionsOnMobile: true,
+        onLogoTap: _handleHomeTap,
         onSearchChanged: (value) {
           setState(() {
             _searchQuery = value;
@@ -433,6 +766,7 @@ class _MyHomePageState extends State<MyHomePage> {
         onProfileTap: _openLoginPage,
         onLogout: _handleLogout,
       ),
+      bottomNavigationBar: isMobile ? _buildMobileFooterNavigation() : null,
       body: SingleChildScrollView(
         controller: _scrollController,
         child: Column(
@@ -653,13 +987,13 @@ class _MyHomePageState extends State<MyHomePage> {
 
                           if (width >= 750) {
                             crossAxisCount = 5;
-                            childAspectRatio = 0.74;
+                            childAspectRatio = 0.88;
                           } else if (width >= 540) {
                             crossAxisCount = 3;
-                            childAspectRatio = 0.76;
+                            childAspectRatio = 0.90;
                           } else {
                             crossAxisCount = 2;
-                            childAspectRatio = 0.73;
+                            childAspectRatio = 0.80;
                           }
 
                           final visibleProducts = filteredProducts
@@ -787,7 +1121,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   color: Colors.grey.shade100,
                   child: Product.buildImageFromSource(
                     product.imageUrl,
-                    fit: BoxFit.cover,
+                    fit: BoxFit.contain,
                     placeholder: Center(
                       child: Icon(
                         Icons.inventory_2_outlined,
@@ -815,33 +1149,37 @@ class _MyHomePageState extends State<MyHomePage> {
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
-                        children: (product.hashtagList.isNotEmpty
-                                ? product.hashtagList
-                                : [product.category])
-                            .map((tag) {
-                          return Container(
-                            margin: const EdgeInsets.only(right: 4),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .primaryContainer
-                                  .withValues(alpha: 0.6),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              tag,
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Theme.of(context).colorScheme.primary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          );
-                        }).toList(),
+                        children:
+                            (product.hashtagList.isNotEmpty
+                                    ? product.hashtagList
+                                    : [product.category])
+                                .map((tag) {
+                                  return Container(
+                                    margin: const EdgeInsets.only(right: 4),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primaryContainer
+                                          .withValues(alpha: 0.6),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      tag,
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.primary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  );
+                                })
+                                .toList(),
                       ),
                     ),
                   ),

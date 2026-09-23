@@ -200,6 +200,9 @@ CREATE INDEX IF NOT EXISTS idx_pesanan_is_completed ON public.pesanan(is_complet
 -- ==============================================================================
 -- 5. TABEL BENTUK SANGKAR (MASTER BENTUK SANGKAR MANDIRI PER BARIS)
 -- Dikelola oleh CageService (Tambah/Hapus/Update dari Admin Dashboard)
+-- Catatan Pembersihan: 8 item dummy lama dan duplikasi telah dibersihkan secara tuntas.
+-- Data aktif saat ini terdiri dari 4 variasi riil: 'Replika', 'Kosan standard', 'Kosan Ceper', dan 'Tebok'.
+-- Penghapusan dari admin dashboard dieksekusi secara asinkron (await) ke tabel ini dan disinkronkan ke cloud.
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.bentuk_sangkar (
     id VARCHAR(255) PRIMARY KEY,

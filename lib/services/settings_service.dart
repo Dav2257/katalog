@@ -533,19 +533,17 @@ class AppSettingsService extends ChangeNotifier {
       'updatedAt': DateTime.now().toIso8601String(),
     };
 
-    // Pertahankan data cages agar tidak tertimpa saat simpan pengaturan toko
-    try {
-      final downloadedBytes = await supabase.storage.from('katalog').download('app_settings.json');
-      final existingMap = jsonDecode(utf8.decode(downloadedBytes)) as Map<String, dynamic>;
-      if (existingMap['cages'] != null && existingMap['cages'] is List && (existingMap['cages'] as List).isNotEmpty) {
-        jsonMap['cages'] = existingMap['cages'];
-      } else if (CageService.instance.cages.isNotEmpty) {
-        jsonMap['cages'] = CageService.instance.cages.map((c) => c.toMap()).toList();
-      }
-    } catch (_) {
-      if (CageService.instance.cages.isNotEmpty) {
-        jsonMap['cages'] = CageService.instance.cages.map((c) => c.toMap()).toList();
-      }
+    // Pertahankan data cages dari CageService agar selalu mutakhir
+    if (CageService.instance.cages.isNotEmpty) {
+      jsonMap['cages'] = CageService.instance.cages.map((c) => c.toMap()).toList();
+    } else {
+      try {
+        final downloadedBytes = await supabase.storage.from('katalog').download('app_settings.json');
+        final existingMap = jsonDecode(utf8.decode(downloadedBytes)) as Map<String, dynamic>;
+        if (existingMap['cages'] != null && existingMap['cages'] is List) {
+          jsonMap['cages'] = existingMap['cages'];
+        }
+      } catch (_) {}
     }
 
     // 3. Simpan ke Supabase Storage (app_settings.json)

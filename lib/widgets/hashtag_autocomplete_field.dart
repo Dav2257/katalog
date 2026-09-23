@@ -143,130 +143,99 @@ class _HashtagAutocompleteFieldState extends State<HashtagAutocompleteField> {
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: const Color(0xFFDCC8B4), width: 1),
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Header kecil indikator database
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFF9F5EF),
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(7),
-                          topRight: Radius.circular(7),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Text(
-                            query.isEmpty
-                                ? 'Pilihan Hashtag Tersimpan'
-                                : 'Saran Auto-Complete Database',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF7A4B29),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(7),
+                  child: ListView(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    shrinkWrap: true,
+                    children: [
+                      // Opsi buat hashtag baru jika belum ada
+                      if (showCreateOption)
+                        InkWell(
+                          onTap: () {
+                            _selectTag(formattedQuery);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            color: const Color(0xFFF5ECD7).withValues(alpha: 0.6),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.add_circle,
+                                  size: 16,
+                                  color: Color(0xFF7A4B29),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: RichText(
+                                    text: TextSpan(
+                                      text: 'Gunakan ',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Color(0xFF4A4A4A),
+                                      ),
+                                      children: [
+                                        TextSpan(
+                                          text: formattedQuery,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF7A4B29),
+                                          ),
+                                        ),
+                                        const TextSpan(
+                                          text: ' (Hashtag Baru)',
+                                          style: TextStyle(
+                                            fontStyle: FontStyle.italic,
+                                            color: Color(0xFF888888),
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                    const Divider(height: 1, color: Color(0xFFE8E0D5)),
-                    Flexible(
-                      child: ListView(
-                        padding: EdgeInsets.zero,
-                        shrinkWrap: true,
-                        children: [
-                          // Opsi buat hashtag baru jika belum ada
-                          if (showCreateOption)
-                            InkWell(
-                              onTap: () {
-                                _selectTag(formattedQuery);
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                color: const Color(0xFFF5ECD7).withValues(alpha: 0.6),
-                                child: Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.add_circle,
-                                      size: 16,
-                                      color: Color(0xFF7A4B29),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: RichText(
-                                        text: TextSpan(
-                                          text: 'Gunakan ',
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            color: Color(0xFF4A4A4A),
-                                          ),
-                                          children: [
-                                            TextSpan(
-                                              text: formattedQuery,
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                color: Color(0xFF7A4B29),
-                                              ),
-                                            ),
-                                            const TextSpan(
-                                              text: ' (Hashtag Baru)',
-                                              style: TextStyle(
-                                                fontStyle: FontStyle.italic,
-                                                color: Color(0xFF888888),
-                                                fontSize: 11,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
+                        ),
 
-                          // Daftar saran dari database
-                          ..._suggestions.map((tag) {
-                            return InkWell(
-                              onTap: () => _selectTag(tag),
-                              hoverColor: const Color(0xFFF5ECD7).withValues(alpha: 0.4),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                child: Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.tag_rounded,
-                                      size: 15,
-                                      color: Color(0xFF7A4B29),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        tag,
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: Color(0xFF333333),
-                                        ),
-                                      ),
-                                    ),
-                                    const Icon(
-                                      Icons.arrow_forward_ios_rounded,
-                                      size: 11,
-                                      color: Color(0xFFAAAAAA),
-                                    ),
-                                  ],
+                      // Daftar saran dari database
+                      ..._suggestions.map((tag) {
+                        return InkWell(
+                          onTap: () => _selectTag(tag),
+                          hoverColor: const Color(0xFFF5ECD7).withValues(alpha: 0.4),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.tag_rounded,
+                                  size: 15,
+                                  color: Color(0xFF7A4B29),
                                 ),
-                              ),
-                            );
-                          }),
-                        ],
-                      ),
-                    ),
-                  ],
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    tag,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF333333),
+                                    ),
+                                  ),
+                                ),
+                                const Icon(
+                                  Icons.arrow_forward_ios_rounded,
+                                  size: 11,
+                                  color: Color(0xFFAAAAAA),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }),
+                    ],
+                  ),
                 ),
               ),
             ),

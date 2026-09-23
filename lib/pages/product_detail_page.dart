@@ -8,6 +8,7 @@ import '../services/cage_service.dart';
 import '../services/auth_service.dart';
 import '../services/product_service.dart';
 import '../widgets/top_navbar.dart';
+import '../widgets/product_fullscreen_viewer.dart';
 
 class CageOption {
   final String id;
@@ -650,6 +651,158 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     );
   }
 
+  Widget _buildSlideImageContent(
+    int index, {
+    double? width,
+    double? height,
+    BoxFit fit = BoxFit.contain,
+  }) {
+    if (index == 0) {
+      if (widget.product.imageUrl.isNotEmpty) {
+        return Product.buildImageFromSource(
+          widget.product.imageUrl,
+          width: width,
+          height: height,
+          fit: fit,
+          placeholder: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.broken_image_rounded,
+                  size: 48,
+                  color: Colors.grey.shade600,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  widget.product.name,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.black54,
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.image_outlined, size: 48, color: Colors.grey.shade600),
+            const SizedBox(height: 8),
+            Text(
+              widget.product.name,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.black54,
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final cageIdx = index - 1;
+    if (cageIdx < 0 || cageIdx >= _cages.length) {
+      return const SizedBox.shrink();
+    }
+    final cage = _cages[cageIdx];
+    if (cage.imageBytes != null && cage.imageBytes!.isNotEmpty) {
+      return Image.memory(
+        cage.imageBytes!,
+        width: width,
+        height: height,
+        fit: fit,
+        gaplessPlayback: true,
+      );
+    }
+    if (cage.imageUrl != null && cage.imageUrl!.isNotEmpty) {
+      return Product.buildImageFromSource(
+        cage.imageUrl!,
+        width: width,
+        height: height,
+        fit: fit,
+        placeholder: Center(
+          child: Icon(
+            Icons.grid_view_rounded,
+            color: Colors.grey.shade600,
+            size: 54,
+          ),
+        ),
+      );
+    }
+    final sc = CageService.instance.cages
+        .where(
+          (c) =>
+              c.name.toLowerCase() == cage.name.toLowerCase() ||
+              c.id == cage.id,
+        )
+        .firstOrNull;
+    if (sc != null &&
+        (sc.imageBytes != null ||
+            (sc.imageUrl != null && sc.imageUrl!.isNotEmpty))) {
+      return sc.buildImage(
+        width: width,
+        height: height,
+        fit: fit,
+      );
+    }
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.grid_view_rounded, color: Colors.grey.shade600, size: 54),
+          const SizedBox(height: 8),
+          Text(
+            cage.name,
+            style: const TextStyle(
+              color: Colors.black54,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getSlideTitle(int index) {
+    if (index == 0) {
+      return widget.product.name;
+    }
+    final cageIdx = index - 1;
+    if (cageIdx >= 0 && cageIdx < _cages.length) {
+      return 'Bentuk Sangkar: ${_cages[cageIdx].name}';
+    }
+    return '';
+  }
+
+  void _openFullscreenImage(int initialIndex) {
+    final int totalSlides = 1 + _cages.length;
+    ProductFullscreenViewer.show(
+      context: context,
+      initialIndex: initialIndex.clamp(0, totalSlides - 1),
+      totalSlides: totalSlides,
+      slideBuilder: (context, index) {
+        return _buildSlideImageContent(index, fit: BoxFit.contain);
+      },
+      titleBuilder: (index) {
+        return _getSlideTitle(index);
+      },
+      onPageChanged: (newIndex) {
+        if (_slideController.hasClients && _currentSlideIndex != newIndex) {
+          _slideController.jumpToPage(newIndex);
+        }
+      },
+    );
+  }
+
   /// Kolom Kiri: Gambar Logo Paling Besar & Bentuk Sangkar (Bisa Digeser) + Quantity
   Widget _buildLeftSection() {
     final int totalSlides = 1 + _cages.length;
@@ -714,122 +867,28 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                       }
                     },
                     itemBuilder: (context, index) {
-                      final slideKey = ValueKey('detail_slide_${index}_${index == 0 ? widget.product.imageUrl : (_cages[index - 1].imageUrl ?? _cages[index - 1].imageBytes.hashCode)}');
-                      if (index == 0) {
-                        // Slide 1: Logo Produk
-                        return _KeepAliveWrapper(
-                          key: slideKey,
-                          child: widget.product.imageUrl.isNotEmpty
-                              ? Product.buildImageFromSource(
-                                  widget.product.imageUrl,
-                                  width: double.infinity,
-                                  height: 350,
-                                  fit: BoxFit.contain,
-                                  placeholder: Center(
-                                    child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.broken_image_rounded,
-                                          size: 48,
-                                          color: Colors.grey.shade600,
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          widget.product.name,
-                                          textAlign: TextAlign.center,
-                                          style: const TextStyle(
-                                            color: Colors.black54,
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                )
-                              : Center(
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.image_outlined,
-                                        size: 48,
-                                        color: Colors.grey.shade600,
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        widget.product.name,
-                                        textAlign: TextAlign.center,
-                                        style: const TextStyle(
-                                          color: Colors.black54,
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                        );
-                      } else {
-                        // Slide 2 dst: Bentuk Sangkar
-                        final cageIdx = index - 1;
-                        final cage = _cages[cageIdx];
-                        return _KeepAliveWrapper(
-                          key: slideKey,
-                          child: Builder(
-                            builder: (context) {
-                              if (cage.imageBytes != null && cage.imageBytes!.isNotEmpty) {
-                                return Image.memory(
-                                  cage.imageBytes!,
-                                  width: double.infinity,
-                                  height: 350,
-                                  fit: BoxFit.contain,
-                                  gaplessPlayback: true,
-                                );
-                              }
-                              if (cage.imageUrl != null && cage.imageUrl!.isNotEmpty) {
-                                return Product.buildImageFromSource(
-                                  cage.imageUrl!,
-                                  width: double.infinity,
-                                  height: 350,
-                                  fit: BoxFit.contain,
-                                  placeholder: Center(
-                                    child: Icon(Icons.grid_view_rounded, color: Colors.grey.shade600, size: 54),
-                                  ),
-                                );
-                              }
-                              final sc = CageService.instance.cages
-                                  .where((c) => c.name.toLowerCase() == cage.name.toLowerCase() || c.id == cage.id)
-                                  .firstOrNull;
-                              if (sc != null && (sc.imageBytes != null || (sc.imageUrl != null && sc.imageUrl!.isNotEmpty))) {
-                                return sc.buildImage(
-                                  width: double.infinity,
-                                  height: 350,
-                                  fit: BoxFit.contain,
-                                );
-                              }
-                              return Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.grid_view_rounded, color: Colors.grey.shade600, size: 54),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      cage.name,
-                                      style: const TextStyle(
-                                        color: Colors.black54,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
+                      final slideKey = ValueKey(
+                        'detail_slide_${index}_${index == 0 ? widget.product.imageUrl : (_cages[index - 1].imageUrl ?? _cages[index - 1].imageBytes.hashCode)}',
+                      );
+                      return _KeepAliveWrapper(
+                        key: slideKey,
+                        child: MouseRegion(
+                          cursor: SystemMouseCursors.zoomIn,
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () => _openFullscreenImage(index),
+                            child: Tooltip(
+                              message: 'Klik untuk perbesar (fullscreen)',
+                              child: _buildSlideImageContent(
+                                index,
+                                width: double.infinity,
+                                height: 350,
+                                fit: BoxFit.contain,
+                              ),
+                            ),
                           ),
-                        );
-                      }
+                        ),
+                      );
                     },
                   ),
                 ),
@@ -862,6 +921,45 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                           ),
                         ),
                       ],
+                    ),
+                  ),
+                ),
+
+                // Tombol Buka Layar Penuh di Pojok Kanan Atas
+                Positioned(
+                  top: 14,
+                  right: 14,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => _openFullscreenImage(_currentSlideIndex),
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.65),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.fullscreen_rounded,
+                              color: Colors.white,
+                              size: 15,
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              'Layar Penuh',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),

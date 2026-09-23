@@ -6,11 +6,18 @@ Dokumen ini mendokumentasikan secara rinci komponen-komponen antarmuka pengguna 
 
 ## 1. 📑 Rincian Halaman (Pages)
 
-### A. `lib/main.dart` (`MyHomePage`)
+### A. `lib/main.dart` (`MyHomePage`) & `UserHomePage`
 - **Tanggung Jawab**: Menampilkan katalog utama produk untuk publik/tamu, search bar dinamis, grid produk sangkar, dan routing cerdas berdasarkan role autentikasi.
 - **Fitur Utama**:
   - **Latar Belakang Warna Krem Hangat (*Warm Cream / Ivory* - `#F8F4EA`)**: Warna background resmi aplikasi yang menyatukan katalog umum dan katalog khusus dalam nuansa hangat, elegan, dan harmonis dengan kerajinan kayu jati (*teak wood*).
-  - **Top Navigation Bar Responsif**: Dilengkapi emblem logo Jatimas Sangkar, pencarian instan, dan indikator badge angka belanjaan pada ikon keranjang.
+  - **Top Navigation Bar Responsif & Penyesuaian Mobile**:
+    - *Desktop / Tablet*: Dilengkapi emblem logo Jatimas Sangkar, pencarian instan, tombol badge angka belanjaan pada ikon keranjang, dan tombol profil/login.
+    - *Mobile (< 768px)*: Ikon keranjang dan tombol profil di Top Navbar disembunyikan agar search bar dapat melebar secara penuh dan nyaman digunakan tanpa memicu overflow.
+  - **Footer Navigasi Bawah Layar Mobile (`_buildMobileFooterNavigation`)**:
+    - Hadir otomatis pada perangkat mobile di bagian bawah layar (`bottomNavigationBar`) dengan latar belakang cokelat gelap kayu jati (`#2C1A0E`), bayangan lembut, dan border atas emas (`#D4AF37`).
+    - **Keranjang (Kiri)**: Ikon keranjang belanja dilengkapi badge merah jumlah item belanjaan aktif (`Badge.count`).
+    - **Beranda (Tengah)**: Tombol lingkaran kuning emas (`#FFDF00` - `#D4AF37`) dengan ikon rumah cokelat (`Icons.home_rounded`) yang membawa pengguna kembali ke katalog beranda.
+    - **Profil (Kanan)**: Ikon profil yang menampilkan avatar pengguna/admin dan membuka modal sheet login/profil secara instan.
   - **Hero Banner**: Header visual yang menampilkan keunggulan kerajinan sangkar jati pilihan.
   - **Grid Katalog Produk Seragam**: Ukuran kartu produk (katalog 1 s/d 5) diseragamkan tinggi dan rasio gambarnya dengan kartu berwarna putih di atas kanvas krem.
   - **Search Filter Dinamis**: Menyaring produk berdasarkan kecocokan nama dan kategori secara instan.
@@ -20,54 +27,58 @@ Dokumen ini mendokumentasikan secara rinci komponen-komponen antarmuka pengguna 
 ### B. `lib/pages/admin_dashboard_page.dart` (`AdminDashboardPage`)
 - **Tanggung Jawab**: Pusat kendali operasional terpadu bagi administrator (`Admin 1` / `admin@gmail.com`).
 - **Fitur Utama**:
-  - **Sidebar Navigasi Kayu Jati**:
+  - **Sidebar Navigasi Kayu Jati (Desktop)**:
     - Berwarna cokelat kayu jati pekat (`#382314`), lebar 220px dengan aksen emas (`#D4AF37`).
     - Logo emblem diperbesar (**62 × 62 px**) dengan border emas 2.0px dan tipografi *JATIMAS SANGKAR* serta badge *ADMIN PANEL*.
     - Menu aktif berlatar belakang kontras, serta tombol "Preview Umum" dan "Keluar" (Logout).
-  - **Header Admin**:
-    - Menampilkan kartu profil admin, status online, dan tombol aksi cepat.
+  - **Header & Navigasi Mobile Bersih Tanpa Hamburger (`_buildMobileAdminFooterNavigation`)**:
+    - **Header Bersih**: Pada layar mobile, AppBar hanya menampilkan teks judul "Dashboard Admin" dengan latar cokelat jati (`#382314`). Tombol menu hamburger `☰` (`automaticallyImplyLeading: false`) serta seluruh ikon profil di header dihilangkan untuk tampilan yang bersih, fokus, dan profesional.
+    - **Footer Navigasi Admin Mobile**: Seluruh akses penting dialihkan ke footer navigasi bawah layar:
+      1. *Setting (Kiri)*: Ikon gear pengaturan (`Icons.settings_rounded`) membuka halaman `AdminSettingsPage`.
+      2. *Preview Umum (Tengah)*: Tombol lingkaran kuning emas dengan ikon etalase toko (`Icons.storefront_rounded`) untuk beralih instan ke mode pratinjau katalog publik.
+      3. *Profil (Kanan)*: Ikon profil admin yang membuka dialog pop-up profil dan opsi keluar (logout).
   - **Analisis Data Metrik (Strict 2 Rows x 3 Columns)**:
     - **Baris 1**: `JUMLAH DESIGN PRODUK` (1.200), `JUMLAH PESANAN` (259), `JUMLAH DESIGN REQUEST` (12).
     - **Baris 2**: `JUMLAH BENTUK SANGKAR` (terhubung dinamis ke `CageService.cages.length`), `JUMLAH PESANAN BARU` (2), kolom ke-3 sengaja dikosongkan untuk keseimbangan tata letak visual.
     - Setiap kartu metrik memiliki garis penanda vertikal cokelat jati (`#8B5328`), tinggi 112px, dan angka tebal berukuran font 36.
   - **Tabel Pesanan Masuk (Elongated Table)**:
-    - Wadah tabel memanjang (`minWidth: 1050`, tinggi baris 52, jarak kolom 42) dengan scrollbar horizontal.
+    - Wadah tabel memanjang (`minWidth: 1050`, tinggi baris 52, jarak kolom 42) dengan scrollbar horizontal yang mulus di perangkat mobile dan desktop.
     - Memuat kolom: *No*, *Nama*, *Desain*, *Bentuk*, *Kuantitas*, *Catatan*, *Status*, dan *Aksi*.
     - Tombol "Detail" membuka dialog pop-up interaktif rincian pesanan.
   - **Tabel User Private (Elongated Table)**:
     - Menampung pengajuan desain kustom member (*User Private*).
     - Wadah tabel memanjang (`minWidth: 1050`, tinggi baris 52, jarak kolom 46).
     - Memuat kolom: *No*, *Nama User*, *Nama Desain*, *Bentuk Sangkar*, *Deskripsi/Catatan*, *Tanggal*, dan *Aksi* (dialog preview gambar & spesifikasi desain).
-  - **Section "List Produk User Umum"**:
+  - **Section "List Produk User Umum" & Paginasi Responsif**:
     - Menampilkan katalog produk yang sedang tayang di sisi publik.
     - Header pencarian "Cari berdasarkan:" dengan tombol pill pilihan `Nama` (cokelat aktif) dan `Kode` (abu-abu), serta dua kolom input filter real-time (`.....` dan `...`).
     - Grid kartu produk berisi gambar thumbnail proporsional, nama produk (contoh: `A01-Batman Swing biru cantik`), dan tag produk (`#superhero #batman #DC`).
+    - **Paginasi Ramah Mobile**: Tombol navigasi halaman ("Sebelumnya" dan "Selanjutnya") dirancang dengan tata letak fleksibel tanpa memicu overflow pixel pada smartphone.
   - **Section "Sangkar" (Manajemen Varian Bentuk Sangkar Mandiri Database)**:
     - Terhubung langsung secara mandiri baris per baris ke tabel PostgreSQL `public.bentuk_sangkar` di Supabase.
-    - **Sinkronisasi Instan & Pemuatan Otomatis**: Dipanggil otomatis saat startup aplikasi di `main()` dan saat `AdminDashboardPage` dibuka, dilengkapi indikator loading halus saat data sedang diambil.
-    - Deretan kartu bentuk sangkar minimalis dan bersih (nama sangkar seperti *Bijian No.2 37x43 cm*, *Kosan R.10 40x40 cm*, dan tombol hapus `x`).
-    - **Navigasi Multi-Input Lengkap**:
-      - Tombol panah navigasi `<` dan `>` pada header section untuk memudahkan geser kiri/kanan.
-      - **Dukungan Scroll Mouse Horisontal**: Dilengkapi pendeteksi event pointer wheel (`Listener.onPointerSignal`) yang mengonversi scroll vertikal roda mouse menjadi geseran horisontal secara mulus.
-      - **Mouse Drag**: Mengaktifkan `PointerDeviceKind.mouse` dalam `ScrollConfiguration` sehingga admin dapat menggeser baris sangkar menggunakan drag kursor mouse di desktop dan web.
-      - **Scrollbar Khusus**: Scrollbar horizontal dengan thumb selalu terlihat (`thumbVisibility: true`).
-    - **Tombol "Tambah Sangkar" Cepat**:
-      - Terletak di sudut kanan bawah section.
-      - Membuka modal dialog ringkas: menginput nama bentuk sangkar baru, langsung tersimpan ke Supabase `bentuk_sangkar`, cache lokal `SharedPreferences`, dan cadangan storage.
+    - **Data Bersih & Bebas Duplikat**: Database telah dibersihkan dari 8 item dummy lama dan duplikasi nama; hanya memuat 4 bentuk sangkar riil: "Replika", "Kosan standard", "Kosan Ceper", dan "Tebok".
+    - **Penghapusan Cloud Terjamin (`await`)**: Fitur `removeCage` menunggu konfirmasi penghapusan cloud Supabase secara tuntas sehingga data yang dihapus tidak akan muncul kembali saat halaman direfresh.
+    - **Navigasi Multi-Input Lengkap**: Tombol panah navigasi `<` dan `>`, scroll roda mouse horizontal, mouse drag, dan scrollbar horizontal khusus.
+    - **Tombol "Tambah Sangkar" Cepat**: Terletak di sudut kanan bawah section untuk mendaftarkan variasi sangkar baru langsung ke cloud.
 
 ### C. `lib/pages/product_detail_page.dart` (`ProductDetailPage`)
 - **Tanggung Jawab**: Menyajikan detail lengkap mengenai sangkar burung yang dipilih pengguna dan konfigurasi pemesanan kustom.
 - **Fitur Utama**:
+  - **Viewer Gambar Fullscreen Interaktif (`ProductFullscreenViewer`)**:
+    - Mengklik atau mengetuk gambar foto produk utama maupun foto varian bentuk sangkar (baik di layar HP maupun laptop/PC) secara instan membuka dialog viewer layar penuh dengan latar belakang hitam elegan (`Colors.black.withValues(alpha: 0.94)`).
+    - **Fitur Zoom & Geser Multi-Input**: Mendukung *pinch-to-zoom*, *double-tap zoom*, *mouse drag*, *mouse wheel zoom*, dan pan interaktif via `InteractiveViewer` & `TransformationController`.
+    - **Navigasi Slide Lengkap**: Tombol panah kiri `<` dan kanan `>`, swipe gesture sentuhan di HP, indikator nomor slide (`1 / N`), nama bentuk sangkar di bar atas, serta tombol tutup `X` dan tombol keyboard Escape.
   - **Tampilan Visual Produk Presisi & Minimalis**:
     - Kotak foto utama berukuran **tinggi 350 px**, warna latar abu-abu halus (`#B0B0B0`), kelengkungan sudut **`borderRadius: 18`**, dan bayangan lembut.
     - Menggunakan properti **`fit: BoxFit.contain`** dan `Product.buildImageFromSource` sehingga logo/artwork persegi (seperti *Es Durian Shake*), landscape, maupun portrait **tampil 100% utuh tanpa terpotong (no-crop)**.
     - Tampilan bersih tanpa kotak thumbnail duplikat di samping sangkar (nama/label langsung fokus pada variasi).
     - **Peniadaan Ikon Bintang Rating**: Ikon bintang rating review dihilangkan demi antarmuka yang bersih, profesional, dan fokus pada keindahan ukiran serta spesifikasi sangkar.
-  - **Navigasi Bentuk Sangkar dengan Tombol Next & Previous**: Dilengkapi tombol panah kiri (`<`) dan kanan (`>`) di samping deretan bentuk sangkar dinamis dari `CageService` (`Bijian No.2`, `Kosan R.10`, `Sangkar isi 2`, dst.).
+  - **Navigasi Bentuk Sangkar dengan Tombol Next & Previous**: Dilengkapi tombol panah kiri (`<`) dan kanan (`>`) di samping deretan bentuk sangkar dinamis dari `CageService`.
   - **Dukungan Foto Sangkar Spesifik per Produk**: Setiap produk dapat memiliki foto sangkar yang berbeda-beda untuk variasi ukuran yang sama (disimpan pada kolom `variasi` di data produk).
   - **Counter Kuantitas per Bentuk**: Tombol `+` dan `-` kuantitas yang tersimpan secara terpisah untuk setiap bentuk sangkar.
   - **Catatan Dinamis per Bentuk**: Kolom catatan (*note*) berada di posisi yang konsisten, namun isi teks note dan batasan kata tersimpan secara independen untuk setiap bentuk sangkar yang dipilih.
   - **Tombol Keranjang**: Menambahkan pesanan setiap bentuk sangkar yang memiliki kuantitas > 0 ke keranjang belanja secara terpisah.
+
 
 ### D. `lib/pages/cart_page.dart` (`CartPage`)
 - **Tanggung Jawab**: Menampilkan daftar barang pesanan pembeli, seleksi item, kalkulasi harga, checkout WhatsApp dengan tautan foto produk, dan pelacakan pesanan.
@@ -164,13 +175,12 @@ Dokumen ini mendokumentasikan secara rinci komponen-komponen antarmuka pengguna 
 | Service | File | Peran & Tanggung Jawab |
 | :--- | :--- | :--- |
 | `AuthService` | `lib/services/auth_service.dart` | Mengelola status login, identitas pengguna, dan pemisahan role antara Tamu (*Guest*), Member (`davin@gmail.com`), dan Admin (`admin@gmail.com` / `Admin 1`). |
-| `CageService` | `lib/services/cage_service.dart` | State manager berbasis `ChangeNotifier` yang mengelola variasi bentuk sangkar secara mandiri baris per baris ke tabel PostgreSQL `public.bentuk_sangkar`, cache offline instan `SharedPreferences`, dan cadangan storage. Dipanggil otomatis pada startup aplikasi dan saat admin dashboard dibuka. |
+| `CageService` | `lib/services/cage_service.dart` | State manager berbasis `ChangeNotifier` yang mengelola variasi bentuk sangkar secara mandiri baris per baris ke tabel PostgreSQL `public.bentuk_sangkar`, cache offline instan `SharedPreferences`, dan cadangan storage. Database telah dibersihkan dari 8 item dummy lama dan duplikasi nama. Dilengkapi deduplikasi data saat fetch, serta `await` penghapusan Supabase cloud sehingga data yang dihapus tidak pernah muncul kembali saat refresh. |
 | `OrderService` | `lib/services/order_service.dart` | Mengelola antrean pesanan masuk (`incomingOrders`), riwayat pesanan selesai (`completedOrders`), update 4 tahapan produksi custom, dan pelacakan pesanan aktif member di keranjang. |
 | `ProductService` | `lib/services/product_service.dart` | Mengelola data katalog produk umum secara reaktif (`ChangeNotifier`), sinkronisasi tambah/edit produk admin ke katalog publik. |
 | `AppSettingsService` | `lib/services/settings_service.dart` | Mengelola nomor WhatsApp tujuan pesanan (`adminWhatsApp`), banner kustom, style navbar (1-3), font katalog, pembentukan link pesanan WhatsApp berfoto, serta penyedia logo terpadu (`buildLogoWidget`) yang dioptimasi dengan varian resolusi (1.0x, 2.0x, 3.0x), auto downsampling `cacheWidth`/`cacheHeight`, dan anti-aliasing `FilterQuality.medium`. |
-| `ProductionScheduleService` | `lib/services/schedule_service.dart` | Mengelola CRUD data jadwal proses produksi (`ProductionScheduleItem`) dengan sinkronisasi ke tabel Supabase `public.production_schedules`, cache lokal offline, filter rentang tanggal, filter status, dan dukungan multi-view. |
 | `HashtagService` | `lib/services/hashtag_service.dart` | Mengelola kamus database tagar terpusat (`public.hashtags`), memfasilitasi pencarian auto-complete cerdas saat pengetikan produk di admin, cache memori instan, dan auto-harvesting tagar baru yang otomatis didaftarkan ke database. |
-| `StorageService` | `lib/services/storage_service.dart` | Menangani proses upload berkas gambar dari memori/perangkat pengguna (Web, Windows, Android, iOS) ke bucket Supabase Storage (`schedules` / `products`) dengan pengembalian Public URL instan dan fallback Base64. |
+| `StorageService` | `lib/services/storage_service.dart` | Menangani proses upload berkas gambar dari memori/perangkat pengguna (Web, Windows, Android, iOS) ke bucket Supabase Storage (`products` / `katalog`) dengan pengembalian Public URL instan dan fallback Base64. |
 
 ---
 
@@ -178,13 +188,12 @@ Dokumen ini mendokumentasikan secara rinci komponen-komponen antarmuka pengguna 
 
 | Widget | File | Fungsi & Penggunaan |
 | :--- | :--- | :--- |
-| `TopNavbar` | `widgets/top_navbar.dart` | Bilah navigasi atas yang memuat emblem logo lingkaran 44px bersanding dengan teks merek elegan `JATIMAS SANGKAR` (kombinasi putih tebal & kuning emas), search input dinamis, ikon keranjang belanja dengan badge counter, dan tombol profil/login. |
+| `ProductFullscreenViewer` | `widgets/product_fullscreen_viewer.dart` | Viewer gambar layar penuh interaktif untuk foto produk dan bentuk sangkar. Mendukung navigasi PageView, gestur sentuh (pinch-to-zoom, double-tap zoom), mouse drag di web/desktop, scroll wheel zoom, keyboard escape/arrows, judul dinamis, dan indikator nomor slide. |
+| `TopNavbar` | `widgets/top_navbar.dart` | Bilah navigasi atas yang memuat emblem logo lingkaran 44px bersanding dengan teks merek elegan `JATIMAS SANGKAR` (kombinasi putih tebal & kuning emas), search input dinamis, ikon keranjang belanja dengan badge counter, dan tombol profil/login. Pada mode mobile (< 768px), tombol keranjang dan profil disembunyikan agar search bar dapat tampil leluasa. |
+| `MobileFooterNav` (`_buildMobileFooterNavigation`) | `main.dart` | Footer navigasi bawah layar khusus mobile untuk Katalog Umum & Member: Keranjang (kiri dengan badge), Beranda (tengah dengan tombol emas melingkar), dan Profil (kanan). |
+| `AdminMobileFooterNav` (`_buildMobileAdminFooterNavigation`) | `pages/admin_dashboard_page.dart` | Footer navigasi bawah layar khusus mobile untuk Dashboard Admin: Setting Toko (kiri), Preview Umum (tengah dengan tombol emas marketplace), dan Profil Admin (kanan). |
 | `HeroBanner` | `widgets/hero_banner.dart` | Banner visual di bagian atas halaman katalog untuk memperkuat identitas brand Jatimas Sangkar, mendukung gambar bawaan maupun banner kustom admin. |
 | `HashtagAutocompleteField` | `widgets/hashtag_autocomplete_field.dart` | Input textfield cerdas dengan dropdown overlay dinamis untuk rekomendasi tagar otomatis (#kayujati, #sangkar, dll.) dengan sinkronisasi database terpusat. |
-| `ScheduleGalleryView` | `widgets/schedule/schedule_gallery_view.dart` | Tampilan kartu galeri visual Notion-style dengan cover gambar wajib, status badge, dan layout rata kiri responsif. |
-| `ScheduleBoardView` | `widgets/schedule/schedule_board_view.dart` | Tampilan Kanban board alur kerja produksi (Direncanakan, Proses, Finishing, Selesai) dengan layout kolom rata kiri full-width. |
-| `ScheduleTableView` | `widgets/schedule/schedule_table_view.dart` | Tampilan tabel database terstruktur rapi dengan baris bergantian, badge status, thumbnail foto, dan aksi CRUD. |
-| `buildScheduleImage` | `widgets/schedule/schedule_image_helper.dart` | Helper utilitas universal untuk merender gambar jadwal dari berbagai sumber (Network, Supabase Storage, Base64 Data URI, Asset) secara aman tanpa crash. |
 | `WhatsAppLogo` | `pages/cart_page.dart` | Komponen logo resmi WhatsApp berbasis Base64 memory image untuk tombol Pesan. |
 | `WhatsAppIcon` | `pages/admin_order_detail_page.dart` | Komponen ikon WhatsApp presisi berbasis CustomPainter untuk tombol hubungi pembeli di halaman admin. |
 
@@ -198,7 +207,17 @@ graph TD
     A -->|Login Member| A2[UserHomePage - Beranda Member]
     A -->|Login Admin| AD[AdminDashboardPage - Dashboard Admin]
     
-    AD -->|Klik Preview Umum| A1
+    %% Navigasi Mobile Footer Pengguna
+    A1 -->|Footer Mobile: Tengah| A1
+    A1 -->|Footer Mobile: Kiri| B[CartPage - Keranjang]
+    A1 -->|Footer Mobile: Kanan| C[Modal Profil / LoginPage]
+    
+    %% Navigasi Mobile Footer Admin
+    AD -->|Footer Mobile: Tengah| A1
+    AD -->|Footer Mobile: Kiri| S1[AdminSettingsPage - WA, Font, Banner, Navbar]
+    AD -->|Footer Mobile: Kanan| PADM[Dialog Profil Admin & Logout]
+    
+    AD -->|Tombol Preview Umum Desktop| A1
     A1 -->|Banner Kembali ke Dashboard| AD
 
     AD -->|Aksi Detail Pesanan| O1[AdminOrderDetailPage - Detail & 4 Tahap Produksi]
@@ -208,18 +227,21 @@ graph TD
     AD -->|Aksi Detail User Private| U1[AdminUserDetailPage - Profil & Desain Member]
     AD -->|Tambah Produk Baru| P1[AdminAddProductPage - Auto-Complete Hashtag]
     AD -->|Edit Produk Eksisting| P2[AdminEditProductPage - Auto-Complete Hashtag]
-    AD -->|Menu Jadwal Produksi| SC[ScheduleProductionPage - 5 View Notion Style]
-    AD -->|Menu Pengaturan Toko| S1[AdminSettingsPage - WA, Font, Banner, Navbar]
+    AD -->|Menu Pengaturan Toko| S1
 
     A2 -->|Tombol Request| R[Modal Request: Insert Gambar Desain]
     A2 -->|Katalog Logo Custom Saya| D(ProductDetailPage: Navigasi Bentuk < >)
     A1 -->|Klik Card Produk Standar| D
     
-    A -->|Klik Ikon Keranjang| B(CartPage)
+    %% Fullscreen Viewer
+    D -->|Klik Gambar Produk / Bentuk Sangkar| FS[ProductFullscreenViewer: Zoom & Slide Layar Penuh]
+    FS -->|Tutup X / Swipe / Esc| D
+    
+    A -->|Klik Ikon Keranjang Desktop/Footer| B
     B -->|User Member| B1[Bagian: Pesanan Anda - Tracking Status]
     B -->|User Tamu / Member| B2[Daftar Item Keranjang Aktif]
     
-    A -->|Klik Login / Profil| C(LoginPage)
+    A -->|Klik Login / Profil| C
     D -->|Masuk Keranjang| B
     B2 -->|Dialog Konfirmasi Berfoto| CF[Dialog Konfirmasi Pesanan]
     CF -->|Kirim Pesanan| E[WhatsApp Gateway: wa.me + Link Foto Produk]

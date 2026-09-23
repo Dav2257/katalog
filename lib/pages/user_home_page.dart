@@ -959,13 +959,13 @@ class _UserHomePageState extends State<UserHomePage> {
 
                     if (width >= 750) {
                       crossAxisCount = 5;
-                      childAspectRatio = 0.74;
+                      childAspectRatio = 0.88;
                     } else if (width >= 540) {
                       crossAxisCount = 3;
-                      childAspectRatio = 0.76;
+                      childAspectRatio = 0.90;
                     } else {
                       crossAxisCount = 2;
-                      childAspectRatio = 0.73;
+                      childAspectRatio = 0.80;
                     }
 
                     final visibleLogos = widget.customLogos
@@ -1089,7 +1089,7 @@ class _UserHomePageState extends State<UserHomePage> {
                         width: double.infinity,
                         height: double.infinity,
                         color: Colors.grey.shade100,
-                        child: product.buildImage(fit: BoxFit.cover),
+                        child: product.buildImage(fit: BoxFit.contain),
                       ),
                     ),
                   ),

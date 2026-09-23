@@ -15,7 +15,6 @@ import 'admin_edit_product_page.dart';
 import 'admin_order_detail_page.dart';
 import 'admin_settings_page.dart';
 import 'admin_user_detail_page.dart';
-import 'schedule_production_page.dart';
 
 /// Ikon circular pie-chart khas seperti di gambar referensi
 class PieChartIcon extends StatelessWidget {
@@ -169,7 +168,6 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     'Riwayat',
     'Pengaturan',
     'Preview Umum',
-    'Schedule Proses Pembuatan',
   ];
 
   // Data Tabel Riwayat Pesanan yang Sudah Selesai dari Semua User (Dikosongkan dari data dummy)
@@ -492,12 +490,12 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     showDialog(
       context: context,
       builder: (ctx) {
-        void submitAddCage() {
+        void submitAddCage() async {
           final name = nameController.text.trim().isNotEmpty
               ? nameController.text.trim()
               : 'Sangkar $nextNumber';
-          CageService.instance.addCage(name: name);
           Navigator.pop(ctx);
+          await CageService.instance.addCage(name: name);
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (_cageScrollController.hasClients) {
               _cageScrollController.animateTo(
@@ -507,15 +505,15 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               );
             }
           });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Bentuk sangkar "$name" berhasil ditambahkan!',
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Bentuk sangkar "$name" berhasil ditambahkan!'),
+                backgroundColor: const Color(0xFF7A4B29),
+                behavior: SnackBarBehavior.floating,
               ),
-              backgroundColor: const Color(0xFF7A4B29),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+            );
+          }
         }
 
         return AlertDialog(
@@ -523,7 +521,10 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             borderRadius: BorderRadius.circular(14),
           ),
           titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 8,
+          ),
           actionsPadding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
           actionsAlignment: MainAxisAlignment.end,
           actionsOverflowButtonSpacing: 8,
@@ -684,6 +685,142 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     );
   }
 
+  Widget _buildMobileAdminFooterNavigation() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF2C1A0E),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.35),
+            blurRadius: 10,
+            offset: const Offset(0, -3),
+          ),
+        ],
+        border: Border(
+          top: BorderSide(
+            color: const Color(0xFFD4AF37).withValues(alpha: 0.35),
+            width: 1.2,
+          ),
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 64,
+          child: Row(
+            children: [
+              // 1. KIRI: SETTING
+              Expanded(
+                child: InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const AdminSettingsPage(),
+                      ),
+                    );
+                  },
+                  child: const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.settings_rounded,
+                        color: Color(0xFFF5ECD7),
+                        size: 24,
+                      ),
+                      SizedBox(height: 3),
+                      Text(
+                        'Setting',
+                        style: TextStyle(
+                          color: Color(0xFFF5ECD7),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // 2. TENGAH: PREVIEW UMUM (MARKETPLACE)
+              Expanded(
+                child: InkWell(
+                  onTap: widget.onPreviewUmum,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFFFDF00), Color(0xFFD4AF37)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFFFD900).withValues(alpha: 0.45),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Center(
+                          child: Icon(
+                            Icons.storefront_rounded,
+                            color: Color(0xFF382314),
+                            size: 24,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      const Text(
+                        'Preview Umum',
+                        style: TextStyle(
+                          color: Color(0xFFFFD900),
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // 3. KANAN: PROFIL
+              Expanded(
+                child: InkWell(
+                  onTap: _showProfileMenu,
+                  child: const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.account_circle_rounded,
+                        color: Color(0xFFFFD900),
+                        size: 24,
+                      ),
+                      SizedBox(height: 3),
+                      Text(
+                        'Profil',
+                        style: TextStyle(
+                          color: Color(0xFFFFD900),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -705,12 +842,13 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             ),
           );
         } else {
-          // Tampilan Mobile / Tablet: Drawer Sidebar
+          // Tampilan Mobile / Tablet: Header Bersih Hanya Teks & Footer Navigation
           return Scaffold(
             backgroundColor: const Color(0xFFEDEDED),
             appBar: AppBar(
               backgroundColor: const Color(0xFF382314),
               elevation: 1,
+              automaticallyImplyLeading: false,
               title: const Text(
                 'Dashboard Admin',
                 style: TextStyle(
@@ -719,25 +857,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              leading: Builder(
-                builder: (context) => IconButton(
-                  icon: const Icon(Icons.menu_rounded, color: Colors.white),
-                  onPressed: () => Scaffold.of(context).openDrawer(),
-                ),
-              ),
-              actions: [
-                IconButton(
-                  icon: const Icon(
-                    Icons.account_circle_outlined,
-                    color: Colors.white,
-                  ),
-                  onPressed: _showProfileMenu,
-                ),
-              ],
             ),
-            drawer: Drawer(
-              child: _buildSidebar(width: double.infinity, inDrawer: true),
-            ),
+            bottomNavigationBar: _buildMobileAdminFooterNavigation(),
             body: _buildMainContent(isDesktop: false),
           );
         }
@@ -800,7 +921,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                         mainAxisSize: MainAxisSize.min,
                         children: const [
                           Text(
-                            'JATIMAS',
+                            'JatiMas',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 14,
@@ -858,16 +979,6 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                         widget.onPreviewUmum();
                         return;
                       }
-                      if (title == 'Schedule Proses Pembuatan') {
-                        if (inDrawer) Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const ScheduleProductionPage(),
-                          ),
-                        );
-                        return;
-                      }
                       if (title == 'Pengaturan') {
                         if (inDrawer) Navigator.pop(context);
                         Navigator.push(
@@ -892,8 +1003,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                         color: isSelected
                             ? const Color(0xFF5A3922)
                             : isHovered
-                                ? const Color(0xFF4A2C18)
-                                : Colors.transparent,
+                            ? const Color(0xFF4A2C18)
+                            : Colors.transparent,
                         border: isSelected
                             ? const Border(
                                 left: BorderSide(
@@ -914,8 +1025,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                             color: isSelected
                                 ? Colors.white
                                 : isHovered
-                                    ? const Color(0xFFFFF0E0)
-                                    : const Color(0xFFE8DBD1),
+                                ? const Color(0xFFFFF0E0)
+                                : const Color(0xFFE8DBD1),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -928,8 +1039,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                                 color: isSelected
                                     ? Colors.white
                                     : isHovered
-                                        ? const Color(0xFFFFF0E0)
-                                        : const Color(0xFFE8DBD1),
+                                    ? const Color(0xFFFFF0E0)
+                                    : const Color(0xFFE8DBD1),
                                 fontWeight: isSelected
                                     ? FontWeight.bold
                                     : FontWeight.w500,
@@ -967,62 +1078,63 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             key: _dashboardKey,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Info Admin di Kiri
-              Row(
-                children: [
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: const BoxDecoration(
-                      color: Colors.black,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.person,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        AuthService.instance.adminName,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
+              children: [
+                // Info Admin di Kiri
+                Row(
+                  children: [
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: const BoxDecoration(
+                        color: Colors.black,
+                        shape: BoxShape.circle,
                       ),
-                      Text(
-                        AuthService.instance.adminEmail,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey.shade600,
-                        ),
+                      child: const Icon(
+                        Icons.person,
+                        color: Colors.white,
+                        size: 24,
                       ),
-                    ],
-                  ),
-                ],
-              ),
-
-              // Tombol Profil di Kanan
-              IconButton(
-                onPressed: _showProfileMenu,
-                icon: const Icon(
-                  Icons.account_circle_outlined,
-                  size: 32,
-                  color: Color(0xFF555555),
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          AuthService.instance.adminName,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        Text(
+                          AuthService.instance.adminEmail,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                tooltip: 'Menu Akun Admin',
-              ),
-            ],
-          ),
-        ),
 
-        const SizedBox(height: 28),
+                // Tombol Profil di Kanan (hanya tampil di desktop, di mobile sudah ada di footer navigasi)
+                if (isDesktop)
+                  IconButton(
+                    onPressed: _showProfileMenu,
+                    icon: const Icon(
+                      Icons.account_circle_outlined,
+                      size: 32,
+                      color: Color(0xFF555555),
+                    ),
+                    tooltip: 'Menu Akun Admin',
+                  ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 28),
 
           // 2. Bagian: Analisis Data
           _buildSectionHeader('Analisis Data'),
@@ -1794,8 +1906,10 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     final startIndex = (currentPage - 1) * _productPageSize;
 
     // Paginate: ambil sebanyak _productPageSize sesuai halaman saat ini
-    final displayList =
-        filteredList.skip(startIndex).take(_productPageSize).toList();
+    final displayList = filteredList
+        .skip(startIndex)
+        .take(_productPageSize)
+        .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1965,34 +2079,53 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<int>(
                             value: _productPageSize,
-                            icon: const Icon(Icons.arrow_drop_down,
-                                size: 18, color: Color(0xFF7A4B29)),
+                            icon: const Icon(
+                              Icons.arrow_drop_down,
+                              size: 18,
+                              color: Color(0xFF7A4B29),
+                            ),
                             isDense: true,
                             items: const [
                               DropdownMenuItem(
-                                  value: 3,
-                                  child: Text('3 per hal',
-                                      style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600))),
+                                value: 3,
+                                child: Text(
+                                  '3 per hal',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
                               DropdownMenuItem(
-                                  value: 5,
-                                  child: Text('5 per hal',
-                                      style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600))),
+                                value: 5,
+                                child: Text(
+                                  '5 per hal',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
                               DropdownMenuItem(
-                                  value: 10,
-                                  child: Text('10 per hal',
-                                      style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600))),
+                                value: 10,
+                                child: Text(
+                                  '10 per hal',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
                               DropdownMenuItem(
-                                  value: 20,
-                                  child: Text('20 per hal',
-                                      style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600))),
+                                value: 20,
+                                child: Text(
+                                  '20 per hal',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
                             ],
                             onChanged: (val) {
                               if (val != null) {
@@ -2092,23 +2225,19 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                             thickness: 1,
                           ),
 
-                          // Bagian Bawah: Navigasi Pagination
+                          // Bagian Bawah: Navigasi Pagination Responsif (Anti-Overflow di HP)
                           Padding(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 4, vertical: 4),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Menampilkan ${totalItems == 0 ? 0 : startIndex + 1}-${startIndex + displayList.length} dari $totalItems produk',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF6E6E6E),
-                                  ),
-                                ),
-                                Row(
+                              horizontal: 4,
+                              vertical: 4,
+                            ),
+                            child: LayoutBuilder(
+                              builder: (context, constraints) {
+                                final isNarrow = constraints.maxWidth < 540;
+
+                                final pageButtons = Row(
                                   mainAxisSize: MainAxisSize.min,
+                                  mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     // Tombol Halaman Sebelumnya
                                     InkWell(
@@ -2122,13 +2251,16 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                                       borderRadius: BorderRadius.circular(6),
                                       child: Container(
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 10, vertical: 5),
+                                          horizontal: 10,
+                                          vertical: 5,
+                                        ),
                                         decoration: BoxDecoration(
                                           color: currentPage > 1
                                               ? Colors.white
                                               : Colors.grey.shade200,
-                                          borderRadius:
-                                              BorderRadius.circular(6),
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
                                           border: Border.all(
                                             color: currentPage > 1
                                                 ? const Color(0xFF7A4B29)
@@ -2165,13 +2297,15 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                                     // Label Halaman X dari Y
                                     Container(
                                       padding: const EdgeInsets.symmetric(
-                                          horizontal: 10, vertical: 5),
+                                        horizontal: 10,
+                                        vertical: 5,
+                                      ),
                                       decoration: BoxDecoration(
                                         color: Colors.white,
-                                        borderRadius:
-                                            BorderRadius.circular(6),
+                                        borderRadius: BorderRadius.circular(6),
                                         border: Border.all(
-                                            color: Colors.grey.shade300),
+                                          color: Colors.grey.shade300,
+                                        ),
                                       ),
                                       child: Text(
                                         'Hal $currentPage / $totalPages',
@@ -2196,13 +2330,16 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                                       borderRadius: BorderRadius.circular(6),
                                       child: Container(
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 10, vertical: 5),
+                                          horizontal: 10,
+                                          vertical: 5,
+                                        ),
                                         decoration: BoxDecoration(
                                           color: currentPage < totalPages
                                               ? Colors.white
                                               : Colors.grey.shade200,
-                                          borderRadius:
-                                              BorderRadius.circular(6),
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
                                           border: Border.all(
                                             color: currentPage < totalPages
                                                 ? const Color(0xFF7A4B29)
@@ -2235,8 +2372,41 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                                       ),
                                     ),
                                   ],
-                                ),
-                              ],
+                                );
+
+                                final infoText = Text(
+                                  'Menampilkan ${totalItems == 0 ? 0 : startIndex + 1}-${startIndex + displayList.length} dari $totalItems produk',
+                                  textAlign: isNarrow
+                                      ? TextAlign.center
+                                      : TextAlign.start,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF6E6E6E),
+                                  ),
+                                );
+
+                                if (isNarrow) {
+                                  return Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: [
+                                      infoText,
+                                      const SizedBox(height: 10),
+                                      Center(child: pageButtons),
+                                    ],
+                                  );
+                                }
+
+                                return Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    infoText,
+                                    pageButtons,
+                                  ],
+                                );
+                              },
                             ),
                           ),
                         ],
@@ -2283,9 +2453,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     return InkWell(
       onTap: () {
         final targetProduct =
-            ProductService.instance.findProductById(
-              product.id,
-            ) ??
+            ProductService.instance.findProductById(product.id) ??
             Product(
               id: product.id,
               name: product.name,
@@ -2312,10 +2480,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       },
       borderRadius: BorderRadius.circular(8),
       child: Padding(
-        padding: const EdgeInsets.symmetric(
-          vertical: 6,
-          horizontal: 8,
-        ),
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
         child: Row(
           children: [
             // Thumbnail Kotak Abu-Abu Membulat dengan Gambar Logo Produk
@@ -2327,9 +2492,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                 borderRadius: BorderRadius.circular(8),
               ),
               clipBehavior: Clip.antiAlias,
-              child: _buildPublicProductThumbnail(
-                product,
-              ),
+              child: _buildPublicProductThumbnail(product),
             ),
             const SizedBox(width: 16),
 
@@ -2390,7 +2553,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     // 2. Cek di ProductService catalog
     if (imgUrl.isEmpty) {
       final p = ProductService.instance.findProductById(product.id);
-      if (p != null && p.imageUrl.trim().isNotEmpty && !p.imageUrl.contains('images.unsplash.com')) {
+      if (p != null &&
+          p.imageUrl.trim().isNotEmpty &&
+          !p.imageUrl.contains('images.unsplash.com')) {
         imgUrl = p.imageUrl.trim();
       }
     }
@@ -2434,7 +2599,11 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         height: 58,
         fit: BoxFit.cover,
         placeholder: const Center(
-          child: Icon(Icons.add_photo_alternate_rounded, color: Colors.white, size: 26),
+          child: Icon(
+            Icons.add_photo_alternate_rounded,
+            color: Colors.white,
+            size: 26,
+          ),
         ),
       );
     }
@@ -2543,32 +2712,32 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                             ),
                           ]
                         : cages.isEmpty
-                            ? [
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 12,
+                        ? [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 12,
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.info_outline,
+                                    size: 18,
+                                    color: Colors.grey.shade400,
                                   ),
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        Icons.info_outline,
-                                        size: 18,
-                                        color: Colors.grey.shade400,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        'Belum ada bentuk sangkar di database (0 data). Klik "+ Tambah Bentuk Sangkar" untuk membuatnya.',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          fontStyle: FontStyle.italic,
-                                          color: Colors.grey.shade600,
-                                        ),
-                                      ),
-                                    ],
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Belum ada bentuk sangkar di database (0 data). Klik "+ Tambah Bentuk Sangkar" untuk membuatnya.',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontStyle: FontStyle.italic,
+                                      color: Colors.grey.shade600,
+                                    ),
                                   ),
-                                ),
-                              ]
+                                ],
+                              ),
+                            ),
+                          ]
                         : cages.map((cage) {
                             return Container(
                               margin: const EdgeInsets.only(right: 12),
@@ -2604,16 +2773,20 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                                   const SizedBox(width: 12),
                                   InkWell(
                                     key: ValueKey('delete_cage_btn_${cage.id}'),
-                                    onTap: () {
-                                      CageService.instance.removeCage(cage.id);
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            'Bentuk sangkar "${cage.name}" berhasil dihapus.',
+                                    onTap: () async {
+                                      await CageService.instance.removeCage(cage.id);
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'Bentuk sangkar "${cage.name}" berhasil dihapus.',
+                                            ),
+                                            duration: const Duration(seconds: 1),
                                           ),
-                                          duration: const Duration(seconds: 1),
-                                        ),
-                                      );
+                                        );
+                                      }
                                     },
                                     borderRadius: BorderRadius.circular(12),
                                     child: Container(

@@ -185,11 +185,24 @@ class CageService extends ChangeNotifier {
       // Terapkan data yang didapat
       if (rows.isNotEmpty) {
         _cages.clear();
+        final Set<String> seenNames = {};
+        final Set<String> seenIds = {};
+
         for (final r in rows) {
+          Map<String, dynamic>? map;
           if (r is Map<String, dynamic>) {
-            _cages.add(CageData.fromMap(r));
+            map = r;
           } else if (r is Map) {
-            _cages.add(CageData.fromMap(Map<String, dynamic>.from(r)));
+            map = Map<String, dynamic>.from(r);
+          }
+          if (map != null) {
+            final cage = CageData.fromMap(map);
+            final norm = cage.name.trim().toLowerCase();
+            if (!seenNames.contains(norm) && !seenIds.contains(cage.id)) {
+              seenNames.add(norm);
+              seenIds.add(cage.id);
+              _cages.add(cage);
+            }
           }
         }
         await _saveToLocalPrefs();
@@ -228,62 +241,83 @@ class CageService extends ChangeNotifier {
   }
 
   /// Tambah sangkar baru oleh Admin (tersinkronisasi ke memori, lokal prefs, dan database Supabase)
-  CageData addCage({String? name, String? imageUrl, Uint8List? imageBytes}) {
+  Future<CageData> addCage({String? name, String? imageUrl, Uint8List? imageBytes}) async {
     final nextNumber = _cages.length + 1;
+    final cleanName = (name != null && name.trim().isNotEmpty) ? name.trim() : 'Sangkar No.$nextNumber';
+
+    // Cek apakah sudah ada sangkar dengan nama yang sama (cegah duplikat)
+    final existingIdx = _cages.indexWhere((c) => c.name.trim().toLowerCase() == cleanName.toLowerCase());
+    if (existingIdx >= 0) {
+      final existing = _cages[existingIdx];
+      final updated = existing.copyWith(
+        imageUrl: (imageUrl != null && imageUrl.trim().isNotEmpty) ? imageUrl.trim() : existing.imageUrl,
+        imageBytes: imageBytes ?? existing.imageBytes,
+      );
+      _cages[existingIdx] = updated;
+      await _saveToLocalPrefs();
+      notifyListeners();
+      await _syncCagesToCloud();
+      return updated;
+    }
+
     final generatedId = 'cage_${DateTime.now().millisecondsSinceEpoch}_$nextNumber';
     final newCage = CageData(
       id: generatedId,
-      name: (name != null && name.trim().isNotEmpty) ? name.trim() : 'Sangkar No.$nextNumber',
+      name: cleanName,
       imageUrl: imageUrl?.trim(),
       imageBytes: imageBytes,
     );
 
     _cages.add(newCage);
-    _saveToLocalPrefs();
+    await _saveToLocalPrefs();
     notifyListeners();
 
     // Sinkronkan ke database Supabase
-    _syncCagesToCloud();
+    await _syncCagesToCloud();
     return newCage;
   }
 
   /// Hapus sangkar berdasarkan ID (mendukung hapus sampai 0 data)
-  bool removeCage(String id) {
+  Future<bool> removeCage(String id) async {
     if (_cages.isEmpty) return false;
     final index = _cages.indexWhere((c) => c.id == id);
     if (index >= 0) {
-      _cages.removeAt(index);
-      _saveToLocalPrefs();
+      final removed = _cages.removeAt(index);
+      await _saveToLocalPrefs();
       notifyListeners();
 
-      // Hapus baris dari tabel bentuk_sangkar jika ada
+      // Hapus baris dari tabel bentuk_sangkar jika ada (AWAITED!)
       try {
-        supabase.from('bentuk_sangkar').delete().eq('id', id);
-      } catch (_) {}
+        await supabase.from('bentuk_sangkar').delete().eq('id', id);
+        // Hapus juga jika ada duplikat nama di database
+        await supabase.from('bentuk_sangkar').delete().eq('name', removed.name);
+      } catch (e) {
+        debugPrint('Catatan error hapus bentuk_sangkar: $e');
+      }
 
-      // Sinkronkan ke database Supabase
-      _syncCagesToCloud();
+      // Sinkronkan ke database Supabase & backup storage
+      await _syncCagesToCloud();
       return true;
     }
     return false;
   }
 
   /// Hapus sangkar berdasarkan Nama
-  bool removeCageByName(String name) {
+  Future<bool> removeCageByName(String name) async {
     if (_cages.isEmpty) return false;
     final cleanName = name.trim().toLowerCase();
     final index = _cages.indexWhere((c) => c.name.trim().toLowerCase() == cleanName);
     if (index >= 0) {
-      final removedId = _cages[index].id;
-      _cages.removeAt(index);
-      _saveToLocalPrefs();
+      final removed = _cages.removeAt(index);
+      await _saveToLocalPrefs();
       notifyListeners();
 
       try {
-        supabase.from('bentuk_sangkar').delete().eq('id', removedId);
+        await supabase.from('bentuk_sangkar').delete().eq('id', removed.id);
+        await supabase.from('bentuk_sangkar').delete().eq('name', removed.name);
       } catch (_) {}
 
-      _syncCagesToCloud();
+      await _syncCagesToCloud();
       return true;
     }
     return false;
@@ -349,13 +383,28 @@ class CageService extends ChangeNotifier {
           });
         } catch (_) {}
       }
+
+      // Bersihkan baris yang sudah dihapus dari tabel bentuk_sangkar agar tidak muncul kembali
+      final activeIds = _cages.map((c) => c.id).toSet();
+      try {
+        final List<dynamic> currentRows = await supabase.from('bentuk_sangkar').select('id');
+        for (final row in currentRows) {
+          if (row is Map && row['id'] != null) {
+            final rId = row['id'].toString();
+            if (!activeIds.contains(rId)) {
+              await supabase.from('bentuk_sangkar').delete().eq('id', rId);
+            }
+          }
+        }
+      } catch (_) {}
+
       debugPrint('SUKSES: Cages berhasil disimpan ke tabel public.bentuk_sangkar');
     } catch (e) {
       debugPrint('Catatan simpan cages ke public.bentuk_sangkar: $e');
     }
 
     // 2. Backup ke Supabase Storage (app_settings.json) sebagai lapisan cadangan aman
-    _backupCagesToStorage();
+    await _backupCagesToStorage();
   }
 
   /// Backup daftar sangkar ke Storage Supabase (app_settings.json) sebagai lapisan persistensi tambahan
