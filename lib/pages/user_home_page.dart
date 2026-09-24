@@ -6,6 +6,7 @@ import '../services/cage_service.dart';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
 import '../services/storage_service.dart';
+import '../widgets/hero_banner.dart';
 
 class UserHomePage extends StatefulWidget {
   final List<Product> customLogos;
@@ -731,183 +732,129 @@ class _UserHomePageState extends State<UserHomePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. Banner Member Khusus User Login
-        Container(
-          width: double.infinity,
-          margin: const EdgeInsets.all(16.0),
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 18.0),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF382314), Color(0xFF4A301E), Color(0xFF5A3922)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.12),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
+          // 1. Banner seperti di Umum dengan tombol Katalog Umum menimpa di atasnya
+          Stack(
+            children: [
+              const HeroBanner(),
+              Positioned(
+                top: 20,
+                right: 16,
+                child: OutlinedButton.icon(
+                  onPressed: widget.onOpenStandardCatalog,
+                  icon: const Icon(
+                    Icons.storefront_outlined,
+                    size: 16,
+                    color: Colors.white,
+                  ),
+                  label: const Text(
+                    'Katalog Umum',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: Colors.black.withValues(alpha: 0.5),
+                    side: const BorderSide(color: Colors.white54),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    elevation: 2,
+                  ),
+                ),
               ),
             ],
           ),
+
+        // 2. Katalog di Beranda yang Isinya CUMA Logo Custom Buatan User Login
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Header Katalog Custom & Tombol Permintaan Logo Custom di sebelah kanan
               LayoutBuilder(
                 builder: (context, constraints) {
-                  final isCompact = constraints.maxWidth < 440;
-                  final memberInfo = Row(
-                    mainAxisSize: MainAxisSize.min,
+                  final isCompact = constraints.maxWidth < 560;
+
+                  final titleSection = Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFD900).withValues(alpha: 0.2),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.verified_user_rounded,
-                          color: Color(0xFFFFD900),
-                          size: 22,
+                      const Text(
+                        'Katalog Logo Custom Saya',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      const Flexible(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Area Member Terverifikasi',
-                              style: TextStyle(
-                                color: Color(0xFFFFD900),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.5,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Text(
-                              'Jatimas Sangkar Custom',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
+                      const SizedBox(height: 2),
+                      Text(
+                        'Hanya memuat logo & ukiran custom buatan Anda (${widget.customLogos.length} desain)',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
                         ),
                       ),
                     ],
                   );
 
-                  final katalogBtn = OutlinedButton.icon(
-                    onPressed: widget.onOpenStandardCatalog,
+                  final requestBtn = ElevatedButton.icon(
+                    onPressed: _showRequestDialog,
                     icon: const Icon(
-                      Icons.storefront_outlined,
-                      size: 16,
-                      color: Colors.white,
+                      Icons.add_circle_outline_rounded,
+                      size: 18,
                     ),
                     label: const Text(
-                      'Katalog Umum',
-                      style: TextStyle(color: Colors.white, fontSize: 12),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.white38),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
+                      'Permintaan Logo Custom',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
                       ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFFD900),
+                      foregroundColor: const Color(0xFF382314),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 11,
+                      ),
+                      elevation: 2,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
                   );
 
                   if (isCompact) {
                     return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        memberInfo,
+                        titleSection,
                         const SizedBox(height: 12),
-                        katalogBtn,
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: requestBtn,
+                        ),
                       ],
                     );
                   }
 
                   return Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Expanded(child: memberInfo),
-                      const SizedBox(width: 12),
-                      katalogBtn,
+                      Expanded(child: titleSection),
+                      const SizedBox(width: 16),
+                      requestBtn,
                     ],
                   );
                 },
-              ),
-              const SizedBox(height: 14),
-              const Text(
-                'Selamat datang di ruang kerja kustomisasi Anda. Anda dapat mengajukan permintaan logo custom khusus, memantau koleksi logo Anda, dan langsung memesan sangkar dengan logo pilihan.',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 13,
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Tombol Permintaan Logo Custom (Aksi Utama Pengguna Login)
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _showRequestDialog,
-                  icon: const Icon(Icons.add_circle_outline_rounded, size: 20),
-                  label: const Text(
-                    'Permintaan Logo Custom',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFFD900),
-                    foregroundColor: const Color(0xFF382314),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // 2. Katalog di Beranda yang Isinya CUMA Logo Custom Buatan User Login
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header Katalog Custom (Tombol + Tambah Desain telah dihilangkan sesuai permintaan)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Katalog Logo Custom Saya',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Hanya memuat logo & ukiran custom buatan Anda (${widget.customLogos.length} desain)',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                  ),
-                ],
               ),
               const SizedBox(height: 14),
 

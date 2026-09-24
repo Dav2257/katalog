@@ -456,38 +456,13 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Wrap(
-                    alignment: WrapAlignment.spaceBetween,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      Text(
-                        'Produk Custom Pribadi (${_currentUser.customLogoCount} Logo)',
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF4A4A4A),
-                        ),
-                      ),
-                      if (_currentUser.customProducts.isNotEmpty)
-                        TextButton.icon(
-                          onPressed: _addNewCustomProductForUser,
-                          icon: const Icon(
-                            Icons.add,
-                            size: 16,
-                            color: Color(0xFF7A4B29),
-                          ),
-                          label: const Text(
-                            'Tambah Produk Custom',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF7A4B29),
-                            ),
-                          ),
-                        ),
-                    ],
+                  Text(
+                    'Produk Custom Pribadi (${_currentUser.customLogoCount} Logo)',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF4A4A4A),
+                    ),
                   ),
                   const SizedBox(height: 14),
 
@@ -504,38 +479,13 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage> {
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(color: Colors.grey.shade300),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Belum ada produk custom pribadi untuk user ini.',
-                            style: TextStyle(
-                              color: Colors.grey,
-                              fontStyle: FontStyle.italic,
-                              fontSize: 13,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          ElevatedButton.icon(
-                            onPressed: _addNewCustomProductForUser,
-                            icon: const Icon(
-                              Icons.add_photo_alternate_outlined,
-                              size: 16,
-                            ),
-                            label: const Text('Tambah Produk Custom Pribadi'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF7A4B29),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 10,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                            ),
-                          ),
-                        ],
+                      child: const Text(
+                        'Belum ada produk custom pribadi yang diunggah oleh user ini.',
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontStyle: FontStyle.italic,
+                          fontSize: 13,
+                        ),
                       ),
                     )
                   else
@@ -611,44 +561,6 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage> {
                                 ),
                               );
                             }),
-
-                            // Tombol Tambah Produk Custom Tambahan
-                            InkWell(
-                              onTap: _addNewCustomProductForUser,
-                              borderRadius: BorderRadius.circular(10),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Container(
-                                    width: 120,
-                                    height: 120,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFF0F0F0),
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color: const Color(0xFFCCCCCC),
-                                      ),
-                                    ),
-                                    child: const Center(
-                                      child: Icon(
-                                        Icons.add_rounded,
-                                        size: 38,
-                                        color: Color(0xFF7A4B29),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  const Text(
-                                    '+ Tambah',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF7A4B29),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
                           ],
                         ),
                       ),
@@ -679,127 +591,6 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage> {
         _handleUserServiceUpdate();
       }
     });
-  }
-
-  void _addNewCustomProductForUser() {
-    final nextNumber = _currentUser.customProducts.length + 1;
-    final nextCode = 'A0$nextNumber';
-    final codeCtrl = TextEditingController(text: nextCode);
-    final nameCtrl = TextEditingController(text: 'Logo $nextNumber');
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: const Row(
-          children: [
-            Icon(Icons.add_photo_alternate_rounded, color: Color(0xFF7A4B29)),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Tambah Produk Custom Pribadi',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Kode:',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            TextField(
-              controller: codeCtrl,
-              decoration: InputDecoration(
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
-            const Text(
-              'Nama Logo / Produk:',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            TextField(
-              controller: nameCtrl,
-              decoration: InputDecoration(
-                hintText: 'Contoh: Logo Merak',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final code = codeCtrl.text.trim().isNotEmpty
-                  ? codeCtrl.text.trim()
-                  : nextCode;
-              final name = nameCtrl.text.trim().isNotEmpty
-                  ? nameCtrl.text.trim()
-                  : 'Logo Custom';
-              final identifier = _currentUser.phone.isNotEmpty
-                  ? _currentUser.phone
-                  : _currentUser.email;
-
-              final newProd = Product(
-                id: 'custom_${DateTime.now().millisecondsSinceEpoch}',
-                code: code,
-                name: name,
-                price: 0,
-                description:
-                    'Desain logo custom pribadi untuk user $identifier',
-                imageUrl: '',
-                category: '#LogoCustomPribadi',
-                rating: 5.0,
-                isUserCustom: true,
-                lastEditedDate: _getTodayFormatted(),
-              );
-
-              UserService.instance.addCustomProductToUser(identifier, newProd);
-              Navigator.pop(ctx);
-              _handleUserServiceUpdate();
-
-              // Langsung buka halaman edit (Gambar 2) agar admin bisa upload gambar dan sangkar
-              _editCustomProduct(newProd);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF7A4B29),
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Buat & Edit'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _getTodayFormatted() {
-    final now = DateTime.now();
-    final day = now.day.toString().padLeft(2, '0');
-    final month = now.month.toString().padLeft(2, '0');
-    final year = now.year.toString();
-    return '$day-$month-$year';
   }
 }
 

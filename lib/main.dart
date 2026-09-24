@@ -813,80 +813,56 @@ class _MyHomePageState extends State<MyHomePage> {
                 onCartTap: _openCartPage,
               )
             else ...[
-              // Banner Navigasi Kembali bagi Member atau Admin yang sedang melihat Katalog Standar
+              // Banner logo proyek (selalu tampil baik untuk tamu, admin, maupun user private)
+              const HeroBanner(),
+
+              // Tombol Navigasi Kembali bagi Member atau Admin yang sedang melihat Katalog Standar
+              // Terletak di bawah banner dan di atas katalog, di sebelah kanan
               if (_isLoggedIn && _showStandardCatalogForUser)
-                Container(
-                  width: double.infinity,
-                  color: const Color(0xFF382314),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 10,
+                Padding(
+                  padding: const EdgeInsets.only(
+                    top: 14.0,
+                    right: 16.0,
+                    left: 16.0,
                   ),
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final isCompact = constraints.maxWidth < 560;
-                      final infoText = Text(
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          _showStandardCatalogForUser = false;
+                        });
+                      },
+                      icon: const Icon(
+                        Icons.arrow_back,
+                        size: 16,
+                        color: Color(0xFFFFD900),
+                      ),
+                      label: Text(
                         _isAdmin
-                            ? 'Mode Preview: Katalog Sangkar Umum (Admin)'
-                            : 'Menampilkan Katalog Sangkar Standar',
+                            ? 'Kembali ke Dashboard Admin'
+                            : 'Kembali ke Katalog Custom Saya',
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      );
-
-                      final backBtn = TextButton.icon(
-                        onPressed: () {
-                          setState(() {
-                            _showStandardCatalogForUser = false;
-                          });
-                        },
-                        icon: const Icon(
-                          Icons.arrow_back,
-                          size: 16,
-                          color: Color(0xFFFFD900),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF382314),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 9,
                         ),
-                        label: Text(
-                          _isAdmin
-                              ? 'Kembali ke Dashboard Admin'
-                              : 'Kembali ke Katalog Custom Saya',
-                          style: const TextStyle(
-                            color: Color(0xFFFFD900),
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                      );
-
-                      if (isCompact) {
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            infoText,
-                            const SizedBox(height: 4),
-                            backBtn,
-                          ],
-                        );
-                      }
-
-                      return Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(child: infoText),
-                          const SizedBox(width: 8),
-                          backBtn,
-                        ],
-                      );
-                    },
+                        elevation: 2,
+                      ),
+                    ),
                   ),
-                )
-              else
-                // Banner logo proyek untuk tamu
-                const HeroBanner(),
+                ),
 
               // Daftar Katalog Produk Standar
               Padding(

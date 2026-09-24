@@ -306,7 +306,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // 3. User is now logged in: Dedicated UserHomePage is displayed
-    expect(find.text('Area Member Terverifikasi'), findsOneWidget);
+    expect(find.text('Katalog Umum'), findsOneWidget);
     expect(find.text('Permintaan Logo Custom'), findsOneWidget);
     expect(find.text('Katalog Logo Custom Saya'), findsOneWidget);
     expect(find.text('Logo Custom Naga Api Jepara'), findsOneWidget);
@@ -355,7 +355,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // 3. User is now logged in. User cart is fresh/separate (0 items)
-    expect(find.text('Area Member Terverifikasi'), findsOneWidget);
+    expect(find.text('Katalog Logo Custom Saya'), findsOneWidget);
     expect(find.text('1'), findsNothing);
 
     // User adds custom logo to user cart

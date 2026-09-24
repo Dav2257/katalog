@@ -101,6 +101,8 @@ gantt
 - [x] **Interactive Fullscreen Product Viewer (`ProductFullscreenViewer`)**: Fitur klik gambar produk dan bentuk sangkar membuka dialog viewer layar penuh dengan zoom multi-input (pinch, double-tap, mouse drag & wheel) dan navigasi slide.
 - [x] **Database & Auto-Complete Tagar Terpusat (`HashtagService` & `HashtagAutocompleteField`)**: Kamus tagar terpusat di `public.hashtags` dengan pencarian auto-complete cerdas saat pengetikan di form admin dan pemanenan tagar baru secara otomatis.
 - [x] **Penyegaran Tampilan Detail Produk Bersih**: Menghilangkan bintang rating dan label ulasan dari `ProductDetailPage` agar tampilan katalog tetap bersih, elegan, dan fokus pada keunggulan spesifikasi sangkar jati.
+- [x] **Standardisasi HeroBanner & Tata Letak Tombol Navigasi Member**: `HeroBanner` kini tampil penuh di halaman user private dengan tombol "Katalog Umum" bergaya dark-glass menimpa banner di kanan atas. Tombol "Permintaan Logo Custom" dipindahkan ke atas katalog logo custom sebelah kanan. Tombol kembali saat beralih melihat katalog standar diposisikan di bawah banner sebelah kanan.
+- [x] **Hak Akses Admin untuk Produk Custom User (Read & Edit Only)**: Menghapus tombol tambah manual produk custom di admin; admin kini difokuskan untuk meninjau dan mengedit foto desain logo custom yang diajukan oleh user private.
 
 ### B. Fitur Prioritas Menengah (Medium Priority)
 - [x] Sinkronisasi otomatis daftar produk langsung dari database Supabase (`produk` table).

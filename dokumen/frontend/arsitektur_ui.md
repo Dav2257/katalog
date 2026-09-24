@@ -18,10 +18,10 @@ Dokumen ini mendokumentasikan secara rinci komponen-komponen antarmuka pengguna 
     - **Keranjang (Kiri)**: Ikon keranjang belanja dilengkapi badge merah jumlah item belanjaan aktif (`Badge.count`).
     - **Beranda (Tengah)**: Tombol lingkaran kuning emas (`#FFDF00` - `#D4AF37`) dengan ikon rumah cokelat (`Icons.home_rounded`) yang membawa pengguna kembali ke katalog beranda.
     - **Profil (Kanan)**: Ikon profil yang menampilkan avatar pengguna/admin dan membuka modal sheet login/profil secara instan.
-  - **Hero Banner**: Header visual yang menampilkan keunggulan kerajinan sangkar jati pilihan.
+  - **Hero Banner Universal**: Banner visual utama (`HeroBanner`) kini selalu tampil penuh di bagian atas katalog bagi seluruh tipe pengunjung (pengguna umum, member private, maupun admin yang sedang melakukan pratinjau katalog standar).
+  - **Tombol Navigasi Kembali di Bawah Banner (Sebelah Kanan)**: Saat admin atau member beralih melihat katalog standar, tombol navigasi kembali (*"Kembali ke Dashboard Admin"* atau *"Kembali ke Katalog Custom Saya"*) ditempatkan rapi di bawah banner dan di atas katalog di sebelah kanan dengan tombol cokelat kayu jati berikon panah emas.
   - **Grid Katalog Produk Seragam**: Ukuran kartu produk (katalog 1 s/d 5) diseragamkan tinggi dan rasio gambarnya dengan kartu berwarna putih di atas kanvas krem.
   - **Search Filter Dinamis**: Menyaring produk berdasarkan kecocokan nama dan kategori secara instan.
-  - **Banner Mode Preview Admin**: Saat admin mengakses mode pratinjau publik ("Preview Umum"), banner khusus di bagian atas layar menyediakan tombol sekali klik "Kembali ke Dashboard".
   - **Transisi Halaman Instan**: Seluruh perpindahan halaman diatur tanpa animasi transisi (instant transition) untuk pengalaman navigasi yang cepat dan responsif.
 
 ### B. `lib/pages/admin_dashboard_page.dart` (`AdminDashboardPage`)
@@ -112,9 +112,9 @@ Dokumen ini mendokumentasikan secara rinci komponen-komponen antarmuka pengguna 
 - **Fitur Utama**:
   - **Latar Belakang Warna Krem (*#F8F4EA*)**: Memiliki background krem yang seragam dengan katalog umum sehingga visual aplikasi terasa selaras dan menenangkan.
   - **Pemisahan Data Total**: Keranjang belanja dan katalog member dipisahkan 100% dari pengguna tamu (guest).
-  - **Banner Ruang Kerja Member**: Banner gradien kayu jati elegan dengan ikon terverifikasi dan tombol beralih cepat ke "Katalog Umum".
-  - **Tombol Request Logo Custom**: Tombol interaktif untuk mengajukan logo sangkar kustom baru.
-  - **Form Request dengan Fitur Insert Gambar**: Menginput gambar referensi desain kustom pelanggan langsung dari galeri/file lokal.
+  - **Banner Penuh dengan Tombol "Katalog Umum" Menimpa (*Overlay*)**: Mengadopsi komponen `HeroBanner` yang sama persis dengan katalog umum. Di sudut kanan atas banner disematkan tombol *"Katalog Umum"* dengan gaya dark-glass semi-transparan (`Colors.black.withValues(alpha: 0.5)`) dan border putih tipis sehingga tetap kontras dan mudah diklik di atas gambar banner apa pun.
+  - **Tombol "Permintaan Logo Custom" di Atas Katalog (Sebelah Kanan)**: Tombol aksi utama berwarna kuning emas (`#FFD900`) diletakkan di atas daftar katalog logo custom sebelah kanan (sejajar dengan judul pada desktop/tablet, dan rata kanan pada mobile).
+  - **Form Request dengan Fitur Insert Gambar**: Menginput gambar referensi desain kustom pelanggan langsung dari galeri/file lokal yang otomatis diunggah ke cloud storage.
   - **Katalog Beranda Khusus Logo Custom**: Grid kartu logo custom berlatar putih dengan border aksen amber halus di atas kanvas krem.
 
 ### G. `lib/pages/admin_order_detail_page.dart` (`AdminOrderDetailPage`)
@@ -133,11 +133,11 @@ Dokumen ini mendokumentasikan secara rinci komponen-komponen antarmuka pengguna 
   - Badge visual status hijau bertuliskan "Selesai".
 
 ### I. `lib/pages/admin_user_detail_page.dart` (`AdminUserDetailPage`)
-- **Tanggung Jawab**: Menampilkan profil lengkap pelanggan private (*Member*).
+- **Tanggung Jawab**: Menampilkan profil lengkap pelanggan private (*Member*) dan mengelola hasil editan gambar logo custom.
 - **Fitur Utama**:
-  - Informasi kredensial (nama, email, no HP/WhatsApp, alamat).
-  - Daftar desain logo custom yang diajukan oleh pengguna beserta tombol preview.
-  - Katalog pratinjau produk kustom khusus user tersebut.
+  - Informasi kredensial pengguna (nama, email, no HP/WhatsApp, alamat).
+  - **Fokus Sunting Gambar Desain User (Tanpa Tambah Manual)**: Admin murni hanya meninjau dan mengedit gambar/desain yang sudah diunggah oleh user private via `AdminEditProductPage`, tanpa adanya tombol penambahan manual di sisi admin (*read & edit only*).
+  - Menampilkan daftar logo custom pribadi pengguna dengan pratinjau kartu interaktif.
 
 ### J. `lib/pages/admin_add_product_page.dart` & `admin_edit_product_page.dart`
 - **Tanggung Jawab**: Menambah produk baru ke katalog publik atau menyunting detail produk yang sudah ada.
