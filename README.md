@@ -1,17 +1,21 @@
-# katalog
+# 🪵 Jatimas Sangkar - Katalog & Sistem Manajemen Pesanan
 
-A new Flutter project.
+Aplikasi web & mobile katalog produk kerajinan sangkar burung kayu jati Jepara (**Jatimas Sangkar**) yang dilengkapi fitur pemesanan WhatsApp otomatis berfoto, pelacakan progres pengerjaan pesanan 4 tahap, katalog kustom member private, serta dashboard administrator terpadu.
 
-## Getting Started
+## 📚 Dokumentasi Lengkap Proyek
+Seluruh dokumentasi perencanaan, arsitektur antarmuka, service layer, dan skema database cloud Supabase tersusun rapi di direktori [dokumen/](dokumen/README.md):
+- [📄 Perencanaan & Spesifikasi Proyek (SRS)](dokumen/planing/README.md)
+- [📱 Arsitektur Antarmuka & Frontend Flutter](dokumen/frontend/README.md)
+- [🗄️ Skema Database & Layanan Cloud Supabase](dokumen/backend/README.md)
 
-This project is a starting point for a Flutter application.
+## 🚀 Menjalankan Proyek
+```bash
+# Instalasi dependensi
+flutter pub get
 
-A few resources to get you started if this is your first Flutter project:
+# Jalankan di Chrome (Web)
+flutter run -d chrome
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+# Build rilis Web
+flutter build web --release
+```

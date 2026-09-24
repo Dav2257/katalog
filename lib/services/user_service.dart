@@ -6,6 +6,7 @@ import 'auth_service.dart';
 /// Model User Private untuk Admin Dashboard dan Registrasi Web
 class AdminPrivateUser {
   final int no;
+  final String name;
   final String phone;
   final String email;
   final String password;
@@ -15,6 +16,7 @@ class AdminPrivateUser {
 
   const AdminPrivateUser({
     required this.no,
+    this.name = '',
     required this.phone,
     this.email = '',
     required this.password,
@@ -31,6 +33,7 @@ class AdminPrivateUser {
 
   AdminPrivateUser copyWith({
     int? no,
+    String? name,
     String? phone,
     String? email,
     String? password,
@@ -43,6 +46,7 @@ class AdminPrivateUser {
     final count = customLogoCount ?? requestCount ?? prods.length;
     return AdminPrivateUser(
       no: no ?? this.no,
+      name: name ?? this.name,
       phone: phone ?? this.phone,
       email: email ?? this.email,
       password: password ?? this.password,
@@ -84,6 +88,7 @@ class UserService extends ChangeNotifier {
       int counter = 1;
 
       for (final rawUser in userRows) {
+        final name = rawUser['name']?.toString().trim() ?? '';
         final phone = rawUser['phone']?.toString().trim() ?? '';
         final email = rawUser['email']?.toString().trim() ?? '';
         
@@ -116,6 +121,7 @@ class UserService extends ChangeNotifier {
         loadedUsers.add(
           AdminPrivateUser(
             no: counter++,
+            name: name,
             phone: phone,
             email: email,
             password: password,
@@ -137,6 +143,7 @@ class UserService extends ChangeNotifier {
 
   /// Registrasi user baru dan menyimpannya ke Supabase
   Future<AdminPrivateUser> registerUser({
+    String name = '',
     required String phone,
     required String password,
     String email = '',
@@ -149,6 +156,7 @@ class UserService extends ChangeNotifier {
     final year = now.year.toString();
     final dateStr = joinDate ?? '$day-$month-$year';
 
+    final cleanName = name.trim();
     final cleanPhone = phone.trim();
     final cleanEmail = email.trim();
 
@@ -157,6 +165,7 @@ class UserService extends ChangeNotifier {
       debugPrint('Peringatan: Pendaftaran dibatalkan karena nomor telepon dan email kosong.');
       return AdminPrivateUser(
         no: 1,
+        name: cleanName,
         phone: '',
         password: '',
         joinDate: dateStr,
@@ -170,12 +179,17 @@ class UserService extends ChangeNotifier {
         (cleanEmail.isNotEmpty && u.email.toLowerCase() == cleanEmail.toLowerCase()));
 
     if (existingIndex >= 0) {
+      if (cleanName.isNotEmpty && _users[existingIndex].name.isEmpty) {
+        _users[existingIndex] = _users[existingIndex].copyWith(name: cleanName);
+        notifyListeners();
+      }
       return _users[existingIndex];
     }
 
     final initialLogos = customProducts ?? const [];
     final newUser = AdminPrivateUser(
       no: 1,
+      name: cleanName,
       phone: cleanPhone,
       email: cleanEmail,
       password: password.trim(),
@@ -197,6 +211,7 @@ class UserService extends ChangeNotifier {
   Future<bool> _saveUserToSupabase(AdminPrivateUser user) async {
     try {
       await supabase.from('user_private').insert({
+        'name': user.name,
         'phone': user.phone,
         'email': user.email,
         'password': user.password,
@@ -207,15 +222,29 @@ class UserService extends ChangeNotifier {
       debugPrint('SUKSES: User ${user.phone.isNotEmpty ? user.phone : user.email} berhasil disimpan ke Supabase.');
       return true;
     } catch (e) {
-      debugPrint('PERINGATAN: Gagal menyimpan user_private ke Supabase: $e');
-      debugPrint('Pastikan tabel "user_private" sudah dibuat di Supabase SQL Editor.');
-      return false;
+      // Fallback jika kolom 'name' belum dibuat di Supabase
+      try {
+        await supabase.from('user_private').insert({
+          'phone': user.phone,
+          'email': user.email,
+          'password': user.password,
+          'join_date': user.joinDate,
+          'jumlah_logo_custom': user.customLogoCount,
+          'request_count': user.customLogoCount,
+        });
+        return true;
+      } catch (e2) {
+        debugPrint('PERINGATAN: Gagal menyimpan user_private ke Supabase: $e2');
+        debugPrint('Pastikan tabel "user_private" sudah dibuat di Supabase SQL Editor.');
+        return false;
+      }
     }
   }
 
-  /// Update data user private (Nomor HP, Email, atau Password) ke Supabase
+  /// Update data user private (Nama, Nomor HP, Email, atau Password) ke Supabase
   Future<void> updateUser({
     required int no,
+    String? name,
     required String phone,
     required String password,
     String? email,
@@ -224,11 +253,13 @@ class UserService extends ChangeNotifier {
     final index = _users.indexWhere((u) => u.no == no);
     if (index >= 0) {
       final old = _users[index];
+      final newName = name != null ? name.trim() : old.name;
       final newPhone = phone.trim();
       final newEmail = email != null ? email.trim() : old.email;
       final newPassword = password.trim();
 
       _users[index] = old.copyWith(
+        name: newName,
         phone: newPhone,
         password: newPassword,
         email: newEmail,
@@ -238,18 +269,16 @@ class UserService extends ChangeNotifier {
 
       // Update di database Supabase
       try {
+        final updateData = {
+          'name': newName,
+          'phone': newPhone,
+          'email': newEmail,
+          'password': newPassword,
+        };
         if (old.phone.isNotEmpty) {
-          await supabase.from('user_private').update({
-            'phone': newPhone,
-            'email': newEmail,
-            'password': newPassword,
-          }).eq('phone', old.phone);
+          await supabase.from('user_private').update(updateData).eq('phone', old.phone);
         } else if (old.email.isNotEmpty) {
-          await supabase.from('user_private').update({
-            'phone': newPhone,
-            'email': newEmail,
-            'password': newPassword,
-          }).eq('email', old.email);
+          await supabase.from('user_private').update(updateData).eq('email', old.email);
         }
       } catch (e) {
         debugPrint('Catatan: Gagal update user_private di Supabase: $e');
@@ -290,8 +319,10 @@ class UserService extends ChangeNotifier {
                 ? (rawUser['request_count'] as num).toInt()
                 : 0);
 
+        final name = rawUser['name']?.toString() ?? '';
         final found = AdminPrivateUser(
           no: _users.length + 1,
+          name: name,
           phone: phone,
           email: email,
           password: password,

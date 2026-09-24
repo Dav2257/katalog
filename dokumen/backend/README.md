@@ -97,6 +97,7 @@ final List<dynamic> data = await supabase
 ```dart
 // Insert pesanan baru dari keranjang checkout WhatsApp
 await supabase.from('pesanan').insert({
+  'customer_name': order.customerName,
   'phone': order.phone,
   'email': order.email,
   'order_date': dateStr,
@@ -109,6 +110,15 @@ await supabase.from('pesanan').insert({
 
 ### C. Member & Produk Custom (`UserService`)
 ```dart
+// Registrasi member baru dengan nama lengkap
+await supabase.from('user_private').insert({
+  'name': name,
+  'phone': phone,
+  'email': email,
+  'password': password,
+  'join_date': dateStr,
+});
+
 // Fetch member private & produk custom
 final userRows = await supabase.from('user_private').select();
 final customProdRows = await supabase.from('produk_custom').select();

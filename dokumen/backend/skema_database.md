@@ -56,6 +56,7 @@ erDiagram
 
     USER_PRIVATE {
         uuid id PK
+        string name "Nama Lengkap Member"
         string phone "Nomor Telepon Member"
         string email "Email Member"
         string password "Kredensial Akses"
@@ -67,6 +68,7 @@ erDiagram
 
     PESANAN {
         uuid id PK
+        string customer_name "Nama Lengkap Pemesan"
         string phone "Nomor HP Pemesan"
         string email "Email Pemesan (opsional)"
         string order_date "Tanggal Order"
@@ -144,6 +146,7 @@ CREATE TABLE IF NOT EXISTS public.produk (
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.user_private (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    name VARCHAR(255) DEFAULT '',
     phone VARCHAR(30) DEFAULT '',
     email VARCHAR(255) DEFAULT '',
     password VARCHAR(255) DEFAULT 'user123',
@@ -183,6 +186,7 @@ CREATE INDEX IF NOT EXISTS idx_produk_custom_user ON public.produk_custom(user_i
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS public.pesanan (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    customer_name VARCHAR(255) DEFAULT '',
     phone VARCHAR(30) NOT NULL,
     email VARCHAR(255) DEFAULT '',
     order_date VARCHAR(50),

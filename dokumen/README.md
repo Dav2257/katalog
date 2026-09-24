@@ -26,8 +26,8 @@ dokumen/
 
 | Kategori | Deskripsi | Tautan |
 | :--- | :--- | :--- |
-| **Planing** | Rencana proyek, ruang lingkup, target pengguna, kebutuhan fungsional (FR-01 s/d FR-32) & non-fungsional, alur pengguna, serta roadmap rilis. | [Lihat Dokumen Planing](./planing/README.md) |
-| **Frontend** | Arsitektur aplikasi Flutter, rincian seluruh halaman (`AdminDashboardPage`, `AdminOrderDetailPage`, `AdminCompletedOrderDetailPage`, `AdminUserDetailPage`, `AdminSettingsPage`, `UserHomePage`, `CartPage`, `ProductDetailPage`), navigasi footer mobile (Katalog & Admin), viewer layar penuh (`ProductFullscreenViewer`), tema warna krem hangat, service layer (`AuthService`, `CageService`, `OrderService`, `ProductService`, `AppSettingsService`, `HashtagService`), komponen (`widgets`), dan manajemen state. | [Lihat Dokumen Frontend](./frontend/README.md) |
+| **Planing** | Rencana proyek, ruang lingkup, target pengguna, kebutuhan fungsional (FR-01 s/d FR-35) & non-fungsional, alur pengguna, serta roadmap rilis. | [Lihat Dokumen Planing](./planing/README.md) |
+| **Frontend** | Arsitektur aplikasi Flutter, rincian seluruh halaman (`AdminDashboardPage`, `AdminOrderDetailPage`, `AdminCompletedOrderDetailPage`, `AdminUserDetailPage`, `AdminSettingsPage`, `UserHomePage`, `CartPage`, `ProductDetailPage`), navigasi footer mobile (Katalog & Admin), viewer layar penuh (`ProductFullscreenViewer`), tema warna krem hangat, service layer (`AuthService`, `CageService`, `OrderService`, `UserService`, `ProductService`, `AppSettingsService`, `HashtagService`), komponen (`widgets`), dan manajemen state. | [Lihat Dokumen Frontend](./frontend/README.md) |
 | **Backend** | Integrasi Backend-as-a-Service (BaaS) Supabase, konfigurasi URL & API Key, skema tabel aktif PostgreSQL (`produk`, `produk_custom`, `user_private`, `pesanan`, `bentuk_sangkar`, `app_settings`, `hashtags`), Supabase Storage (`katalog`), dan aturan keamanan (RLS). | [Lihat Dokumen Backend](./backend/README.md) |
 
 ---

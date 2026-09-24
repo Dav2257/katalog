@@ -26,6 +26,7 @@ class UserOrder {
   final DateTime orderDate;
   final String phone;
   final String email;
+  final String customerName;
 
   UserOrder({
     required this.id,
@@ -39,6 +40,7 @@ class UserOrder {
     DateTime? orderDate,
     String? phone,
     this.email = '',
+    this.customerName = '',
   })  : orderDate = orderDate ?? DateTime.now(),
         phone = phone ?? '085732257048';
 
@@ -136,6 +138,8 @@ class OrderService extends ChangeNotifier {
             ? (r['stage_number'] as num).toInt()
             : 1;
 
+        String custName = r['customer_name']?.toString() ?? '';
+
         String prodName = 'Sangkar Custom';
         int qty = 1;
         String cageType = 'Sangkar 1';
@@ -153,6 +157,9 @@ class OrderService extends ChangeNotifier {
             cageType = firstItem['cage_type']?.toString() ?? cageType;
             note = firstItem['note']?.toString() ?? '';
             imgUrl = firstItem['image_url']?.toString();
+            if (custName.isEmpty && firstItem['customer_name'] != null) {
+              custName = firstItem['customer_name'].toString();
+            }
           }
         }
 
@@ -175,6 +182,7 @@ class OrderService extends ChangeNotifier {
           orderDate: orderDate,
           phone: phone,
           email: email,
+          customerName: custName,
         ));
       }
 
@@ -208,12 +216,14 @@ class OrderService extends ChangeNotifier {
         'cage_type': order.cageTypeOrDesign,
         'note': order.note,
         'image_url': order.imageUrl,
+        'customer_name': order.customerName,
       }
     ];
 
     try {
       await supabase.from('pesanan').insert({
         'phone': order.phone,
+        'customer_name': order.customerName,
         'email': order.email,
         'order_date': dateStr,
         'status': order.status,
@@ -225,8 +235,23 @@ class OrderService extends ChangeNotifier {
       debugPrint('SUKSES: Pesanan ${order.id} berhasil disimpan ke tabel pesanan di Supabase');
       await fetchOrders();
     } catch (e) {
-      debugPrint('PERINGATAN: Gagal menyimpan pesanan ke Supabase: $e');
-      debugPrint('Pastikan Anda telah menjalankan skrip tabel "pesanan" di Supabase SQL Editor.');
+      // Fallback jika kolom customer_name belum di-migrate di Supabase SQL Editor
+      try {
+        await supabase.from('pesanan').insert({
+          'phone': order.phone,
+          'email': order.email,
+          'order_date': dateStr,
+          'status': order.status,
+          'stage_number': order.currentStep,
+          'is_completed': false,
+          'total_amount': 0,
+          'items': itemsPayload,
+        });
+        await fetchOrders();
+      } catch (e2) {
+        debugPrint('PERINGATAN: Gagal menyimpan pesanan ke Supabase: $e2');
+        debugPrint('Pastikan Anda telah menjalankan skrip tabel "pesanan" di Supabase SQL Editor.');
+      }
     }
   }
 

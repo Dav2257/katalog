@@ -193,6 +193,7 @@ class AppSettingsService extends ChangeNotifier {
   /// Membuat link wa.me ke nomor WhatsApp Admin dengan pesan pesanan
   Uri createOrderWhatsAppUri({
     required String customerPhone,
+    String? customerName,
     required List<String> itemDescriptions,
     String? orderCode,
     String? note,
@@ -203,8 +204,11 @@ class AppSettingsService extends ChangeNotifier {
     final codeHeader = orderCode != null && orderCode.trim().isNotEmpty
         ? '📦 No. Pesanan: #$orderCode\n'
         : '';
+    final nameHeader = (customerName != null && customerName.trim().isNotEmpty)
+        ? '👤 Nama Pemesan: ${customerName.trim()}\n'
+        : '';
     final message =
-        'Halo Admin Jatimas Sangkar, saya ingin memesan produk berikut:\n$codeHeader\n$itemsText$noteText\n\nNomor Kontak Saya: $customerPhone\nMohon informasi ketersediaan & prosesnya. Terima kasih!';
+        'Halo Admin Jatimas Sangkar, saya ingin memesan produk berikut:\n$codeHeader$nameHeader$itemsText$noteText\n\nNomor Kontak Saya: $customerPhone\nMohon informasi ketersediaan & prosesnya. Terima kasih!';
 
     return Uri.parse('https://wa.me/$dest?text=${Uri.encodeComponent(message)}');
   }

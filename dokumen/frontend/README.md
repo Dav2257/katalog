@@ -113,8 +113,12 @@ Aplikasi menggunakan arsitektur modular yang rapi dengan kombinasi **StatefulWid
   - Sinkronisasi instan jumlah bentuk sangkar ke kartu metrik dashboard admin (`JUMLAH BENTUK SANGKAR`) dan pilihan variasi bentuk sangkar di detail produk.
 - **`OrderService`**:
   - Mengelola pesanan masuk (`incomingOrders`) dan riwayat pesanan selesai (`completedOrders`).
+  - Mendukung perekaman nama pemesan (`customerName`) untuk kemudahan identifikasi di dashboard admin.
   - Mendukung update progres 4 tahap produksi (*Verifikasi Desain*, *Kayu Jati*, *Ukir/Grafir*, *Perakitan & Finishing*) dan aksi penyelesaian pesanan (`completeOrder()`).
   - Menyediakan tracking pesanan aktif khusus bagi akun member pada halaman keranjang belanja.
+- **`UserService`**:
+  - Mengelola data member private (`user_private`), registrasi akun lengkap dengan nama pemesan, dan sinkronisasi pengajuan desain logo custom.
+  - Mendukung fitur *auto-fill* data nama dan nomor WhatsApp saat member melakukan checkout dari halaman keranjang.
 - **`ProductService`**:
   - State manager reaktif untuk katalog produk publik (`ChangeNotifier`).
   - Menyediakan fungsi penambahan produk baru (`addProduct`), pengeditan produk (`updateProduct`), serta penghapusan produk secara langsung disinkronkan dengan tampilan katalog umum.

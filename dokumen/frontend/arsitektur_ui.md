@@ -41,14 +41,16 @@ Dokumen ini mendokumentasikan secara rinci komponen-komponen antarmuka pengguna 
     - **Baris 1**: `JUMLAH DESIGN PRODUK` (1.200), `JUMLAH PESANAN` (259), `JUMLAH DESIGN REQUEST` (12).
     - **Baris 2**: `JUMLAH BENTUK SANGKAR` (terhubung dinamis ke `CageService.cages.length`), `JUMLAH PESANAN BARU` (2), kolom ke-3 sengaja dikosongkan untuk keseimbangan tata letak visual.
     - Setiap kartu metrik memiliki garis penanda vertikal cokelat jati (`#8B5328`), tinggi 112px, dan angka tebal berukuran font 36.
-  - **Tabel Pesanan Masuk (Elongated Table)**:
-    - Wadah tabel memanjang (`minWidth: 1050`, tinggi baris 52, jarak kolom 42) dengan scrollbar horizontal yang mulus di perangkat mobile dan desktop.
-    - Memuat kolom: *No*, *Nama*, *Desain*, *Bentuk*, *Kuantitas*, *Catatan*, *Status*, dan *Aksi*.
-    - Tombol "Detail" membuka dialog pop-up interaktif rincian pesanan.
-  - **Tabel User Private (Elongated Table)**:
-    - Menampung pengajuan desain kustom member (*User Private*).
-    - Wadah tabel memanjang (`minWidth: 1050`, tinggi baris 52, jarak kolom 46).
-    - Memuat kolom: *No*, *Nama User*, *Nama Desain*, *Bentuk Sangkar*, *Deskripsi/Catatan*, *Tanggal*, dan *Aksi* (dialog preview gambar & spesifikasi desain).
+  - **Tabel Pesanan Masuk (Full-Width Responsive Table)**:
+    - Mengadopsi arsitektur responsif `LayoutBuilder` dengan perhitungan jarak kolom dinamis (`dynamicSpacing`) dan `minTableWidth`. Pada layar desktop lebar, tabel otomatis membentang mengisi 100% lebar kartu putih tanpa menyisakan ruang kosong di kanan dan tanpa memotong tombol *Action*.
+    - Pada perangkat mobile/tablet, tabel mempertahankan tata letak yang proporsional dengan scrolling horizontal (`SingleChildScrollView` + `Scrollbar`) tanpa error overflow.
+    - Memuat 8 kolom lengkap: *No.*, *Nama* (nama pemesan), *Nomor Telp.*, *Tgl Pesanan*, *Jumlah Pesanan*, *Kode Produk*, *Status*, dan *Action* (tombol Detail cokelat jati).
+  - **Tabel User Private (Full-Width Responsive Table)**:
+    - Menampung akun pelanggan member eksklusif (*User Private*).
+    - Berbasis `LayoutBuilder` dinamis yang menyesuaikan diri dengan lebar layar secara proporsional.
+    - Memuat 8 kolom lengkap: *No.*, *Nama* (nama lengkap member), *No. Telp*, *Email*, *Password*, *Tgl Masuk*, *Jumlah Logo Custom*, dan *Action* (tombol Detail profil).
+  - **Tabel Riwayat Pesanan Selesai (Full-Width Responsive Table)**:
+    - Menampilkan seluruh pesanan yang telah rampung dengan layout responsif dinamis penuh, memuat kolom *No.*, *Nomor Telp.*, *Tgl Pesanan*, *Jumlah Pesanan*, *Kode Produk*, *Status*, dan *Action*.
   - **Section "List Produk User Umum" & Paginasi Responsif**:
     - Menampilkan katalog produk yang sedang tayang di sisi publik.
     - Header pencarian "Cari berdasarkan:" dengan tombol pill pilihan `Nama` (cokelat aktif) dan `Kode` (abu-abu), serta dua kolom input filter real-time (`.....` dan `...`).
@@ -87,22 +89,26 @@ Dokumen ini mendokumentasikan secara rinci komponen-komponen antarmuka pengguna 
     - Khusus ditampilkan jika pengguna berstatus login sebagai Member.
     - Menampilkan daftar pesanan berjalan dari `OrderService` lengkap dengan status tahapan pengerjaan (*Tahap 1 Verifikasi & Desain* s/d *Tahap 4 Perakitan & Finishing*), nomor invoice, dan rincian item.
     - **Terisolasi dari Pengguna Tamu**: Bagian ini otomatis disembunyikan jika pengunjung adalah tamu/umum (guest).
+  - **Formulir Identifikasi Pemesan & Auto-Fill Member**:
+    - **Pengguna Umum (Guest)**: Dialog konfirmasi checkout mewajibkan input **Nama Pemesan** dan **Nomor WhatsApp** agar pesanan di Admin Dashboard dapat langsung dikenali pemiliknya.
+    - **Pengguna Member (User Private)**: Sistem otomatis menarik dan mengisi data **Nama** dan **Nomor WhatsApp** dari database profil member (`user_private`) secara instan (*read-only / auto-fill*), mencegah salah kirim dan mempercepat checkout.
   - **Pemisahan Item per Bentuk Sangkar**: Pesanan dengan bentuk sangkar berbeda otomatis dipisahkan menjadi kartu item tersendiri dengan badge `Bentuk: Sangkar X`.
   - **Kotak Catatan Khusus**: Menampilkan catatan kustom yang telah diinput pengguna pada masing-masing item.
   - **Penghapusan Responsif & Pembersihan Jejak Pesanan**: Tombol hapus ikon tempat sampah pada tiap item bekerja instan. Saat keranjang kosong, seluruh state pemesanan direset bersih.
   - **Checkbox Seleksi Item & Pilih Semua**: Pengguna dapat mencentang item tertentu yang ingin dibeli atau menggunakan tombol "Pilih Semua".
   - **Tombol Hapus Semua Dinamis**: Tombol "Hapus Semua" hanya muncul jika terdapat item yang dicentang.
-  - **Dialog Konfirmasi Pesanan Berfoto**: Pop-up konfirmasi pesanan menampilkan thumbnail foto produk, rincian kuantitas, catatan, dan input nomor WhatsApp pemesan.
+  - **Dialog Konfirmasi Pesanan Berfoto**: Pop-up konfirmasi pesanan menampilkan thumbnail foto produk, rincian kuantitas, catatan, dan verifikasi kontak pemesan.
   - **Tombol Pesan WhatsApp Resmi di Kanan Bawah**:
     - Tombol berwarna hijau resmi WhatsApp (`#25D366`) berpadu dengan **Logo Resmi WhatsApp** (`WhatsAppLogo`).
-    - **Otomatis Menyertakan Foto Produk**: Pesan WhatsApp yang dibuat via `AppSettingsService.createOrderWhatsAppUri` menyematkan nama produk, kuantitas, catatan, dan **URL foto produk** (`📸 Foto Produk: https://...`) yang memicu *rich link preview* gambar di aplikasi WhatsApp.
+    - **Otomatis Menyertakan Foto Produk**: Pesan WhatsApp yang dibuat via `AppSettingsService.createOrderWhatsAppUri` menyematkan nama pemesan, nama produk, kuantitas, catatan, dan **URL foto produk** (`📸 Foto Produk: https://...`) yang memicu *rich link preview* gambar di aplikasi WhatsApp.
     - Mengarahkan pesanan langsung ke nomor WhatsApp Admin yang dikonfigurasi.
 
 ### E. `lib/pages/login_page.dart` (`LoginPage`)
-- **Tanggung Jawab**: Formulir autentikasi pengguna dengan pemisahan akun member dan administrator.
+- **Tanggung Jawab**: Formulir autentikasi pengguna dengan pemisahan akun member dan administrator serta registrasi member baru.
 - **Fitur Utama**:
   - Latar belakang foto sangkar di taman alam berpadu gradien zaitun-cokelat gelap elegan.
   - Header brand `JATIMAS SANGKAR` kuning emas.
+  - **Registrasi Member Baru Lengkap**: Mode pendaftaran akun private menyediakan input **Nama Lengkap**, **Nomor WhatsApp/Telepon**, **Email**, dan **Password**, yang langsung tersinkronisasi ke tabel `public.user_private`.
   - Input Email dan Password dengan visibilitas toggle.
   - Tombol Masuk Supabase Auth.
   - Tombol Masuk Cepat (Mode Demo) & Dukungan Akun Admin (`admin@gmail.com`).

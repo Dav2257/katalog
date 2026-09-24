@@ -7,6 +7,7 @@ import '../services/auth_service.dart';
 import '../services/order_service.dart';
 import '../services/settings_service.dart';
 import '../services/storage_service.dart';
+import '../services/user_service.dart';
 
 class CartPage extends StatefulWidget {
   final List<CartItem> cartItems;
@@ -228,12 +229,35 @@ class _CartPageState extends State<CartPage> {
     }
 
     final selectedList = _selectedItems.toList();
+
+    // Otomatis ambil data nama & nomor WhatsApp dari database User Private jika sedang login
+    final auth = AuthService.instance;
+    final isPrivateMember = auth.isLoggedIn && !auth.isAdmin;
+    AdminPrivateUser? privateUser;
+    if (isPrivateMember) {
+      if (auth.userPhone.trim().isNotEmpty) {
+        privateUser = UserService.instance.findUserByIdentifier(auth.userPhone.trim());
+      }
+      if (privateUser == null && auth.userEmail.trim().isNotEmpty) {
+        privateUser = UserService.instance.findUserByIdentifier(auth.userEmail.trim());
+      }
+    }
+
+    final initialName = (privateUser != null && privateUser.name.isNotEmpty)
+        ? privateUser.name
+        : auth.userName;
+
+    final initialPhone = (privateUser != null && privateUser.phone.isNotEmpty)
+        ? privateUser.phone
+        : (auth.userPhone.trim().isNotEmpty
+            ? auth.userPhone.trim()
+            : (auth.userEmail.trim().isNotEmpty
+                ? auth.userEmail.trim()
+                : ''));
+
+    final nameController = TextEditingController(text: initialName);
     final phoneController = TextEditingController(
-      text: AuthService.instance.userPhone.trim().isNotEmpty
-          ? AuthService.instance.userPhone.trim()
-          : (AuthService.instance.userEmail.trim().isNotEmpty
-              ? AuthService.instance.userEmail.trim()
-              : '085113123142'),
+      text: initialPhone.isNotEmpty ? initialPhone : '085113123142',
     );
 
     showDialog(
@@ -252,6 +276,32 @@ class _CartPageState extends State<CartPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (isPrivateMember)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE8F5E9),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFA5D6A7)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.verified_user_outlined, size: 18, color: Color(0xFF2E7D32)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Data Nama & WhatsApp otomatis diambil dari profil User Private Anda.',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.green.shade800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               Text(
                 'Anda akan memesan ${selectedList.length} produk terpilih via WhatsApp:',
                 style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
@@ -306,6 +356,22 @@ class _CartPageState extends State<CartPage> {
               ),
               const SizedBox(height: 14),
               const Text(
+                'Nama Pemesan:',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+              ),
+              const SizedBox(height: 6),
+              TextField(
+                controller: nameController,
+                textCapitalization: TextCapitalization.words,
+                decoration: InputDecoration(
+                  hintText: 'Masukkan nama Anda (contoh: Budi Santoso)',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  prefixIcon: const Icon(Icons.person_outline, size: 18),
+                ),
+              ),
+              const SizedBox(height: 14),
+              const Text(
                 'Nomor Telepon / WhatsApp Pemesan:',
                 style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
               ),
@@ -331,15 +397,23 @@ class _CartPageState extends State<CartPage> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(ctx);
+              final inputName = nameController.text.trim();
+              final customerName = inputName.isNotEmpty
+                  ? inputName
+                  : (initialName.isNotEmpty
+                      ? initialName
+                      : (auth.isLoggedIn
+                          ? (auth.userEmail.isNotEmpty
+                              ? auth.userEmail
+                              : 'Member App')
+                          : 'User Umum'));
               final inputVal = phoneController.text.trim();
               final customerPhone = inputVal.isNotEmpty
                   ? inputVal
-                  : (AuthService.instance.userPhone.trim().isNotEmpty
-                      ? AuthService.instance.userPhone.trim()
-                      : (AuthService.instance.userEmail.trim().isNotEmpty
-                          ? AuthService.instance.userEmail.trim()
-                          : '085113123142'));
-              final customerEmail = AuthService.instance.userEmail.trim();
+                  : (initialPhone.isNotEmpty
+                      ? initialPhone
+                      : '085113123142');
+              final customerEmail = auth.userEmail.trim();
 
               final orderCode = 'JTM-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
               final itemsToRemove = selectedList.toList();
@@ -402,6 +476,7 @@ class _CartPageState extends State<CartPage> {
                     imageUrl: imgUrl,
                     phone: customerPhone,
                     email: customerEmail,
+                    customerName: customerName,
                   ),
                 );
 
@@ -420,6 +495,7 @@ class _CartPageState extends State<CartPage> {
 
               final waUri = AppSettingsService.instance.createOrderWhatsAppUri(
                 customerPhone: customerPhone,
+                customerName: customerName,
                 itemDescriptions: itemDescriptions,
                 orderCode: orderCode,
               );

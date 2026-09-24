@@ -37,6 +37,7 @@ GRANT ALL ON TABLE public.produk TO anon, authenticated;
 -- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.user_private (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    name VARCHAR(255) DEFAULT '',
     phone VARCHAR(50),
     email VARCHAR(255),
     password VARCHAR(255) NOT NULL,
@@ -46,6 +47,7 @@ CREATE TABLE IF NOT EXISTS public.user_private (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+ALTER TABLE IF EXISTS public.user_private ADD COLUMN IF NOT EXISTS name VARCHAR(255) DEFAULT '';
 ALTER TABLE IF EXISTS public.user_private ADD COLUMN IF NOT EXISTS jumlah_logo_custom INT DEFAULT 0;
 ALTER TABLE IF EXISTS public.user_private ADD COLUMN IF NOT EXISTS request_count INT DEFAULT 0;
 
@@ -84,6 +86,7 @@ GRANT ALL ON TABLE public.produk_custom TO anon, authenticated;
 CREATE TABLE IF NOT EXISTS public.pesanan (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     phone VARCHAR(50) NOT NULL,
+    customer_name VARCHAR(255) DEFAULT '',
     email VARCHAR(255),
     order_date VARCHAR(50) NOT NULL,
     status VARCHAR(50) NOT NULL DEFAULT 'Tahap 1',
@@ -93,6 +96,8 @@ CREATE TABLE IF NOT EXISTS public.pesanan (
     items JSONB NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+ALTER TABLE IF EXISTS public.pesanan ADD COLUMN IF NOT EXISTS customer_name VARCHAR(255) DEFAULT '';
 
 ALTER TABLE public.pesanan ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Akses penuh pesanan" ON public.pesanan;

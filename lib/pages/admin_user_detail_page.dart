@@ -19,6 +19,7 @@ class AdminUserDetailPage extends StatefulWidget {
 
 class _AdminUserDetailPageState extends State<AdminUserDetailPage> {
   late AdminPrivateUser _currentUser;
+  late TextEditingController _nameController;
   late TextEditingController _phoneController;
   late TextEditingController _emailController;
   late TextEditingController _passwordController;
@@ -28,6 +29,7 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage> {
   void initState() {
     super.initState();
     _currentUser = widget.user;
+    _nameController = TextEditingController(text: _currentUser.name);
     _phoneController = TextEditingController(text: _currentUser.phone);
     _emailController = TextEditingController(text: _currentUser.email);
     _passwordController = TextEditingController(text: _currentUser.password);
@@ -49,6 +51,7 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage> {
   @override
   void dispose() {
     UserService.instance.removeListener(_handleUserServiceUpdate);
+    _nameController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
@@ -56,6 +59,7 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage> {
   }
 
   Future<void> _saveUserData() async {
+    final newName = _nameController.text.trim();
     final newPhone = _phoneController.text.trim();
     final newEmail = _emailController.text.trim();
     final newPassword = _passwordController.text.trim();
@@ -82,6 +86,7 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage> {
 
     await UserService.instance.updateUser(
       no: _currentUser.no,
+      name: newName,
       phone: newPhone,
       password: newPassword,
       email: newEmail,
@@ -89,6 +94,7 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage> {
 
     setState(() {
       _currentUser = _currentUser.copyWith(
+        name: newName,
         phone: newPhone,
         password: newPassword,
         email: newEmail,
@@ -307,6 +313,46 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Form Input Nama Lengkap
+                  const Text(
+                    'Nama Lengkap',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF4A4A4A),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    key: const ValueKey('user_detail_name_field'),
+                    controller: _nameController,
+                    decoration: InputDecoration(
+                      hintText: 'Contoh: Budi Santoso',
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFFBDBDBD)),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFFBDBDBD)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(
+                          color: Color(0xFF5A3825),
+                          width: 1.5,
+                        ),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
                   // Form Input Nomor Telepon
                   const Text(
                     'Nomor Telepon (No. HP)',

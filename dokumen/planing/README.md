@@ -103,6 +103,9 @@ gantt
 - [x] **Penyegaran Tampilan Detail Produk Bersih**: Menghilangkan bintang rating dan label ulasan dari `ProductDetailPage` agar tampilan katalog tetap bersih, elegan, dan fokus pada keunggulan spesifikasi sangkar jati.
 - [x] **Standardisasi HeroBanner & Tata Letak Tombol Navigasi Member**: `HeroBanner` kini tampil penuh di halaman user private dengan tombol "Katalog Umum" bergaya dark-glass menimpa banner di kanan atas. Tombol "Permintaan Logo Custom" dipindahkan ke atas katalog logo custom sebelah kanan. Tombol kembali saat beralih melihat katalog standar diposisikan di bawah banner sebelah kanan.
 - [x] **Hak Akses Admin untuk Produk Custom User (Read & Edit Only)**: Menghapus tombol tambah manual produk custom di admin; admin kini difokuskan untuk meninjau dan mengedit foto desain logo custom yang diajukan oleh user private.
+- [x] **Identifikasi Nama Pemesan & Auto-Fill Checkout Member**: Dialog konfirmasi checkout keranjang mewajibkan nama pemesan untuk pengguna umum dan otomatis mengisi nama & WhatsApp dari profil member (`user_private`). Kolom *Nama* tampil di tabel Pesanan Masuk Admin Dashboard.
+- [x] **Registrasi Nama Member & Kolom Nama User Private Admin**: Mode registrasi akun member (`LoginPage`) dilengkapi input Nama Lengkap (`name`), dan tabel User Private di Admin Dashboard menampilkan kolom *Nama* secara eksplisit.
+- [x] **Arsitektur Tabel Responsif Dinamis (Full-Width LayoutBuilder)**: Tabel Pesanan Masuk, Pesanan Selesai, dan User Private otomatis melebar mengisi 100% kartu di layar desktop tanpa kolom terpotong dan tanpa celah kosong di kanan, serta bebas overflow pada smartphone.
 
 ### B. Fitur Prioritas Menengah (Medium Priority)
 - [x] Sinkronisasi otomatis daftar produk langsung dari database Supabase (`produk` table).

@@ -603,7 +603,9 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                           ),
                         ),
                         Text(
-                          widget.order.phone,
+                          widget.order.customerName.trim().isNotEmpty
+                              ? '${widget.order.customerName} (${widget.order.phone})'
+                              : widget.order.phone,
                           style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,

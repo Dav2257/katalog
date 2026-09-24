@@ -66,6 +66,7 @@ class _PieChartPainter extends CustomPainter {
 /// Model Pesanan Masuk untuk Admin
 class AdminIncomingOrder {
   final int no;
+  final String customerName;
   final String phone;
   final String email;
   final String date;
@@ -79,6 +80,7 @@ class AdminIncomingOrder {
 
   const AdminIncomingOrder({
     required this.no,
+    this.customerName = '',
     required this.phone,
     this.email = '',
     required this.date,
@@ -226,6 +228,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         list.add(
           AdminIncomingOrder(
             no: counter++,
+            customerName: order.customerName,
             phone: order.phone,
             email: order.email,
             date: dateStr,
@@ -246,6 +249,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       list.add(
         AdminIncomingOrder(
           no: counter++,
+          customerName: inc.customerName,
           phone: inc.phone,
           date: inc.date,
           quantity: inc.quantity,
@@ -1080,43 +1084,51 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 // Info Admin di Kiri
-                Row(
-                  children: [
-                    Container(
-                      width: 38,
-                      height: 38,
-                      decoration: const BoxDecoration(
-                        color: Colors.black,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.person,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          AuthService.instance.adminName,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
+                Expanded(
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: const BoxDecoration(
+                          color: Colors.black,
+                          shape: BoxShape.circle,
                         ),
-                        Text(
-                          AuthService.instance.adminEmail,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey.shade600,
-                          ),
+                        child: const Icon(
+                          Icons.person,
+                          color: Colors.white,
+                          size: 24,
                         ),
-                      ],
-                    ),
-                  ],
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              AuthService.instance.adminName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            Text(
+                              AuthService.instance.adminEmail,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
 
                 // Tombol Profil di Kanan (hanya tampil di desktop, di mobile sudah ada di footer navigasi)
@@ -1497,6 +1509,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
     return Container(
       width: double.infinity,
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -1508,83 +1521,111 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           ),
         ],
       ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minWidth: 1050),
-          child: DataTable(
-            horizontalMargin: 28,
-            columnSpacing: 42,
-            headingRowHeight: 52,
-            dataRowMinHeight: 52,
-            dataRowMaxHeight: 58,
-            columns: const [
-              DataColumn(label: Text('No.', style: _headerStyle)),
-              DataColumn(label: Text('Nomor Telp.', style: _headerStyle)),
-              DataColumn(label: Text('Tgl Pesanan', style: _headerStyle)),
-              DataColumn(label: Text('Jumlah Pesanan', style: _headerStyle)),
-              DataColumn(label: Text('Kode Produk', style: _headerStyle)),
-              DataColumn(label: Text('Status', style: _headerStyle)),
-              DataColumn(label: Text('Action', style: _headerStyle)),
-            ],
-            rows: incomingList.map((order) {
-              return DataRow(
-                cells: [
-                  DataCell(Text('${order.no}.', style: _cellStyle)),
-                  DataCell(
-                    Text(
-                      order.phone.trim().isNotEmpty
-                          ? order.phone
-                          : (order.email.trim().isNotEmpty ? order.email : '-'),
-                      style: _cellStyle.copyWith(
-                        decoration: TextDecoration.underline,
-                      ),
-                    ),
-                  ),
-                  DataCell(Text(order.date, style: _cellStyle)),
-                  DataCell(Text('${order.quantity}', style: _cellStyle)),
-                  DataCell(Text(order.productCode, style: _cellStyle)),
-                  DataCell(Text(order.status, style: _cellStyle)),
-                  DataCell(
-                    ElevatedButton(
-                      key: ValueKey('order_detail_${order.phone}_${order.no}'),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => AdminOrderDetailPage(order: order),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final availableWidth = constraints.maxWidth;
+          final double dynamicSpacing =
+              ((availableWidth - 48 - 720) / 7).clamp(20.0, 140.0);
+          final double minTableWidth = math.max(availableWidth, 900.0);
+
+          return Scrollbar(
+            thumbVisibility: false,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minWidth: minTableWidth),
+                child: DataTable(
+                  horizontalMargin: 24,
+                  columnSpacing: dynamicSpacing,
+                  headingRowHeight: 52,
+                  dataRowMinHeight: 52,
+                  dataRowMaxHeight: 58,
+                  columns: const [
+                    DataColumn(label: Text('No.', style: _headerStyle)),
+                    DataColumn(label: Text('Nama', style: _headerStyle)),
+                    DataColumn(label: Text('Nomor Telp.', style: _headerStyle)),
+                    DataColumn(label: Text('Tgl Pesanan', style: _headerStyle)),
+                    DataColumn(label: Text('Jumlah Pesanan', style: _headerStyle)),
+                    DataColumn(label: Text('Kode Produk', style: _headerStyle)),
+                    DataColumn(label: Text('Status', style: _headerStyle)),
+                    DataColumn(label: Text('Action', style: _headerStyle)),
+                  ],
+                  rows: incomingList.map((order) {
+                    return DataRow(
+                      cells: [
+                        DataCell(Text('${order.no}.', style: _cellStyle)),
+                        DataCell(
+                          Text(
+                            order.customerName.trim().isNotEmpty
+                                ? order.customerName
+                                : '-',
+                            style: _cellStyle.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        ).then((_) {
-                          if (mounted) setState(() {});
-                        });
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF7A4B29),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 6,
                         ),
-                        minimumSize: const Size(60, 28),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(4),
+                        DataCell(
+                          Text(
+                            order.phone.trim().isNotEmpty
+                                ? order.phone
+                                : (order.email.trim().isNotEmpty
+                                    ? order.email
+                                    : '-'),
+                            style: _cellStyle.copyWith(
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
                         ),
-                      ),
-                      child: const Text(
-                        'Detail',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+                        DataCell(Text(order.date, style: _cellStyle)),
+                        DataCell(Text('${order.quantity}', style: _cellStyle)),
+                        DataCell(Text(order.productCode, style: _cellStyle)),
+                        DataCell(Text(order.status, style: _cellStyle)),
+                        DataCell(
+                          ElevatedButton(
+                            key: ValueKey(
+                              'order_detail_${order.phone}_${order.no}',
+                            ),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      AdminOrderDetailPage(order: order),
+                                ),
+                              ).then((_) {
+                                if (mounted) setState(() {});
+                              });
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF7A4B29),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 6,
+                              ),
+                              minimumSize: const Size(60, 28),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                            child: const Text(
+                              'Detail',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            }).toList(),
-          ),
-        ),
+                      ],
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -1651,100 +1692,112 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           ),
         ],
       ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minWidth: 1050),
-          child: DataTable(
-            horizontalMargin: 28,
-            columnSpacing: 42,
-            headingRowHeight: 52,
-            dataRowMinHeight: 52,
-            dataRowMaxHeight: 58,
-            columns: const [
-              DataColumn(label: Text('No.', style: _headerStyle)),
-              DataColumn(label: Text('Nomor Telp.', style: _headerStyle)),
-              DataColumn(label: Text('Tgl Pesanan', style: _headerStyle)),
-              DataColumn(label: Text('Jumlah Pesanan', style: _headerStyle)),
-              DataColumn(label: Text('Kode Produk', style: _headerStyle)),
-              DataColumn(label: Text('Status', style: _headerStyle)),
-              DataColumn(label: Text('Action', style: _headerStyle)),
-            ],
-            rows: completedList.map((order) {
-              return DataRow(
-                cells: [
-                  DataCell(Text('${order.no}.', style: _cellStyle)),
-                  DataCell(
-                    InkWell(
-                      key: ValueKey(
-                        'completed_order_phone_${order.phone}_${order.no}',
-                      ),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                AdminCompletedOrderDetailPage(order: order),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final availableWidth = constraints.maxWidth;
+          final double dynamicSpacing =
+              ((availableWidth - 48 - 640) / 6).clamp(20.0, 150.0);
+          final double minTableWidth = math.max(availableWidth, 850.0);
+
+          return Scrollbar(
+            thumbVisibility: false,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minWidth: minTableWidth),
+                child: DataTable(
+                  horizontalMargin: 24,
+                  columnSpacing: dynamicSpacing,
+                  headingRowHeight: 52,
+                  dataRowMinHeight: 52,
+                  dataRowMaxHeight: 58,
+                  columns: const [
+                    DataColumn(label: Text('No.', style: _headerStyle)),
+                    DataColumn(label: Text('Nomor Telp.', style: _headerStyle)),
+                    DataColumn(label: Text('Tgl Pesanan', style: _headerStyle)),
+                    DataColumn(label: Text('Jumlah Pesanan', style: _headerStyle)),
+                    DataColumn(label: Text('Kode Produk', style: _headerStyle)),
+                    DataColumn(label: Text('Status', style: _headerStyle)),
+                    DataColumn(label: Text('Action', style: _headerStyle)),
+                  ],
+                  rows: completedList.map((order) {
+                    return DataRow(
+                      cells: [
+                        DataCell(Text('${order.no}.', style: _cellStyle)),
+                        DataCell(
+                          InkWell(
+                            key: ValueKey(
+                              'completed_order_phone_${order.phone}_${order.no}',
+                            ),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      AdminCompletedOrderDetailPage(order: order),
+                                ),
+                              );
+                            },
+                            child: Text(
+                              order.phone.trim().isNotEmpty
+                                  ? order.phone
+                                  : (order.email.trim().isNotEmpty
+                                      ? order.email
+                                      : '-'),
+                              style: _cellStyle.copyWith(
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
                           ),
-                        );
-                      },
-                      child: Text(
-                        order.phone.trim().isNotEmpty
-                            ? order.phone
-                            : (order.email.trim().isNotEmpty
-                                  ? order.email
-                                  : '-'),
-                        style: _cellStyle.copyWith(
-                          decoration: TextDecoration.underline,
                         ),
-                      ),
-                    ),
-                  ),
-                  DataCell(Text(order.date, style: _cellStyle)),
-                  DataCell(Text('${order.quantity}', style: _cellStyle)),
-                  DataCell(Text(order.productCode, style: _cellStyle)),
-                  DataCell(Text(order.status, style: _cellStyle)),
-                  DataCell(
-                    ElevatedButton(
-                      key: ValueKey(
-                        'completed_order_detail_${order.phone}_${order.no}',
-                      ),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                AdminCompletedOrderDetailPage(order: order),
+                        DataCell(Text(order.date, style: _cellStyle)),
+                        DataCell(Text('${order.quantity}', style: _cellStyle)),
+                        DataCell(Text(order.productCode, style: _cellStyle)),
+                        DataCell(Text(order.status, style: _cellStyle)),
+                        DataCell(
+                          ElevatedButton(
+                            key: ValueKey(
+                              'completed_order_detail_${order.phone}_${order.no}',
+                            ),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      AdminCompletedOrderDetailPage(order: order),
+                                ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF7A4B29),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 6,
+                              ),
+                              minimumSize: const Size(60, 28),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                            child: const Text(
+                              'Detail',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF7A4B29),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 6,
                         ),
-                        minimumSize: const Size(60, 28),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ),
-                      child: const Text(
-                        'Detail',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            }).toList(),
-          ),
-        ),
+                      ],
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -1798,6 +1851,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
     return Container(
       width: double.infinity,
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -1809,88 +1863,109 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           ),
         ],
       ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minWidth: 1050),
-          child: DataTable(
-            horizontalMargin: 28,
-            columnSpacing: 46,
-            headingRowHeight: 52,
-            dataRowMinHeight: 52,
-            dataRowMaxHeight: 58,
-            columns: const [
-              DataColumn(label: Text('No.', style: _headerStyle)),
-              DataColumn(label: Text('No. Telp', style: _headerStyle)),
-              DataColumn(label: Text('Email', style: _headerStyle)),
-              DataColumn(label: Text('Password', style: _headerStyle)),
-              DataColumn(label: Text('Tgl Masuk', style: _headerStyle)),
-              DataColumn(
-                label: Text('Jumlah Logo Custom', style: _headerStyle),
-              ),
-              DataColumn(label: Text('Action', style: _headerStyle)),
-            ],
-            rows: _privateUsers.map((user) {
-              return DataRow(
-                cells: [
-                  DataCell(Text('${user.no}.', style: _cellStyle)),
-                  DataCell(
-                    Text(
-                      user.phone.isNotEmpty ? user.phone : '-',
-                      style: _cellStyle,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final availableWidth = constraints.maxWidth;
+          final double dynamicSpacing =
+              ((availableWidth - 48 - 780) / 7).clamp(20.0, 140.0);
+          final double minTableWidth = math.max(availableWidth, 950.0);
+
+          return Scrollbar(
+            thumbVisibility: false,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minWidth: minTableWidth),
+                child: DataTable(
+                  horizontalMargin: 24,
+                  columnSpacing: dynamicSpacing,
+                  headingRowHeight: 52,
+                  dataRowMinHeight: 52,
+                  dataRowMaxHeight: 58,
+                  columns: const [
+                    DataColumn(label: Text('No.', style: _headerStyle)),
+                    DataColumn(label: Text('Nama', style: _headerStyle)),
+                    DataColumn(label: Text('No. Telp', style: _headerStyle)),
+                    DataColumn(label: Text('Email', style: _headerStyle)),
+                    DataColumn(label: Text('Password', style: _headerStyle)),
+                    DataColumn(label: Text('Tgl Masuk', style: _headerStyle)),
+                    DataColumn(
+                      label: Text('Jumlah Logo Custom', style: _headerStyle),
                     ),
-                  ),
-                  DataCell(
-                    Text(
-                      user.email.isNotEmpty ? user.email : '-',
-                      style: _cellStyle,
-                    ),
-                  ),
-                  DataCell(Text(user.password, style: _cellStyle)),
-                  DataCell(Text(user.joinDate, style: _cellStyle)),
-                  DataCell(Text('${user.customLogoCount}', style: _cellStyle)),
-                  DataCell(
-                    ElevatedButton(
-                      key: ValueKey(
-                        'user_detail_${user.phone.isNotEmpty ? user.phone : user.email}',
-                      ),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => AdminUserDetailPage(user: user),
+                    DataColumn(label: Text('Action', style: _headerStyle)),
+                  ],
+                  rows: _privateUsers.map((user) {
+                    return DataRow(
+                      cells: [
+                        DataCell(Text('${user.no}.', style: _cellStyle)),
+                        DataCell(
+                          Text(
+                            user.name.isNotEmpty ? user.name : '-',
+                            style: _cellStyle.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        ).then((_) {
-                          if (mounted) setState(() {});
-                        });
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF7A4B29),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 6,
                         ),
-                        minimumSize: const Size(60, 28),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(4),
+                        DataCell(
+                          Text(
+                            user.phone.isNotEmpty ? user.phone : '-',
+                            style: _cellStyle,
+                          ),
                         ),
-                      ),
-                      child: const Text(
-                        'Detail',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+                        DataCell(
+                          Text(
+                            user.email.isNotEmpty ? user.email : '-',
+                            style: _cellStyle,
+                          ),
                         ),
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            }).toList(),
-          ),
-        ),
+                        DataCell(Text(user.password, style: _cellStyle)),
+                        DataCell(Text(user.joinDate, style: _cellStyle)),
+                        DataCell(Text('${user.customLogoCount}', style: _cellStyle)),
+                        DataCell(
+                          ElevatedButton(
+                            key: ValueKey(
+                              'user_detail_${user.phone.isNotEmpty ? user.phone : user.email}',
+                            ),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => AdminUserDetailPage(user: user),
+                                ),
+                              ).then((_) {
+                                if (mounted) setState(() {});
+                              });
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF7A4B29),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 6,
+                              ),
+                              minimumSize: const Size(60, 28),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                            child: const Text(
+                              'Detail',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

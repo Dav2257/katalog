@@ -11,6 +11,7 @@ class AuthService extends ChangeNotifier {
 
   static const String _keyIsLoggedIn = 'auth_is_logged_in';
   static const String _keyIsAdmin = 'auth_is_admin';
+  static const String _keyUserName = 'auth_user_name';
   static const String _keyUserPhone = 'auth_user_phone';
   static const String _keyUserEmail = 'auth_user_email';
   static const String _keyAdminName = 'auth_admin_name';
@@ -23,6 +24,7 @@ class AuthService extends ChangeNotifier {
   String _adminName = 'Admin 1';
   String _adminEmail = 'admin@gmail.com';
 
+  String _userName = '';
   String _userPhone = '';
   String _userEmail = '';
 
@@ -30,6 +32,7 @@ class AuthService extends ChangeNotifier {
   bool get isAdmin => _isAdmin;
   String get adminName => _adminName;
   String get adminEmail => _adminEmail;
+  String get userName => _userName;
   String get userPhone => _userPhone;
   String get userEmail => _userEmail;
 
@@ -41,6 +44,7 @@ class AuthService extends ChangeNotifier {
       if (savedLoggedIn) {
         _isLoggedIn = true;
         _isAdmin = prefs.getBool(_keyIsAdmin) ?? false;
+        _userName = prefs.getString(_keyUserName) ?? '';
         _userPhone = prefs.getString(_keyUserPhone) ?? '';
         _userEmail = prefs.getString(_keyUserEmail) ?? '';
         _adminName = prefs.getString(_keyAdminName) ?? 'Admin 1';
@@ -62,6 +66,8 @@ class AuthService extends ChangeNotifier {
       _isLoggedIn = user != null;
       _isAdmin = user?.email?.toLowerCase().contains('admin') == true;
       if (user?.email != null) _userEmail = user!.email!;
+      final metaName = user?.userMetadata?['name']?.toString() ?? '';
+      if (metaName.isNotEmpty) _userName = metaName;
     } catch (_) {
       _isLoggedIn = false;
       _isAdmin = false;
@@ -73,12 +79,14 @@ class AuthService extends ChangeNotifier {
     required bool isAdmin,
     String? phone,
     String? email,
+    String? userName,
     String? adminName,
   }) async {
     _isLoggedIn = true;
     _isAdmin = isAdmin;
     if (phone != null && phone.isNotEmpty) _userPhone = phone;
     if (email != null && email.isNotEmpty) _userEmail = email;
+    if (userName != null && userName.isNotEmpty) _userName = userName;
     if (adminName != null && adminName.isNotEmpty) _adminName = adminName;
     if (isAdmin && email != null && email.isNotEmpty) _adminEmail = email;
 
@@ -88,6 +96,7 @@ class AuthService extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_keyIsLoggedIn, true);
       await prefs.setBool(_keyIsAdmin, _isAdmin);
+      await prefs.setString(_keyUserName, _userName);
       await prefs.setString(_keyUserPhone, _userPhone);
       await prefs.setString(_keyUserEmail, _userEmail);
       await prefs.setString(_keyAdminName, _adminName);
@@ -103,6 +112,7 @@ class AuthService extends ChangeNotifier {
     } catch (_) {}
     _isLoggedIn = false;
     _isAdmin = false;
+    _userName = '';
     _userPhone = '';
     _userEmail = '';
     notifyListeners();
@@ -111,6 +121,7 @@ class AuthService extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_keyIsLoggedIn);
       await prefs.remove(_keyIsAdmin);
+      await prefs.remove(_keyUserName);
       await prefs.remove(_keyUserPhone);
       await prefs.remove(_keyUserEmail);
       await prefs.remove(_keyAdminName);

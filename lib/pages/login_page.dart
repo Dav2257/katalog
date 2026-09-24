@@ -16,6 +16,7 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -36,6 +37,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void dispose() {
     AppSettingsService.instance.removeListener(_onSettingsChanged);
+    _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
@@ -112,9 +114,12 @@ class _LoginPageState extends State<LoginPage> {
         isAdmin: false,
         phone: registeredUser.phone,
         email: registeredUser.email,
+        userName: registeredUser.name,
       );
       if (mounted) {
-        final displayName = registeredUser.phone.isNotEmpty ? registeredUser.phone : registeredUser.email;
+        final displayName = registeredUser.name.isNotEmpty
+            ? registeredUser.name
+            : (registeredUser.phone.isNotEmpty ? registeredUser.phone : registeredUser.email);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Selamat datang kembali, $displayName!'),
@@ -185,6 +190,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _handleRegister() async {
+    final name = _nameController.text.trim();
     final phone = _phoneController.text.trim();
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
@@ -224,6 +230,7 @@ class _LoginPageState extends State<LoginPage> {
     try {
       // 1. Simpan user baru ke UserService (tersimpan langsung ke Supabase)
       final newUser = await UserService.instance.registerUser(
+        name: name,
         phone: phone,
         password: password,
         email: email,
@@ -235,7 +242,7 @@ class _LoginPageState extends State<LoginPage> {
           await supabase.auth.signUp(
             email: email,
             password: password,
-            data: {'phone': phone, 'role': 'member'},
+            data: {'name': name, 'phone': phone, 'role': 'member'},
           );
         } catch (_) {}
       }
@@ -245,6 +252,7 @@ class _LoginPageState extends State<LoginPage> {
         isAdmin: false,
         phone: newUser.phone,
         email: newUser.email,
+        userName: newUser.name,
       );
 
       if (mounted) {
@@ -472,6 +480,38 @@ class _LoginPageState extends State<LoginPage> {
           ),
 
           const SizedBox(height: 16),
+
+          // Field: Nama Lengkap
+          const Text(
+            'Nama Lengkap',
+            style: TextStyle(
+              fontFamily: 'LemonMilk',
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 6),
+          TextField(
+            controller: _nameController,
+            textCapitalization: TextCapitalization.words,
+            style: const TextStyle(color: Colors.black87, fontSize: 13),
+            decoration: InputDecoration(
+              hintText: 'Contoh: Budi Santoso',
+              hintStyle: const TextStyle(color: Colors.black45, fontSize: 13),
+              filled: true,
+              fillColor: Colors.white,
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 12),
 
           // Field: Nomor Telepon (Wajib)
           const Text(
