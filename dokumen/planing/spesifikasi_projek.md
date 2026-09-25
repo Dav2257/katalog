@@ -43,6 +43,11 @@ Dokumen ini mendefinisikan kebutuhan fungsional, non-fungsional, use case, dan b
 | **FR-33** | Identifikasi Nama Pemesan & Auto-Fill Checkout Member | Dialog konfirmasi checkout keranjang belanja (`CartPage`) mewajibkan input nama pemesan bagi pengguna umum (guest) yang langsung tersimpan di kolom `customer_name` tabel `pesanan`. Khusus pengguna member (User Private) yang login, sistem secara otomatis menarik dan mengisi data nama dan nomor WhatsApp dari profil member (`user_private`) sehingga tidak perlu mengisi manual. |
 | **FR-34** | Registrasi Nama Member & Kolom Nama Admin Dashboard | Formulir pendaftaran akun member (`LoginPage`) dilengkapi input Nama Lengkap yang tersimpan di kolom `name` tabel `user_private`. Pada Dashboard Admin (`AdminDashboardPage`), tabel Pesanan Masuk dan tabel User Private menyajikan kolom *Nama* secara eksplisit untuk kemudahan identifikasi pelanggan. |
 | **FR-35** | Arsitektur Tabel Responsif Dinamis (Full-Width LayoutBuilder) | Tabel Pesanan Masuk, Riwayat Pesanan Selesai, dan User Private di Dashboard Admin mengadopsi `LayoutBuilder` dengan perhitungan jarak kolom dinamis (`dynamicSpacing`) dan `minTableWidth`. Tabel secara otomatis membentang mengisi 100% lebar kartu pada monitor/desktop lebar tanpa menyisakan ruang kosong di kanan dan tanpa kolom terpotong, serta tetap responsif dengan horizontal scrolling mulus dan bebas error `RenderFlex overflowed` di layar smartphone. |
+| **FR-36** | Asisten AI Berbasis Suara & Teks (Voice & Text Assistant) | Pengguna dapat berkonsultasi mengenai produk sangkar burung melalui asisten AI interaktif (`AiAssistantDialog`) dengan input ucapan mikrofon (`speech_to_text`) atau pengetikan teks, didukung sintesis suara otomatis (`flutter_tts`). Ditenagai LLM Nous Hermes 3 (Llama 3.1 8B) via OpenRouter dengan fallback Groq Llama 3.3 70B, serta integrasi konteks katalog real-time dari `ProductService`. |
+| **FR-37** | Kartu Rekomendasi Visual Produk Interaktif (Visual Product Cards) | Sistem AI menggantikan tampilan rekomendasi daftar teks bernomor polos dengan kartu visual produk (`_buildProductCard`) yang memuat foto asli produk dari katalog, kode produk, nama, badge harga format Rupiah, dan keterangan alasan kecocokan. Setiap kartu menyediakan tombol aksi langsung: `[Pesan]`, `[+ Keranjang]`, dan `[Detail]`. |
+| **FR-38** | Formulir Pemesanan Cepat AI & Batasan Desain Katalog | AI menyediakan modal formulir pemesanan cepat (`_showOrderFormBottomSheet`) dengan data produk terpilih terisi otomatis, input Nama Pemesan, Nomor WhatsApp, dan Catatan Tambahan. Sistem menegaskan bahwa pelanggan umum hanya dapat memesan produk yang tersedia di katalog (tidak melayani pembuatan desain baru dari awal/scratch). Kolom catatan difungsikan khusus untuk permintaan penambahan teks/inisial kecil pada karakter produk yang dipilih (contoh: *"di samping karakternya ditambah tulisan GB"*). Pemesanan dikirim langsung ke WhatsApp Admin toko (`wa.me`). |
+| **FR-39** | Deteksi Warna & Motif Produk Cerdas oleh AI | AI secara otomatis mengenali preferensi warna yang disebut pengguna (contoh: motif naga biru, ukiran emas, merah, hitam, kayu jati natural) dan memetakan pencarian secara akurat ke produk katalog yang dipajang admin berdasarkan nama, tagar, dan deskripsi produk. |
+| **FR-40** | Proteksi Anti-Overflow Responsif Multi-Perangkat | Dialog Asisten AI dan kartu rekomendasi visual menerapkan pembungkus `FittedBox(fit: BoxFit.scaleDown)` pada seluruh tombol aksi, `Flexible` pada judul, dan `Wrap` pada baris harga sehingga antarmuka tetap rapi, proporsional, dan 100% bebas dari error `RenderFlex overflowed` baik di layar smartphone sempit (< 400px) maupun layar desktop lebar (> 700px). |
 
 ---
 
@@ -76,6 +81,8 @@ flowchart LR
         UC6(Request Desain: Insert Gambar)
         UC7(Kelola Logo Custom Saya)
         UC8(Tracking Status Pesanan Anda)
+        UC19(Konsultasi Asisten AI Suara & Teks)
+        UC20(Pesan Cepat via Formulir AI Assistant)
     end
 
     subgraph Dashboard Administrator
@@ -96,6 +103,8 @@ flowchart LR
     User --> UC3
     User --> UC4
     User --> UC5
+    User --> UC19
+    User --> UC20
 
     Member --> UC1
     Member --> UC3
@@ -104,6 +113,8 @@ flowchart LR
     Member --> UC6
     Member --> UC7
     Member --> UC8
+    Member --> UC19
+    Member --> UC20
 
     Admin --> UC5
     Admin --> UC9
@@ -132,6 +143,11 @@ stateDiagram-v2
     state HalamanUtamaTamu {
         KatalogUmum --> CariProduk
         KatalogUmum --> DetailProduk : Klik Card
+        KatalogUmum --> AsistenAISuaraTeks : Tombol Floating Coba AI
+        AsistenAISuaraTeks --> KartuVisualRekomendasi : Deteksi Warna & Motif
+        KartuVisualRekomendasi --> FormPesananCepatAI : Tombol Pesan
+        KartuVisualRekomendasi --> MasukKeranjangTamu : Tombol + Keranjang
+        KartuVisualRekomendasi --> DetailProduk : Tombol Detail
         DetailProduk --> NavigasiBentuk : Tombol < dan >
         NavigasiBentuk --> MasukKeranjangTamu : Tentukan Qty & Catatan
     }
@@ -171,6 +187,7 @@ stateDiagram-v2
         DialogKonfirmasi --> KirimPesananWhatsApp : Thumbnail Foto Produk & Input No HP
     }
 
+    FormPesananCepatAI --> ChatWhatsAppAdmin : Kirim Pesanan WA Langsung
     KirimPesananWhatsApp --> ChatWhatsAppAdmin : Link Pesan + Foto Produk (wa.me)
     ChatWhatsAppAdmin --> [*]
 ```

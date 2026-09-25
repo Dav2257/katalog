@@ -31,12 +31,14 @@ lib/
 │   ├── product_service.dart              # Layanan sinkronisasi data produk katalog publik (tambah/edit/hapus)
 │   ├── hashtag_service.dart              # Layanan database & auto-complete hashtag (SharedPreferences + Supabase)
 │   ├── storage_service.dart              # Layanan upload media gambar ke Supabase Storage
-│   └── settings_service.dart             # Layanan pengaturan toko, nomor WhatsApp wa.me, banner, style, & font
+│   ├── settings_service.dart             # Layanan pengaturan toko, nomor WhatsApp wa.me, banner, style, & font
+│   └── ai_assistant_service.dart         # Layanan asisten cerdas AI suara & teks (OpenRouter Hermes 3 / Groq Llama 3.3)
 └── widgets/                              # Komponen UI yang dapat digunakan kembali (reusable)
     ├── hero_banner.dart                  # Komponen visual header dinamis Jatimas Sangkar
     ├── top_navbar.dart                   # Bilah navigasi atas responsif (auto-hide keranjang & profil pada mobile)
     ├── hashtag_autocomplete_field.dart   # Input hashtag pintar dengan dropdown auto-complete & quick chips
-    └── product_fullscreen_viewer.dart    # Viewer gambar fullscreen interaktif (pinch-to-zoom, pan, slide < >)
+    ├── product_fullscreen_viewer.dart    # Viewer gambar fullscreen interaktif (pinch-to-zoom, pan, slide < >)
+    └── ai_assistant_dialog.dart          # Dialog asisten AI suara & teks, kartu rekomendasi visual, & quick order sheet
 ```
 
 ---
@@ -131,6 +133,14 @@ Aplikasi menggunakan arsitektur modular yang rapi dengan kombinasi **StatefulWid
   - Mendukung konversi upload file lokal perangkat (laptop/HP) menjadi URL publik permanen dengan fallback data URI Base64.
 - **`AppSettingsService`**:
   - Mengelola konfigurasi nomor WhatsApp admin untuk checkout (`wa.me`), banner kustom, navbar style, font katalog, dan pembentukan link WhatsApp berfoto.
+- **`AiAssistantService`**:
+  - Layanan state manager berbasis `ChangeNotifier` untuk asisten AI interaktif (suara & teks).
+  - Terintegrasi dengan model LLM canggih via OpenRouter (`NousResearch/Hermes-3-Llama-3.1-8B`, fallback Groq `llama-3.3-70b-versatile`).
+  - **Injeksi Konteks Produk Real-time**: Mengambil data seluruh produk aktif secara otomatis dari `ProductService` (kode, nama, harga, variasi bentuk sangkar, dan warna motif ukiran).
+  - **Deteksi Warna & Motif Cerdas**: AI secara otomatis mengenali warna dan motif sangkar (contoh: motif naga biru, emas, merah, hitam, jati natural) berdasarkan deskripsi produk dan preferensi pengguna.
+  - **Parsing Ekstraksi Produk**: Dilengkapi regular expression cerdas yang mengekstrak kode produk (`A01`, `A05`, dll.) dari respons AI bahkan dengan berbagai format pemisah (titik, strip, pipa `|`, titik dua `:`).
+  - **Proteksi Desain**: AI menegaskan aturan katalog di mana pelanggan umum hanya dapat memesan produk yang tersedia di katalog (bukan membuat desain custom baru dari awal). Catatan pesanan hanya untuk penambahan teks/inisial kecil pada model yang dipilih.
+  - **Penyimpanan Lokal**: Persistensi riwayat percakapan dan preferensi suara di `SharedPreferences`.
 - **Pemisahan Keranjang Tamu vs Member**:
   - `_guestCart`: Keranjang belanja terisolasi saat bertindak sebagai tamu.
   - `_userCart`: Keranjang belanja terisolasi untuk member login.

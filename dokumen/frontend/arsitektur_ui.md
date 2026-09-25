@@ -174,6 +174,36 @@ Dokumen ini mendokumentasikan secara rinci komponen-komponen antarmuka pengguna 
   - **Pratinjau Gambar Real-Time & Validasi Wajib**: Menyediakan kartu preview foto interaktif dengan tombol hapus/ganti. Foto jadwal produksi bersifat **wajib (mandatory)**; form modal secara ketat menolak penyimpanan jika foto belum diunggah atau URL kosong.
   - **Universal Image Renderer**: Didukung `buildScheduleImage` di `schedule_image_helper.dart` yang secara tangguh menangani Supabase Storage URL, Web HTTP/HTTPS, Base64 Data URI, maupun Asset Image lokal.
 
+### M. `lib/widgets/ai_assistant_dialog.dart` (`AiAssistantDialog`)
+- **Tanggung Jawab**: Dialog percakapan asisten kecerdasan buatan (AI) interaktif multi-modal (suara & teks) yang membantu pelanggan menemukan produk sangkar yang tepat, mengenali preferensi warna & motif, menampilkan kartu produk visual, serta menyediakan form pemesanan cepat langsung ke WhatsApp.
+- **Fitur Utama**:
+  - **Mode Tampilan Adaptif Multi-Perangkat**:
+    - *Mobile (< 700px)*: Tampil sebagai BottomSheet geser responsif dari bawah layar dengan handling keyboard dinamis (`viewInsets.bottom`).
+    - *Desktop / Tablet (> 700px)*: Tampil sebagai dialog pop-up elegan dengan sudut melengkung 24px (`maxWidth: 580, maxHeight: 720`), bayangan lembut, dan tata letak terpusat.
+  - **Interaksi Suara (Voice-to-Text & Text-to-Speech)**:
+    - Dilengkapi fitur pengenalan suara (`speech_to_text`) via mikrofon perangkat dengan animasi gelombang suara saat mendengarkan.
+    - Pembacaan respons AI otomatis bersuara menggunakan `flutter_tts` dengan toggle suara aktif/nonaktif.
+  - **Injeksi Data Produk Katalog Real-time & Deteksi Warna Motif**:
+    - Menghubungkan konteks percakapan ke seluruh data produk aktif dari `ProductService` (kode, nama, harga, variasi bentuk sangkar, dan warna motif ukiran).
+    - **Pengenalan Warna Motif Cerdas**: AI secara otomatis mengenali preferensi warna yang disebut pengguna (contoh: motif naga biru, ukiran emas, merah, hitam, kayu jati natural) dan memetakan langsung ke produk katalog yang sesuai.
+  - **Kartu Rekomendasi Visual Produk (`_buildProductCard`)**:
+    - Menggantikan tampilan teks daftar bernomor polos dengan kartu visual produk yang interaktif dan kaya informasi.
+    - Menampilkan foto asli produk dari katalog, kode produk (contoh: `[A05]`), nama produk, badge harga format Rupiah (`Rp ...`), dan penjelasan alasan rekomendasi.
+    - **Aksi Langsung Interaktif pada Kartu**:
+      1. `[Pesan]`: Membuka BottomSheet formulir pemesanan cepat dengan data produk terisi otomatis.
+      2. `[+ Keranjang]`: Langsung memasukkan produk ke keranjang belanja pengguna secara instan.
+      3. `[Detail]`: Membuka halaman detail produk lengkap untuk melihat spesifikasi dan variasi bentuk sangkar.
+  - **Proteksi Anti-Overflow Ekstrem**:
+    - Tombol aksi kartu dibungkus dengan `FittedBox(fit: BoxFit.scaleDown)` sehingga teks tombol tidak pernah pecah atau terpotong pada layar ponsel sempit (< 400px).
+    - Judul produk menggunakan `Flexible` dan baris harga menggunakan `Wrap` untuk menjamin tidak ada error pixel `RenderFlex overflowed`.
+  - **Formulir Pemesanan Cepat AI (`_showOrderFormBottomSheet`)**:
+    - Kartu ringkasan produk terpilih (foto, kode, nama, harga, jumlah pemesanan).
+    - Field input: **Nama Pemesan**, **Nomor WhatsApp**, dan **Catatan Tambahan**.
+    - **Aturan Bisnis Katalog Umum**: Menegaskan bahwa pelanggan umum hanya dapat memesan produk yang tersedia di katalog (tidak melayani pembuatan desain baru dari awal/scratch).
+    - **Batasan Catatan Pemesanan**: Kolom catatan secara eksplisit difungsikan hanya jika pelanggan ingin menambahkan teks atau inisial kecil pada karakter produk yang dipilih (contoh: *"di samping karakternya ditambah tulisan GB"*).
+    - **Bebas Alamat di Chat**: AI tidak menanyakan alamat pengiriman dalam sesi chat (alamat pengiriman ditangani saat checkout keranjang).
+    - **Tombol Kirim Pesanan via WhatsApp**: Menyusun pesan WhatsApp berformat rapi dan langsung membuka deep link WhatsApp toko (`wa.me`).
+
 ---
 
 ## 2. 🧩 Lapisan Layanan Terpusat (Service Layer)
@@ -184,7 +214,8 @@ Dokumen ini mendokumentasikan secara rinci komponen-komponen antarmuka pengguna 
 | `CageService` | `lib/services/cage_service.dart` | State manager berbasis `ChangeNotifier` yang mengelola variasi bentuk sangkar secara mandiri baris per baris ke tabel PostgreSQL `public.bentuk_sangkar`, cache offline instan `SharedPreferences`, dan cadangan storage. Database telah dibersihkan dari 8 item dummy lama dan duplikasi nama. Dilengkapi deduplikasi data saat fetch, serta `await` penghapusan Supabase cloud sehingga data yang dihapus tidak pernah muncul kembali saat refresh. |
 | `OrderService` | `lib/services/order_service.dart` | Mengelola antrean pesanan masuk (`incomingOrders`), riwayat pesanan selesai (`completedOrders`), update 4 tahapan produksi custom, dan pelacakan pesanan aktif member di keranjang. |
 | `ProductService` | `lib/services/product_service.dart` | Mengelola data katalog produk umum secara reaktif (`ChangeNotifier`), sinkronisasi tambah/edit produk admin ke katalog publik. |
-| `AppSettingsService` | `lib/services/settings_service.dart` | Mengelola nomor WhatsApp tujuan pesanan (`adminWhatsApp`), banner kustom, style navbar (1-3), font katalog, pembentukan link pesanan WhatsApp berfoto, serta penyedia logo terpadu (`buildLogoWidget`) yang dioptimasi dengan varian resolusi (1.0x, 2.0x, 3.0x), auto downsampling `cacheWidth`/`cacheHeight`, dan anti-aliasing `FilterQuality.medium`. |
+| `AppSettingsService` | `lib/services/settings_service.dart` | Mengelola nomor WhatsApp tujuan pesanan (`adminWhatsApp`), banner kustom, style navbar (1-3), font katalog, konfigurasi AI Assistant toggle/model/API key, pembentukan link pesanan WhatsApp berfoto, serta penyedia logo terpadu (`buildLogoWidget`) yang dioptimasi dengan varian resolusi (1.0x, 2.0x, 3.0x), auto downsampling `cacheWidth`/`cacheHeight`, dan anti-aliasing `FilterQuality.medium`. |
+| `AiAssistantService` | `lib/services/ai_assistant_service.dart` | Layanan AI interaktif berbasis LLM (OpenRouter Hermes 3 Llama-3.1 8B / fallback Groq Llama-3.3 70B), injeksi konteks katalog real-time, pencocokan warna motif, parsing kode produk regex cerdas, dan sinkronisasi ke keranjang & checkout WhatsApp. |
 | `HashtagService` | `lib/services/hashtag_service.dart` | Mengelola kamus database tagar terpusat (`public.hashtags`), memfasilitasi pencarian auto-complete cerdas saat pengetikan produk di admin, cache memori instan, dan auto-harvesting tagar baru yang otomatis didaftarkan ke database. |
 | `StorageService` | `lib/services/storage_service.dart` | Menangani proses upload berkas gambar dari memori/perangkat pengguna (Web, Windows, Android, iOS) ke bucket Supabase Storage (`products` / `katalog`) dengan pengembalian Public URL instan dan fallback Base64. |
 
@@ -194,6 +225,8 @@ Dokumen ini mendokumentasikan secara rinci komponen-komponen antarmuka pengguna 
 
 | Widget | File | Fungsi & Penggunaan |
 | :--- | :--- | :--- |
+| `AiAssistantDialog` | `widgets/ai_assistant_dialog.dart` | Modal dialog asisten AI suara & teks, kartu visual rekomendasi produk dengan tombol aksi instan (`[Pesan]`, `[+ Keranjang]`, `[Detail]`), dan bottom sheet formulir pemesanan cepat langsung ke WhatsApp. |
+| `FloatingActionButton Asisten AI` | `main.dart` | Tombol mengambang elegan di kanan bawah layar bertema kayu jati dan aksen lingkaran emas untuk memicu dialog asisten AI ("Coba" asisten cerdas). |
 | `ProductFullscreenViewer` | `widgets/product_fullscreen_viewer.dart` | Viewer gambar layar penuh interaktif untuk foto produk dan bentuk sangkar. Mendukung navigasi PageView, gestur sentuh (pinch-to-zoom, double-tap zoom), mouse drag di web/desktop, scroll wheel zoom, keyboard escape/arrows, judul dinamis, dan indikator nomor slide. |
 | `TopNavbar` | `widgets/top_navbar.dart` | Bilah navigasi atas yang memuat emblem logo lingkaran 44px bersanding dengan teks merek elegan `JATIMAS SANGKAR` (kombinasi putih tebal & kuning emas), search input dinamis, ikon keranjang belanja dengan badge counter, dan tombol profil/login. Pada mode mobile (< 768px), tombol keranjang dan profil disembunyikan agar search bar dapat tampil leluasa. |
 | `MobileFooterNav` (`_buildMobileFooterNavigation`) | `main.dart` | Footer navigasi bawah layar khusus mobile untuk Katalog Umum & Member: Keranjang (kiri dengan badge), Beranda (tengah dengan tombol emas melingkar), dan Profil (kanan). |
@@ -251,4 +284,12 @@ graph TD
     D -->|Masuk Keranjang| B
     B2 -->|Dialog Konfirmasi Berfoto| CF[Dialog Konfirmasi Pesanan]
     CF -->|Kirim Pesanan| E[WhatsApp Gateway: wa.me + Link Foto Produk]
+
+    %% Asisten AI Suara & Teks
+    A1 -->|Floating Action Button: AI Asisten| AI[AiAssistantDialog: Suara & Teks]
+    AI -->|Deteksi Warna & Motif| AIC[Kartu Visual Rekomendasi Produk]
+    AIC -->|Tombol Detail| D
+    AIC -->|Tombol + Keranjang| B2
+    AIC -->|Tombol Pesan| OF[Order Form BottomSheet: Nama, WA, Catatan Tambahan]
+    OF -->|Kirim Pesanan Langsung| E
 ```

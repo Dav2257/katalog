@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import '../models/product.dart';
 import '../services/settings_service.dart';
 import '../services/storage_service.dart';
+import '../services/ai_assistant_service.dart';
 import 'admin_order_detail_page.dart';
 
 /// Halaman Pengaturan untuk Admin
@@ -50,6 +51,9 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
   String? _logoImageUrl;
   String? _logoFileName;
 
+  // Status Aktif/Nonaktif AI Asisten di Beranda
+  late bool _aiEnabled;
+
   // Status proses upload ke Supabase Storage & penyimpanan
   bool _isUploadingBanner = false;
   bool _isUploadingLogo = false;
@@ -78,6 +82,8 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
     _logoUrlController = TextEditingController(text: settings.logoImageUrl ?? '');
     _logoImageBytes = settings.logoImageBytes;
     _logoImageUrl = settings.logoImageUrl;
+
+    _aiEnabled = settings.aiAssistantEnabled;
   }
 
   @override
@@ -730,9 +736,11 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
         loginWallpaperBytes: _loginWallpaperBytes,
         loginWallpaperUrl: effectiveWallpaperUrl,
         clearLoginWallpaper: clearLoginWallpaper,
+        aiAssistantEnabled: _aiEnabled,
       );
 
       await AppSettingsService.instance.saveSettingsToCloud();
+      AiAssistantService.instance.setEnabled(_aiEnabled);
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1393,6 +1401,11 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
 
               const SizedBox(height: 28),
 
+              // ==================== Section AI Asisten ====================
+              _buildAiAssistantSettingsSection(),
+
+              const SizedBox(height: 28),
+
               // 7. Tombol Simpan Pengaturan
               ElevatedButton.icon(
                 key: const ValueKey('save_settings_btn'),
@@ -1948,6 +1961,123 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
         const Text(
           'Logo ini otomatis tampil di navbar katalog pengguna dan pojok kiri atas dashboard admin.',
           style: TextStyle(fontSize: 11, color: Color(0xFF888888)),
+        ),
+      ],
+    );
+  }
+
+  /// Bagian Pengaturan AI Asisten (Hermes AI) - Cukup Saklar ON / OFF Sederhana
+  Widget _buildAiAssistantSettingsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFD4AF37).withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.auto_awesome_rounded, color: Color(0xFF7A4B29), size: 20),
+            ),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text(
+                'AI Asisten Pemesanan (Hermes AI)',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF333333),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        const Text(
+          'Aktifkan atau nonaktifkan tombol asisten suara & teks di beranda katalog umum dan pribadi:',
+          style: TextStyle(fontSize: 12.5, color: Color(0xFF777777)),
+        ),
+        const SizedBox(height: 14),
+
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 580),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: _aiEnabled ? const Color(0xFFD4AF37) : const Color(0xFFE2D6C5),
+                width: _aiEnabled ? 1.5 : 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Text(
+                            'Status AI Asisten di Beranda',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                          const SizedBox(width: 10),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: _aiEnabled ? const Color(0xFFE8F5E9) : Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: _aiEnabled ? const Color(0xFF2E7D32) : Colors.grey,
+                                width: 0.8,
+                              ),
+                            ),
+                            child: Text(
+                              _aiEnabled ? 'Aktif' : 'Nonaktif',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: _aiEnabled ? const Color(0xFF2E7D32) : Colors.grey.shade700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _aiEnabled
+                            ? 'Tombol "AI Asisten" tampil di pojok kanan bawah beranda untuk membantu pelanggan mencari dan memesan sangkar.'
+                            : 'Tombol "AI Asisten" disembunyikan dari beranda.',
+                        style: const TextStyle(fontSize: 12, color: Color(0xFF666666), height: 1.3),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Switch(
+                  value: _aiEnabled,
+                  activeThumbColor: const Color(0xFF7A4B29),
+                  activeTrackColor: const Color(0xFFD4AF37).withValues(alpha: 0.4),
+                  onChanged: (val) {
+                    setState(() {
+                      _aiEnabled = val;
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
         ),
       ],
     );

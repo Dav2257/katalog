@@ -62,7 +62,12 @@ gantt
     Viewer Gambar Fullscreen Interaktif     :done,    fe9,  2026-09-23, 2026-09-23
     Navigasi Footer & Header Mobile Bersih  :done,    fe10, 2026-09-23, 2026-09-23
     Dual Deployment (Firebase & Cloudflare) :done,    fe11, 2026-09-23, 2026-09-23
-    section Fase 8: Rencana Lanjutan
+    section Fase 8: Asisten AI & Kartu Rekomendasi Visual
+    Asisten AI Suara & Teks (Hermes 3 / Groq):done,    ai1,  2026-09-24, 2026-09-25
+    Kartu Rekomendasi Visual Produk         :done,    ai2,  2026-09-25, 2026-09-25
+    Quick Order Form Sheet & WhatsApp Direct:done,    ai3,  2026-09-25, 2026-09-25
+    Proteksi Anti-Overflow Multi-Perangkat  :done,    ai4,  2026-09-25, 2026-09-25
+    section Fase 9: Rencana Lanjutan
     Payment Gateway Otomatis                :         be3,  2026-09-29, 2026-10-15
 ```
 
@@ -88,7 +93,7 @@ gantt
 - [x] **Riwayat Pesanan Selesai (`AdminCompletedOrderDetailPage`)**: Halaman riwayat pesanan yang sudah rampung dengan tanggal selesai dan riwayat kontak pembeli.
 - [x] **Detail User Private (`AdminUserDetailPage`)**: Rincian profil member, kredensial akun, riwayat logo custom, dan pratinjau katalog khusus member.
 - [x] **Tambah & Edit Produk Publik Admin (`AdminAddProductPage` & `AdminEditProductPage`)**: Menambah dan mengubah produk katalog umum beserta sinkronisasi bentuk sangkar dan gambar.
-- [x] **Pengaturan Toko Admin (`AdminSettingsPage` & `AppSettingsService`)**: Mengatur nomor WhatsApp tujuan seluruh pesanan, pilihan banner katalog umum, layout navbar (Style 1-3), dan font katalog.
+- [x] **Pengaturan Toko Admin (`AdminSettingsPage` & `AppSettingsService`)**: Mengatur nomor WhatsApp tujuan seluruh pesanan, pilihan banner katalog umum, layout navbar (Style 1-3), font katalog, dan kontrol konfigurasi asisten AI.
 - [x] Bagian "List Produk User Umum" di dashboard admin dengan pencarian berdasarkan Nama/Kode.
 - [x] **Sinkronisasi Supabase Database 6 Tabel Inti Aktif**: Produk publik (`produk`), katalog kustom (`produk_custom`), user private (`user_private`), pesanan 4 tahap (`pesanan`), master bentuk sangkar mandiri (`bentuk_sangkar`), dan pengaturan toko (`app_settings`).
 - [x] **Master Bentuk Sangkar Relasional Mandiri (`public.bentuk_sangkar`)**: Variasi bentuk sangkar dikelola mandiri baris per baris di database Supabase dengan sinkronisasi startup otomatis, loading state halus, dan cache lokal `SharedPreferences`.
@@ -106,11 +111,15 @@ gantt
 - [x] **Identifikasi Nama Pemesan & Auto-Fill Checkout Member**: Dialog konfirmasi checkout keranjang mewajibkan nama pemesan untuk pengguna umum dan otomatis mengisi nama & WhatsApp dari profil member (`user_private`). Kolom *Nama* tampil di tabel Pesanan Masuk Admin Dashboard.
 - [x] **Registrasi Nama Member & Kolom Nama User Private Admin**: Mode registrasi akun member (`LoginPage`) dilengkapi input Nama Lengkap (`name`), dan tabel User Private di Admin Dashboard menampilkan kolom *Nama* secara eksplisit.
 - [x] **Arsitektur Tabel Responsif Dinamis (Full-Width LayoutBuilder)**: Tabel Pesanan Masuk, Pesanan Selesai, dan User Private otomatis melebar mengisi 100% kartu di layar desktop tanpa kolom terpotong dan tanpa celah kosong di kanan, serta bebas overflow pada smartphone.
+- [x] **Asisten AI Suara & Teks Interaktif (`AiAssistantDialog` & `AiAssistantService`)**: Fitur konsultasi cerdas multi-modal dengan input suara (`speech_to_text`) atau teks ketik serta respons bersuara (`flutter_tts`). Ditenagai LLM Nous Hermes 3 Llama-3.1 8B (OpenRouter) / fallback Groq Llama-3.3 70B, dengan injeksi katalog real-time dan deteksi warna motif otomatis.
+- [x] **Kartu Rekomendasi Visual Produk AI**: Rekomendasi AI ditampilkan dalam bentuk kartu visual lengkap dengan foto asli produk dari katalog, kode produk, nama, badge harga Rupiah, dan alasan kecocokan. Menyediakan 3 tombol aksi langsung: `[Pesan]`, `[+ Keranjang]`, dan `[Detail]`.
+- [x] **Formulir Pemesanan Cepat AI & Batasan Desain Katalog**: Modal BottomSheet pemesanan instan dengan item terisi otomatis, Nama Pemesan, Nomor WhatsApp, dan Catatan Tambahan. Menegaskan batasan bisnis: pesanan umum hanya untuk produk katalog (tidak mendesain dari awal), dan kolom catatan hanya untuk inisial/teks kecil pada model yang dipilih. Pesanan langsung dikirim ke WhatsApp toko.
+- [x] **Proteksi Anti-Overflow Multi-Perangkat**: Implementasi pembungkus responsif `FittedBox(fit: BoxFit.scaleDown)` pada tombol aksi kartu AI, `Flexible` pada judul, dan `Wrap` pada baris harga menjamin antarmuka bebas error `RenderFlex overflowed` di semua resolusi (layar HP < 400px hingga desktop > 700px).
 
 ### B. Fitur Prioritas Menengah (Medium Priority)
 - [x] Sinkronisasi otomatis daftar produk langsung dari database Supabase (`produk` table).
 - [x] Integrasi pemesanan WhatsApp lengkap dengan format rincian produk, tautan foto produk, bentuk sangkar, dan catatan pemesan.
-- [x] Manajemen state terpusat via Service Layer (`AuthService`, `CageService`, `OrderService`, `ProductService`, `AppSettingsService`, `HashtagService`, `StorageService`).
+- [x] Manajemen state terpusat via Service Layer (`AuthService`, `CageService`, `OrderService`, `ProductService`, `AppSettingsService`, `AiAssistantService`, `HashtagService`, `StorageService`).
 - [ ] Integrasi Supabase Auth penuh (Register akun mandiri, Forgot Password, OAuth Google).
 
 ### C. Fitur Prioritas Rendah (Future Enhancements)

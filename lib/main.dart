@@ -16,6 +16,8 @@ import 'supabase_config.dart';
 import 'widgets/hero_banner.dart';
 import 'widgets/top_navbar.dart';
 import 'services/settings_service.dart';
+import 'services/ai_assistant_service.dart';
+import 'widgets/ai_assistant_dialog.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,6 +35,9 @@ Future<void> main() async {
 
   // Muat bentuk sangkar dari database Supabase (tabel bentuk_sangkar)
   await CageService.instance.fetchCages();
+
+  // Inisialisasi AI Asisten (Hermes AI)
+  await AiAssistantService.instance.init();
 
   runApp(const MyApp());
 }
@@ -143,6 +148,7 @@ class _MyHomePageState extends State<MyHomePage> {
     AuthService.instance.addListener(_handleAuthUpdate);
     ProductService.instance.addListener(_handleProductUpdate);
     UserService.instance.addListener(_handleUserUpdate);
+    AiAssistantService.instance.addListener(_handleAiUpdate);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ProductService.instance.fetchProducts();
       UserService.instance.fetchUsers();
@@ -206,9 +212,17 @@ class _MyHomePageState extends State<MyHomePage> {
     AuthService.instance.removeListener(_handleAuthUpdate);
     ProductService.instance.removeListener(_handleProductUpdate);
     UserService.instance.removeListener(_handleUserUpdate);
+    AiAssistantService.instance.removeListener(_handleAiUpdate);
     _searchController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _handleAiUpdate() {
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   /// Keranjang aktif sesuai status login saat ini (Data Tamu dan Member Terpisah 100%)
@@ -216,16 +230,29 @@ class _MyHomePageState extends State<MyHomePage> {
   int get _totalCartCount =>
       _activeCart.fold(0, (sum, item) => sum + item.quantity);
 
-  void _addToCart(Product product) {
+  void _addToCart(
+    Product product, {
+    int quantity = 1,
+    String? note,
+    String? cageType,
+  }) {
     setState(() {
       final cart = _activeCart;
       final index = cart.indexWhere(
-        (item) => item.product.id == product.id && item.cageType == null,
+        (item) => item.product.id == product.id && item.cageType == cageType,
       );
       if (index >= 0) {
-        cart[index].quantity++;
+        cart[index].quantity += quantity;
+        if (note != null && note.isNotEmpty) {
+          cart[index].note = note;
+        }
       } else {
-        cart.add(CartItem(product: product, quantity: 1));
+        cart.add(CartItem(
+          product: product,
+          quantity: quantity,
+          cageType: cageType,
+          note: note,
+        ));
       }
     });
   }
@@ -767,6 +794,53 @@ class _MyHomePageState extends State<MyHomePage> {
         onLogout: _handleLogout,
       ),
       bottomNavigationBar: isMobile ? _buildMobileFooterNavigation() : null,
+      floatingActionButton: (!_isAdmin && AiAssistantService.instance.isEnabled)
+          ? Container(
+              margin: EdgeInsets.only(bottom: isMobile ? 64 : 12),
+              child: FloatingActionButton.extended(
+                onPressed: () {
+                  AiAssistantDialog.show(
+                    context,
+                    onAddToCart: _addToCart,
+                    onOpenCart: _openCartPage,
+                  );
+                },
+                backgroundColor: const Color(0xFF2C1A0E),
+                foregroundColor: const Color(0xFFF5ECD7),
+                elevation: 6,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                  side: const BorderSide(
+                    color: Color(0xFFD4AF37),
+                    width: 1.5,
+                  ),
+                ),
+                icon: Container(
+                  padding: const EdgeInsets.all(5),
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [Color(0xFFFFDF00), Color(0xFFD4AF37)],
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.auto_awesome_rounded,
+                    color: Color(0xFF2C1A0E),
+                    size: 16,
+                  ),
+                ),
+                label: const Text(
+                  'AI Asisten',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            )
+          : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: SingleChildScrollView(
         controller: _scrollController,
         child: Column(

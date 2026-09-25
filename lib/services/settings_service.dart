@@ -29,6 +29,11 @@ class AppSettingsService extends ChangeNotifier {
   static const String _prefWallpaperBase64 = 'app_settings_wallpaper_b64';
   static const String _prefNavbarStyle = 'app_settings_navbar_style';
   static const String _prefFontFamily = 'app_settings_font_family';
+  static const String _prefAiEnabled = 'app_settings_ai_enabled';
+
+  // Status Aktif/Nonaktif AI Asisten di Beranda
+  bool _aiAssistantEnabled = true;
+  bool get aiAssistantEnabled => _aiAssistantEnabled;
 
   // Nomor WhatsApp tujuan pesanan (Default: 085732257048)
   String _adminWhatsApp = '085732257048';
@@ -230,6 +235,7 @@ class AppSettingsService extends ChangeNotifier {
     bool clearLoginWallpaper = false,
     int? navbarStyle,
     String? fontFamily,
+    bool? aiAssistantEnabled,
   }) {
     if (adminWhatsApp != null && adminWhatsApp.trim().isNotEmpty) {
       _adminWhatsApp = adminWhatsApp.trim();
@@ -298,6 +304,9 @@ class AppSettingsService extends ChangeNotifier {
     if (fontFamily != null && fontFamily.trim().isNotEmpty) {
       _fontFamily = fontFamily.trim();
     }
+    if (aiAssistantEnabled != null) {
+      _aiAssistantEnabled = aiAssistantEnabled;
+    }
 
     notifyListeners();
     saveSettingsToCloud();
@@ -362,6 +371,11 @@ class AppSettingsService extends ChangeNotifier {
       final localFont = prefs.getString(_prefFontFamily);
       if (localFont != null && localFont.trim().isNotEmpty) {
         _fontFamily = localFont.trim();
+      }
+
+      final localAi = prefs.getBool(_prefAiEnabled);
+      if (localAi != null) {
+        _aiAssistantEnabled = localAi;
       }
 
       notifyListeners();
@@ -455,6 +469,9 @@ class AppSettingsService extends ChangeNotifier {
     if (jsonMap['fontFamily'] != null && jsonMap['fontFamily'].toString().trim().isNotEmpty) {
       _fontFamily = jsonMap['fontFamily'].toString().trim();
     }
+    if (jsonMap.containsKey('aiAssistantEnabled')) {
+      _aiAssistantEnabled = jsonMap['aiAssistantEnabled'] == true;
+    }
   }
 
   /// Menyimpan pengaturan ke SharedPreferences secara instan
@@ -501,6 +518,7 @@ class AppSettingsService extends ChangeNotifier {
 
       await prefs.setInt(_prefNavbarStyle, _navbarStyle);
       await prefs.setString(_prefFontFamily, _fontFamily);
+      await prefs.setBool(_prefAiEnabled, _aiAssistantEnabled);
     } catch (e) {
       debugPrint('Gagal menyimpan ke SharedPreferences: $e');
     }
@@ -534,6 +552,7 @@ class AppSettingsService extends ChangeNotifier {
       'loginWallpaperUrl': effectiveWallpaper,
       'navbarStyle': _navbarStyle,
       'fontFamily': _fontFamily,
+      'aiAssistantEnabled': _aiAssistantEnabled,
       'updatedAt': DateTime.now().toIso8601String(),
     };
 
