@@ -144,11 +144,13 @@ Dokumen ini mendokumentasikan secara rinci komponen-komponen antarmuka pengguna 
   - Informasi kredensial pengguna (nama, email, no HP/WhatsApp, alamat).
   - **Fokus Sunting Gambar Desain User (Tanpa Tambah Manual)**: Admin murni hanya meninjau dan mengedit gambar/desain yang sudah diunggah oleh user private via `AdminEditProductPage`, tanpa adanya tombol penambahan manual di sisi admin (*read & edit only*).
   - Menampilkan daftar logo custom pribadi pengguna dengan pratinjau kartu interaktif.
+  - **Notifikasi Validasi Supabase Cerdas**: Menampilkan status keberhasilan penyimpanan secara akurat. Jika kolom `name` di database Supabase belum ditambahkan, sistem memberi peringatan jelas (*warning SnackBar*) agar admin mengetahui bahwa skrip SQL migrasi perlu dijalankan.
 
 ### J. `lib/pages/admin_add_product_page.dart` & `admin_edit_product_page.dart`
 - **Tanggung Jawab**: Menambah produk baru ke katalog publik atau menyunting detail produk yang sudah ada.
 - **Fitur Utama**:
-  - Input nama produk, kategori, harga, kode produk, tagar (#), dan URL gambar.
+  - **Input Kode Produk Bersih & Mandiri (No Auto-Fill / No Flow Following)**: Kolom input "Kode" produk kini dimulai dalam keadaan kosong tanpa ada auto-increment otomatis (seperti `A20`, `A01`), mewajibkan admin mengisi kode produk secara sadar dengan validasi SnackBar jika dikosongkan.
+  - **Hashtag Bebas Data Dummy**: Daftar chip hashtag dimulai bersih/kosong tanpa chip bawaan dummy (`#sangkar`, `#jati`), serta tanpa fallback rahasia saat disimpan.
   - **Auto-Complete Tagar Terpusat**: Menggunakan `HashtagAutocompleteField` yang terhubung dengan `HashtagService`. Saat admin mengetik tanda pagar `#` atau kata kunci tagar, sistem menampilkan daftar rekomendasi tagar dari database terpusat (`public.hashtags`), memanen tagar baru secara otomatis, dan menghindarkan pengetikan berulang.
   - **Sinkronisasi Bentuk Sangkar**: Mengintegrasikan pilihan variasi bentuk sangkar (`ProductCageVariation`) dengan foto kustom yang tersinkronisasi dua arah ke `CageService`.
 
@@ -175,14 +177,15 @@ Dokumen ini mendokumentasikan secara rinci komponen-komponen antarmuka pengguna 
   - **Universal Image Renderer**: Didukung `buildScheduleImage` di `schedule_image_helper.dart` yang secara tangguh menangani Supabase Storage URL, Web HTTP/HTTPS, Base64 Data URI, maupun Asset Image lokal.
 
 ### M. `lib/widgets/ai_assistant_dialog.dart` (`AiAssistantDialog`)
-- **Tanggung Jawab**: Dialog percakapan asisten kecerdasan buatan (AI) interaktif multi-modal (suara & teks) yang membantu pelanggan menemukan produk sangkar yang tepat, mengenali preferensi warna & motif, menampilkan kartu produk visual, serta menyediakan form pemesanan cepat langsung ke WhatsApp.
+- **Tanggung Jawab**: Dialog percakapan asisten kecerdasan buatan (AI) interaktif teks dan visual yang membantu pelanggan menemukan produk sangkar yang tepat, mengenali preferensi warna & motif, menampilkan kartu produk visual, serta menyediakan form pemesanan cepat langsung ke WhatsApp.
 - **Fitur Utama**:
+  - **Fokus Percakapan Bersih (Audio TTS Ditiadakan)**: Fitur pembacaan suara AI (TTS) dan tombol toggle audio dihilangkan agar dialog fokus murni pada respons teks yang rapi, cepat, dan tidak mengganggu kenyamanan pengguna.
+  - **Filter Sapaan & Obrolan Kasual Cerdas**: Obrolan ramah tamah (seperti "halo", "terima kasih", sapaan umum) dijawab secara natural tanpa memunculkan kartu produk yang tidak relevan.
+  - **Deteksi Pertanyaan Opini / Konsultasi Murni**: Pertanyaan opini (seperti "menurutmu kalau yang Ebod bagus ngga untuk sehari-hari") dijawab dengan pertimbangan objektif dan perspektif ahli tanpa menyertakan kartu rekomendasi produk yang tidak diminta.
+  - **Dukungan Rekomendasi Lanjutan & Alternatif**: Pengguna dapat meminta alternatif ("cari yang lain", "rekomendasi lain") di mana AI secara otomatis menyaring dan mengecualikan produk yang sudah pernah disarankan sebelumnya, serta mampu merespons pertanyaan lanjutan seperti "kalau yang Excellent?".
   - **Mode Tampilan Adaptif Multi-Perangkat**:
     - *Mobile (< 700px)*: Tampil sebagai BottomSheet geser responsif dari bawah layar dengan handling keyboard dinamis (`viewInsets.bottom`).
     - *Desktop / Tablet (> 700px)*: Tampil sebagai dialog pop-up elegan dengan sudut melengkung 24px (`maxWidth: 580, maxHeight: 720`), bayangan lembut, dan tata letak terpusat.
-  - **Interaksi Suara (Voice-to-Text & Text-to-Speech)**:
-    - Dilengkapi fitur pengenalan suara (`speech_to_text`) via mikrofon perangkat dengan animasi gelombang suara saat mendengarkan.
-    - Pembacaan respons AI otomatis bersuara menggunakan `flutter_tts` dengan toggle suara aktif/nonaktif.
   - **Injeksi Data Produk Katalog Real-time & Deteksi Warna Motif**:
     - Menghubungkan konteks percakapan ke seluruh data produk aktif dari `ProductService` (kode, nama, harga, variasi bentuk sangkar, dan warna motif ukiran).
     - **Pengenalan Warna Motif Cerdas**: AI secara otomatis mengenali preferensi warna yang disebut pengguna (contoh: motif naga biru, ukiran emas, merah, hitam, kayu jati natural) dan memetakan langsung ke produk katalog yang sesuai.
@@ -211,11 +214,12 @@ Dokumen ini mendokumentasikan secara rinci komponen-komponen antarmuka pengguna 
 | Service | File | Peran & Tanggung Jawab |
 | :--- | :--- | :--- |
 | `AuthService` | `lib/services/auth_service.dart` | Mengelola status login, identitas pengguna, dan pemisahan role antara Tamu (*Guest*), Member (`davin@gmail.com`), dan Admin (`admin@gmail.com` / `Admin 1`). |
+| `UserService` | `lib/services/user_service.dart` | Mengelola akun member private, sinkronisasi produk custom, toleransi pembacaan alias kolom `name`/`nama` dari Supabase, dan feedback status boolean pembaruan profil ke cloud. |
 | `CageService` | `lib/services/cage_service.dart` | State manager berbasis `ChangeNotifier` yang mengelola variasi bentuk sangkar secara mandiri baris per baris ke tabel PostgreSQL `public.bentuk_sangkar`, cache offline instan `SharedPreferences`, dan cadangan storage. Database telah dibersihkan dari 8 item dummy lama dan duplikasi nama. Dilengkapi deduplikasi data saat fetch, serta `await` penghapusan Supabase cloud sehingga data yang dihapus tidak pernah muncul kembali saat refresh. |
 | `OrderService` | `lib/services/order_service.dart` | Mengelola antrean pesanan masuk (`incomingOrders`), riwayat pesanan selesai (`completedOrders`), update 4 tahapan produksi custom, dan pelacakan pesanan aktif member di keranjang. |
 | `ProductService` | `lib/services/product_service.dart` | Mengelola data katalog produk umum secara reaktif (`ChangeNotifier`), sinkronisasi tambah/edit produk admin ke katalog publik. |
 | `AppSettingsService` | `lib/services/settings_service.dart` | Mengelola nomor WhatsApp tujuan pesanan (`adminWhatsApp`), banner kustom, style navbar (1-3), font katalog, konfigurasi AI Assistant toggle/model/API key, pembentukan link pesanan WhatsApp berfoto, serta penyedia logo terpadu (`buildLogoWidget`) yang dioptimasi dengan varian resolusi (1.0x, 2.0x, 3.0x), auto downsampling `cacheWidth`/`cacheHeight`, dan anti-aliasing `FilterQuality.medium`. |
-| `AiAssistantService` | `lib/services/ai_assistant_service.dart` | Layanan AI interaktif berbasis LLM (OpenRouter Hermes 3 Llama-3.1 8B / fallback Groq Llama-3.3 70B), injeksi konteks katalog real-time, pencocokan warna motif, parsing kode produk regex cerdas, dan sinkronisasi ke keranjang & checkout WhatsApp. |
+| `AiAssistantService` | `lib/services/ai_assistant_service.dart` | Layanan AI interaktif berbasis LLM (OpenRouter Hermes 3 Llama-3.1 8B / Groq Llama-3.3 70B), filter intent percakapan/sapaan santai, deteksi pertanyaan opini murni, pelacakan riwayat rekomendasi untuk saran alternatif, pencocokan warna motif, parsing kode produk regex cerdas, dan sinkronisasi ke keranjang & checkout WhatsApp. |
 | `HashtagService` | `lib/services/hashtag_service.dart` | Mengelola kamus database tagar terpusat (`public.hashtags`), memfasilitasi pencarian auto-complete cerdas saat pengetikan produk di admin, cache memori instan, dan auto-harvesting tagar baru yang otomatis didaftarkan ke database. |
 | `StorageService` | `lib/services/storage_service.dart` | Menangani proses upload berkas gambar dari memori/perangkat pengguna (Web, Windows, Android, iOS) ke bucket Supabase Storage (`products` / `katalog`) dengan pengembalian Public URL instan dan fallback Base64. |
 

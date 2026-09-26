@@ -156,6 +156,13 @@ CREATE TABLE IF NOT EXISTS public.user_private (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- Skrip Migrasi Penambahan Kolom Nama (jika tabel dibuat dari versi awal):
+ALTER TABLE IF EXISTS public.user_private ADD COLUMN IF NOT EXISTS name VARCHAR(255) DEFAULT '';
+
+-- Catatan Kompatibilitas Kode (UserService):
+-- Kode aplikasi otomatis mendukung pembacaan dan penyimpanan fleksibel baik untuk kolom 'name' maupun 'nama' 
+-- beserta mekanisme fallback aman agar profil user tetap tersimpan di database Supabase.
+
 -- Index pencarian cepat berdasarkan telepon dan email
 CREATE INDEX IF NOT EXISTS idx_user_private_phone ON public.user_private(phone);
 CREATE INDEX IF NOT EXISTS idx_user_private_email ON public.user_private(email);

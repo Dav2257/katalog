@@ -26,19 +26,20 @@ lib/
 │   └── user_home_page.dart               # Beranda khusus member (katalog logo custom & request desain)
 ├── services/                             # Lapisan bisnis & manajemen state terpusat
 │   ├── auth_service.dart                 # Layanan autentikasi & pemisahan role (Guest, Member, Admin)
+│   ├── user_service.dart                 # Layanan pengelolaan member private & toleransi skema Supabase
 │   ├── cage_service.dart                 # Layanan reaktif manajemen varian bentuk sangkar (ChangeNotifier, deduplikasi, clean sync)
 │   ├── order_service.dart                # Layanan pesanan masuk, progres 4 tahap, riwayat selesai, & tracking
 │   ├── product_service.dart              # Layanan sinkronisasi data produk katalog publik (tambah/edit/hapus)
 │   ├── hashtag_service.dart              # Layanan database & auto-complete hashtag (SharedPreferences + Supabase)
 │   ├── storage_service.dart              # Layanan upload media gambar ke Supabase Storage
 │   ├── settings_service.dart             # Layanan pengaturan toko, nomor WhatsApp wa.me, banner, style, & font
-│   └── ai_assistant_service.dart         # Layanan asisten cerdas AI suara & teks (OpenRouter Hermes 3 / Groq Llama 3.3)
+│   └── ai_assistant_service.dart         # Layanan asisten cerdas AI teks & visual (filter sapaan, opini, alternatif)
 └── widgets/                              # Komponen UI yang dapat digunakan kembali (reusable)
     ├── hero_banner.dart                  # Komponen visual header dinamis Jatimas Sangkar
     ├── top_navbar.dart                   # Bilah navigasi atas responsif (auto-hide keranjang & profil pada mobile)
     ├── hashtag_autocomplete_field.dart   # Input hashtag pintar dengan dropdown auto-complete & quick chips
     ├── product_fullscreen_viewer.dart    # Viewer gambar fullscreen interaktif (pinch-to-zoom, pan, slide < >)
-    └── ai_assistant_dialog.dart          # Dialog asisten AI suara & teks, kartu rekomendasi visual, & quick order sheet
+    └── ai_assistant_dialog.dart          # Dialog asisten AI teks & visual, kartu rekomendasi visual, & quick order sheet
 ```
 
 ---

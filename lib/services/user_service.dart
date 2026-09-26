@@ -88,7 +88,7 @@ class UserService extends ChangeNotifier {
       int counter = 1;
 
       for (final rawUser in userRows) {
-        final name = rawUser['name']?.toString().trim() ?? '';
+        final name = (rawUser['name'] ?? rawUser['nama'] ?? rawUser['customer_name'] ?? rawUser['full_name'])?.toString().trim() ?? '';
         final phone = rawUser['phone']?.toString().trim() ?? '';
         final email = rawUser['email']?.toString().trim() ?? '';
         
@@ -222,7 +222,21 @@ class UserService extends ChangeNotifier {
       debugPrint('SUKSES: User ${user.phone.isNotEmpty ? user.phone : user.email} berhasil disimpan ke Supabase.');
       return true;
     } catch (e) {
-      // Fallback jika kolom 'name' belum dibuat di Supabase
+      // Fallback jika kolom 'nama' digunakan di Supabase
+      try {
+        await supabase.from('user_private').insert({
+          'nama': user.name,
+          'phone': user.phone,
+          'email': user.email,
+          'password': user.password,
+          'join_date': user.joinDate,
+          'jumlah_logo_custom': user.customLogoCount,
+          'request_count': user.customLogoCount,
+        });
+        return true;
+      } catch (_) {}
+
+      // Fallback jika kolom 'name' / 'nama' belum dibuat di Supabase
       try {
         await supabase.from('user_private').insert({
           'phone': user.phone,
@@ -242,7 +256,7 @@ class UserService extends ChangeNotifier {
   }
 
   /// Update data user private (Nama, Nomor HP, Email, atau Password) ke Supabase
-  Future<void> updateUser({
+  Future<bool> updateUser({
     required int no,
     String? name,
     required String phone,
@@ -280,10 +294,42 @@ class UserService extends ChangeNotifier {
         } else if (old.email.isNotEmpty) {
           await supabase.from('user_private').update(updateData).eq('email', old.email);
         }
+        return true;
       } catch (e) {
-        debugPrint('Catatan: Gagal update user_private di Supabase: $e');
+        // Fallback coba kolom 'nama'
+        try {
+          final updateDataFallback = {
+            'nama': newName,
+            'phone': newPhone,
+            'email': newEmail,
+            'password': newPassword,
+          };
+          if (old.phone.isNotEmpty) {
+            await supabase.from('user_private').update(updateDataFallback).eq('phone', old.phone);
+          } else if (old.email.isNotEmpty) {
+            await supabase.from('user_private').update(updateDataFallback).eq('email', old.email);
+          }
+          return true;
+        } catch (e2) {
+          // Fallback tanpa kolom nama agar data phone/password/email tetap tersimpan
+          try {
+            final updateDataBasic = {
+              'phone': newPhone,
+              'email': newEmail,
+              'password': newPassword,
+            };
+            if (old.phone.isNotEmpty) {
+              await supabase.from('user_private').update(updateDataBasic).eq('phone', old.phone);
+            } else if (old.email.isNotEmpty) {
+              await supabase.from('user_private').update(updateDataBasic).eq('email', old.email);
+            }
+          } catch (_) {}
+          debugPrint('Catatan: Kolom name/nama belum ada di Supabase: $e');
+          return false;
+        }
       }
     }
+    return false;
   }
 
   /// Mencari user berdasarkan no telp atau email dan password di memori lokal
@@ -319,7 +365,7 @@ class UserService extends ChangeNotifier {
                 ? (rawUser['request_count'] as num).toInt()
                 : 0);
 
-        final name = rawUser['name']?.toString() ?? '';
+        final name = (rawUser['name'] ?? rawUser['nama'] ?? rawUser['customer_name'] ?? rawUser['full_name'])?.toString().trim() ?? '';
         final found = AdminPrivateUser(
           no: _users.length + 1,
           name: name,

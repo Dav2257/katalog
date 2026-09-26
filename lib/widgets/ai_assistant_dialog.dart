@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_tts/flutter_tts.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:url_launcher/url_launcher.dart';
 import '../models/product.dart';
@@ -81,12 +80,9 @@ class _AiAssistantDialogState extends State<AiAssistantDialog>
 
   // Voice Modules
   late stt.SpeechToText _speech;
-  late FlutterTts _flutterTts;
   bool _speechEnabled = false;
   bool _isListening = false;
   String _liveSpokenText = '';
-  bool _isTtsSpeaking = false;
-  bool _isVoiceMuted = false;
 
   // Processing state
   bool _isAiThinking = false;
@@ -123,26 +119,7 @@ class _AiAssistantDialogState extends State<AiAssistantDialog>
   }
 
   Future<void> _initVoiceEngines() async {
-    // 1. Inisialisasi Text-to-Speech (TTS)
-    _flutterTts = FlutterTts();
-    try {
-      await _flutterTts.setLanguage('id-ID');
-      await _flutterTts.setSpeechRate(0.9);
-      await _flutterTts.setPitch(1.0);
-      _flutterTts.setStartHandler(() {
-        if (mounted) setState(() => _isTtsSpeaking = true);
-      });
-      _flutterTts.setCompletionHandler(() {
-        if (mounted) setState(() => _isTtsSpeaking = false);
-      });
-      _flutterTts.setErrorHandler((msg) {
-        if (mounted) setState(() => _isTtsSpeaking = false);
-      });
-    } catch (e) {
-      debugPrint('TTS initialization note: $e');
-    }
-
-    // 2. Inisialisasi Speech-to-Text (STT)
+    // Inisialisasi Speech-to-Text (STT)
     _speech = stt.SpeechToText();
     try {
       final available = await _speech.initialize(
@@ -172,22 +149,9 @@ class _AiAssistantDialogState extends State<AiAssistantDialog>
   void dispose() {
     _pulseController.dispose();
     _speech.stop();
-    _flutterTts.stop();
     _textController.dispose();
     _scrollController.dispose();
     super.dispose();
-  }
-
-  Future<void> _speakText(String text) async {
-    if (_isVoiceMuted) return;
-    try {
-      await _flutterTts.stop();
-      // Bersihkan karakter aneh atau tag sebelum diucapkan
-      final cleanText = text.replaceAll(RegExp(r'[*_#`>]'), '');
-      await _flutterTts.speak(cleanText);
-    } catch (e) {
-      debugPrint('TTS speak error: $e');
-    }
   }
 
   Future<void> _toggleListening() async {
@@ -200,9 +164,6 @@ class _AiAssistantDialogState extends State<AiAssistantDialog>
       }
       return;
     }
-
-    // Hentikan suara AI jika sedang berbicara
-    await _flutterTts.stop();
 
     if (!_speechEnabled) {
       // Coba inisialisasi ulang
@@ -299,11 +260,6 @@ class _AiAssistantDialogState extends State<AiAssistantDialog>
         });
 
         _scrollToBottom();
-
-        // Ucapkan suara jawaban AI
-        if (AiAssistantService.instance.isAutoVoice) {
-          _speakText(response.text);
-        }
       }
     } catch (e) {
       if (mounted) {
@@ -1192,9 +1148,7 @@ class _AiAssistantDialogState extends State<AiAssistantDialog>
                         decoration: BoxDecoration(
                           color: _isListening
                               ? Colors.redAccent
-                              : (_isTtsSpeaking
-                                    ? Colors.orangeAccent
-                                    : Colors.greenAccent),
+                              : Colors.greenAccent,
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -1202,9 +1156,7 @@ class _AiAssistantDialogState extends State<AiAssistantDialog>
                       Text(
                         _isListening
                             ? 'Mendengarkan suara...'
-                            : (_isTtsSpeaking
-                                  ? 'Berbicara...'
-                                  : 'Siap melayani pesanan'),
+                            : 'Online & siap membantu',
                         style: const TextStyle(
                           color: Color(0xFFEDE4D3),
                           fontSize: 12,
@@ -1216,28 +1168,10 @@ class _AiAssistantDialogState extends State<AiAssistantDialog>
               ),
             ),
 
-            // Toggle Audio / Mute TTS
-            IconButton(
-              icon: Icon(
-                _isVoiceMuted
-                    ? Icons.volume_off_rounded
-                    : Icons.volume_up_rounded,
-                color: _isVoiceMuted ? Colors.grey : const Color(0xFFFFD900),
-              ),
-              tooltip: _isVoiceMuted ? 'Nyalakan Suara AI' : 'Bisukan Suara AI',
-              onPressed: () {
-                setState(() {
-                  _isVoiceMuted = !_isVoiceMuted;
-                  if (_isVoiceMuted) _flutterTts.stop();
-                });
-              },
-            ),
-
             // Tombol Tutup
             IconButton(
               icon: const Icon(Icons.close_rounded, color: Color(0xFFF5ECD7)),
               onPressed: () {
-                _flutterTts.stop();
                 _speech.stop();
                 Navigator.of(context).pop();
               },
@@ -1315,40 +1249,6 @@ class _AiAssistantDialogState extends State<AiAssistantDialog>
                       fontSize: 14,
                       height: 1.45,
                     ),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      InkWell(
-                        onTap: () => _speakText(message.text),
-                        borderRadius: BorderRadius.circular(12),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 4,
-                            vertical: 2,
-                          ),
-                          child: Row(
-                            children: const [
-                              Icon(
-                                Icons.volume_up_rounded,
-                                size: 16,
-                                color: Color(0xFF8C6D37),
-                              ),
-                              SizedBox(width: 4),
-                              Text(
-                                'Dengarkan',
-                                style: TextStyle(
-                                  color: Color(0xFF8C6D37),
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
                   ),
                 ],
               ),

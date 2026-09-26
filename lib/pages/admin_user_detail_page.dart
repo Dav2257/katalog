@@ -84,7 +84,7 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage> {
       return;
     }
 
-    await UserService.instance.updateUser(
+    final isSuccess = await UserService.instance.updateUser(
       no: _currentUser.no,
       name: newName,
       phone: newPhone,
@@ -103,13 +103,25 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage> {
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Data user ${newPhone.isNotEmpty ? newPhone : newEmail} berhasil disimpan ke Supabase!'),
-        backgroundColor: const Color(0xFF2E7D32),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    if (isSuccess) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Data user ${newPhone.isNotEmpty ? newPhone : newEmail} berhasil disimpan ke Supabase!'),
+          backgroundColor: const Color(0xFF2E7D32),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Data user tersimpan di aplikasi, namun kolom "name" belum ada di tabel Supabase user_private. Silakan jalankan ALTER TABLE di SQL Editor Supabase agar tersimpan permanen.',
+          ),
+          backgroundColor: Colors.deepOrange,
+          duration: Duration(seconds: 5),
+        ),
+      );
+    }
   }
 
   void _openCatalogPreview() {

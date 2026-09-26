@@ -21,7 +21,7 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
   late TextEditingController _codeController;
   late TextEditingController _nameController;
   final TextEditingController _hashtagInputController = TextEditingController();
-  final List<String> _hashtagsList = ['#sangkar', '#jati'];
+  final List<String> _hashtagsList = [];
 
   late final PageController _slideController;
   final ScrollController _cageScrollController = ScrollController();
@@ -35,9 +35,7 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
   @override
   void initState() {
     super.initState();
-    final nextNum = ProductService.instance.products.length + 1;
-    final defaultCode = nextNum < 10 ? 'A0$nextNum' : 'A$nextNum';
-    _codeController = TextEditingController(text: defaultCode);
+    _codeController = TextEditingController();
     _nameController = TextEditingController();
 
     final serviceCages = CageService.instance.cages;
@@ -149,12 +147,17 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
     if (_hashtagInputController.text.trim().isNotEmpty) {
       _addHashtag();
     }
-    final cleanHashtags = _hashtagsList.isNotEmpty
-        ? _hashtagsList.join(' ')
-        : '#sangkar #jati';
+    final cleanHashtags = _hashtagsList.join(' ');
 
     if (_hashtagsList.isNotEmpty) {
       HashtagService.instance.addHashtags(_hashtagsList);
+    }
+
+    if (code.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Kode produk tidak boleh kosong!')),
+      );
+      return;
     }
 
     if (name.isEmpty) {
@@ -168,7 +171,7 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
       _isLoading = true;
     });
 
-    final cleanCode = code.isNotEmpty ? code : 'A01';
+    final cleanCode = code;
 
     try {
       await ProductService.instance.addProduct(

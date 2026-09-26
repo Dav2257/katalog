@@ -26,22 +26,22 @@ dokumen/
 
 | Kategori | Deskripsi | Tautan |
 | :--- | :--- | :--- |
-| **Planing** | Rencana proyek, ruang lingkup, target pengguna, kebutuhan fungsional (FR-01 s/d FR-40) & non-fungsional, alur pengguna, serta roadmap rilis. | [Lihat Dokumen Planing](./planing/README.md) |
-| **Frontend** | Arsitektur aplikasi Flutter, rincian seluruh halaman (`AdminDashboardPage`, `AdminOrderDetailPage`, `AdminCompletedOrderDetailPage`, `AdminUserDetailPage`, `AdminSettingsPage`, `UserHomePage`, `CartPage`, `ProductDetailPage`), asisten AI suara & teks (`AiAssistantDialog`), kartu rekomendasi visual produk, navigasi footer mobile (Katalog & Admin), viewer layar penuh (`ProductFullscreenViewer`), tema warna krem hangat, service layer (`AuthService`, `CageService`, `OrderService`, `UserService`, `ProductService`, `AppSettingsService`, `AiAssistantService`, `HashtagService`), komponen (`widgets`), dan manajemen state. | [Lihat Dokumen Frontend](./frontend/README.md) |
-| **Backend** | Integrasi Backend-as-a-Service (BaaS) Supabase, konfigurasi URL & API Key, skema tabel aktif PostgreSQL (`produk`, `produk_custom`, `user_private`, `pesanan`, `bentuk_sangkar`, `app_settings`, `hashtags`), Supabase Storage (`katalog`), dan aturan keamanan (RLS). | [Lihat Dokumen Backend](./backend/README.md) |
+| **Planing** | Rencana proyek, ruang lingkup, target pengguna, kebutuhan fungsional (FR-01 s/d FR-42) & non-fungsional, alur pengguna, serta roadmap rilis. | [Lihat Dokumen Planing](./planing/README.md) |
+| **Frontend** | Arsitektur aplikasi Flutter, rincian seluruh halaman (`AdminDashboardPage`, `AdminOrderDetailPage`, `AdminCompletedOrderDetailPage`, `AdminUserDetailPage`, `AdminAddProductPage`, `AdminEditProductPage`, `AdminSettingsPage`, `UserHomePage`, `CartPage`, `ProductDetailPage`), asisten AI teks & visual (`AiAssistantDialog`), kartu rekomendasi visual produk, navigasi footer mobile (Katalog & Admin), viewer layar penuh (`ProductFullscreenViewer`), tema warna krem hangat, service layer (`AuthService`, `UserService`, `CageService`, `OrderService`, `ProductService`, `AppSettingsService`, `AiAssistantService`, `HashtagService`, `StorageService`), komponen (`widgets`), dan manajemen state. | [Lihat Dokumen Frontend](./frontend/README.md) |
+| **Backend** | Integrasi Backend-as-a-Service (BaaS) Supabase, konfigurasi URL & API Key, skema tabel aktif PostgreSQL (`produk`, `produk_custom`, `user_private`, `pesanan`, `bentuk_sangkar`, `app_settings`, `hashtags`), migrasi skema tabel, Supabase Storage (`katalog`), dan aturan keamanan (RLS). | [Lihat Dokumen Backend](./backend/README.md) |
 
 ---
 
 ## 🛠️ Stack Teknologi & Infrastruktur
 
 - **Frontend Framework**: [Flutter SDK](https://flutter.dev/) (Dart `>= 3.11.4`)
-- **AI Intelligence**: [OpenRouter API](https://openrouter.ai/) (Nous Hermes 3 Llama-3.1 8B) & [Groq Cloud](https://groq.com/) (Llama 3.3 70B Versatile)
-- **Speech & Audio**: `speech_to_text` (pengenalan suara mikrofon) & `flutter_tts` (sintesis suara AI)
+- **AI Intelligence**: [OpenRouter API](https://openrouter.ai/) (Nous Hermes 3 Llama-3.1 8B) & [Groq Cloud](https://groq.com/) (Llama 3.3 70B Versatile), filter intent sapaan & konsultasi opini murni
+- **Input Suara**: `speech_to_text` (pengenalan suara mikrofon) & percakapan teks responsif (bebas audio TTS yang mengganggu)
 - **Backend & Database**: [Supabase](https://supabase.com/) (PostgreSQL Tabel Inti Aktif + JSONB, Supabase Auth, Storage)
 - **Web Hosting**:
   - [Firebase Hosting](https://firebase.google.com/) (`https://katalog-jatimas-2257.web.app`)
   - [Cloudflare Pages](https://pages.cloudflare.com/) (`jatimas.derylandri.my.id`) via Wrangler
-- **State & Service Layer**: Modular Service Pattern (`ChangeNotifier`, `AuthService`, `CageService`, `OrderService`, `ProductService`, `AppSettingsService`, `AiAssistantService`, `HashtagService`)
+- **State & Service Layer**: Modular Service Pattern (`ChangeNotifier`, `AuthService`, `UserService`, `CageService`, `OrderService`, `ProductService`, `AppSettingsService`, `AiAssistantService`, `HashtagService`, `StorageService`)
 - **Messaging & Checkout**: WhatsApp Deep Link Gateway (`wa.me`) dengan penyertaan foto produk otomatis
 - **Target Platform**: Web (Desktop & Mobile Browser), Android, iOS, Windows Desktop
 

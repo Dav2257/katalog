@@ -136,7 +136,7 @@ class AiAssistantService extends ChangeNotifier {
 
     // Jika belum mengisi API Key, gunakan Offline NLP Engine cerdas JatiMas
     if (!hasApiKey) {
-      return _generateSmartOfflineResponse(trimmed);
+      return _generateSmartOfflineResponse(trimmed, history: history);
     }
 
     try {
@@ -150,7 +150,7 @@ class AiAssistantService extends ChangeNotifier {
       debugPrint(
         'Gagal memanggil API AI: $e. Beralih ke respons cerdas lokal.',
       );
-      return _generateSmartOfflineResponse(trimmed);
+      return _generateSmartOfflineResponse(trimmed, history: history);
     }
   }
 
@@ -166,6 +166,12 @@ TUGAS UTAMAMU:
 
 GAYA PERCAKAPAN (WAJIB DIPATUHI):
 - Jawab secara interaktif, santai, dan alami seperti mengobrol langsung (panggil "kak" atau "om").
+- JIKA PELANGGAN HANYA MENYAPA (misal "halo", "hai", "selamat pagi", "permisi", "assalamu'alaikum") ATAU OBROLAN UMUM/SANTAI (misal "terima kasih", "kamu siapa", "tokonya buka jam berapa"):
+  CUKUP BALAS DENGAN RAMAH DAN TANYAKAN APA YANG BISA DIBANTU.
+  DILARANG KERAS MENYEBUTKAN/MENYODORKAN DAFTAR REKOMENDASI PRODUK (1. [Kode] Nama Produk...) JIKA PELANGGAN BELUM MENANYAKAN ATAU MENCARI PRODUK TERTENTU!
+- JIKA PELANGGAN MENANYAKAN PENDAPAT / REVIEW / KONSULTASI (contoh: "menurutmu kalau yang ebod bagus untuk sehari-hari ngga?", "bagusan mana?", "cocok buat harian ngga?", "kelebihannya apa?"):
+  CUKUP SAMPAIKAN PENDAPAT, ANALISIS, DAN SARANMU SEBAGAI AHLI SANGKAR JATIMAS DALAM TEKS OBROLAN YANG RAMAH DAN JELAS.
+  DILARANG KERAS MENGELUARKAN DAFTAR PRODUK ATAU TAG ORDER_JSON KARENA PELANGGAN HANYA MEMINTA PENDAPATMU, BUKAN MEMINTA KATALOG PRODUK!
 - DILARANG KERAS MENGGUNAKAN SALAM PENUTUP SURAT:
   Jangan pernah menulis salam penutup formal seperti:
   "Terima kasih,"
@@ -379,38 +385,57 @@ ${_buildStoreContext()}
         )
         .trim();
 
+    final isOpinion = _isAskingOpinion(originalQuery);
+    if (isOpinion) {
+      // Pengguna hanya menanyakan pendapat/review/saran, jangan tampilkan kartu produk atau order
+      return AiResponse(
+        text: cleanText,
+        suggestedProducts: [],
+        orderData: null,
+      );
+    }
+
+    final hasProductIntent = _hasProductOrOrderIntent(originalQuery);
+
     // Ekstrak rekomendasi produk beserta penjelasannya langsung dari teks jawaban AI
     final extractedProducts = _extractRecommendedProductsFromAiText(cleanText);
     List<Product> matchedProducts;
 
-    if (extractedProducts.isNotEmpty) {
-      matchedProducts = extractedProducts;
+    if (hasProductIntent) {
+      if (extractedProducts.isNotEmpty) {
+        matchedProducts = extractedProducts;
 
-      // Hapus baris-baris daftar teks "1. [A05] ... | Penjelasan" dari balon obrolan
-      // agar langsung digantikan oleh kartu produk visual bergambar lengkap dengan penjelasannya
-      cleanText = cleanText.replaceAll(
-        RegExp(
-          r'(?:^|\n)\s*(?:\d+[\.\)]|\-|\*)\s*(?:[\[\(][A-Za-z0-9]+[\]\)]|[A-Za-z]\d{1,4}\b)?\s*[^|\n:\-–—]+?\s*(?:\||[-:–—])\s*[^\n]+(?:\n(?!\s*(?:\d+[\.\)]|\-|\*|\n))[^\n]+)*',
-          multiLine: true,
-        ),
-        '',
-      );
+        // Hapus baris-baris daftar teks "1. [A05] ... | Penjelasan" dari balon obrolan
+        // agar langsung digantikan oleh kartu produk visual bergambar lengkap dengan penjelasannya
+        cleanText = cleanText.replaceAll(
+          RegExp(
+            r'(?:^|\n)\s*(?:\d+[\.\)]|\-|\*)\s*(?:[\[\(][A-Za-z0-9]+[\]\)]|[A-Za-z]\d{1,4}\b)?\s*[^|\n:\-–—]+?\s*(?:\||[-:–—])\s*[^\n]+(?:\n(?!\s*(?:\d+[\.\)]|\-|\*|\n))[^\n]+)*',
+            multiLine: true,
+          ),
+          '',
+        );
 
-      // Bersihkan baris kosong berlebih
-      cleanText = cleanText.replaceAll(RegExp(r'\n{3,}'), '\n\n').trim();
+        // Bersihkan baris kosong berlebih
+        cleanText = cleanText.replaceAll(RegExp(r'\n{3,}'), '\n\n').trim();
 
-      if (cleanText.isEmpty) {
-        cleanText = 'Berikut pilihan sangkar yang cocok untuk kakak:';
+        if (cleanText.isEmpty) {
+          cleanText = 'Berikut pilihan sangkar yang cocok untuk kakak:';
+        }
+      } else {
+        matchedProducts = _findRelevantProducts(originalQuery)
+            .take(3)
+            .map((p) => p.copyWith(
+                  customNote: p.description.trim().isNotEmpty
+                      ? p.description.trim()
+                      : 'Sangkar kayu jati pilihan khas JatiMas Jepara dengan ukiran halus.',
+                ))
+            .toList();
       }
     } else {
-      matchedProducts = _findRelevantProducts('$originalQuery $cleanText')
-          .take(3)
-          .map((p) => p.copyWith(
-                customNote: p.description.trim().isNotEmpty
-                    ? p.description.trim()
-                    : 'Sangkar kayu jati pilihan khas JatiMas Jepara dengan ukiran halus.',
-              ))
-          .toList();
+      // Obrolan umum/sapaan/santai yang tidak ada hubungan dengan produk:
+      // JANGAN tampilkan produk rekomendasi sama sekali
+      matchedProducts = [];
+      orderData = null;
     }
 
     // Pengaman: Jangan tampilkan ringkasan pesanan sepihak jika user hanya menanyakan info/kategori/tema umum
@@ -527,29 +552,335 @@ ${_buildStoreContext()}
     return result;
   }
 
+  static const Set<String> _stopWords = {
+    'mau', 'ada', 'yang', 'bisa', 'kak', 'om', 'saya', 'aku', 'kami', 'kita',
+    'dan', 'atau', 'ini', 'itu', 'di', 'ke', 'dari', 'pada', 'untuk', 'dengan',
+    'dong', 'ya', 'kan', 'nih', 'tuh', 'saja', 'aja', 'punya', 'apakah', 'gimana',
+    'bagaimana', 'kenapa', 'mengapa', 'tolong', 'minta', 'coba', 'halo', 'hai',
+    'selamat', 'pagi', 'siang', 'sore', 'malam', 'terima', 'kasih', 'makasih',
+    'kalau', 'klo', 'kl', 'kalo', 'apa', 'mana', 'udah', 'sudah', 'belum', 'blm',
+    'kok', 'sih', 'deh', 'lah', 'loh', 'mas', 'bang', 'gan', 'min', 'admin',
+    'gw', 'gue', 'lu', 'lo', 'bro', 'sis', 'terus', 'trus', 'lalu',
+    'cari', 'mencari', 'lihat', 'pengen', 'ingin',
+  };
+
+  /// Memeriksa apakah pesan pengguna memiliki maksud mencari, menanyakan, atau memesan produk
+  bool _hasProductOrOrderIntent(String text) {
+    final lower = text.toLowerCase().trim();
+    if (lower.isEmpty) return false;
+
+    // 1. Kata kunci pemesanan / transaksi langsung
+    const orderKeywords = [
+      'pesan', 'beli', 'order', 'keranjang', 'checkout', 'ambil', 'mau yang', 'bungkus', 'keep'
+    ];
+    for (final kw in orderKeywords) {
+      if (lower.contains(kw)) return true;
+    }
+
+    // 2. Kata kunci harga & ketersediaan
+    const inquiryKeywords = [
+      'harga', 'berapa', 'biaya', 'ongkir', 'tarif', 'diskon', 'promo', 'murah', 'stok', 'ready'
+    ];
+    for (final kw in inquiryKeywords) {
+      if (lower.contains(kw)) return true;
+    }
+
+    // 3. Kata kunci rekomendasi, perbandingan, atau mencari alternatif lain
+    const recommendationKeywords = [
+      'rekomendasi', 'rekomendasikan', 'recomendasi', 'recomended', 'recommend',
+      'yang lain', 'yg lain', 'pilihan lain', 'opsi lain', 'model lain', 'motif lain',
+      'varian lain', 'tipe lain', 'selain ini', 'selain itu', 'ada lagi', 'apa lagi',
+      'cari yang', 'mau yang', 'lihat yang', 'tampilkan yang', 'tunjukin yang',
+      'kalau yang', 'klo yang', 'kalo yang', 'kl yang', 'gimana kalau yang',
+      'katalog', 'pilihan produk', 'daftar produk', 'produk', 'koleksi'
+    ];
+    for (final kw in recommendationKeywords) {
+      if (lower.contains(kw)) return true;
+    }
+
+    // 4. Kata kunci kategori burung / sangkar / motif umum
+    const productKeywords = [
+      'sangkar', 'kandang', 'tebok', 'burung',
+      'murai', 'kacer', 'cucak', 'pleci', 'lovebird', 'anis', 'kenari', 'branjangan', 'cendet', 'gelatik',
+      'motif', 'ukir', 'ukiran', 'carbon', 'adidas', 'onepiece', 'one piece', 'naruto', 'anime', 'serdadu', 'naga', 'wayang', 'batik',
+    ];
+    for (final kw in productKeywords) {
+      if (lower.contains(kw)) return true;
+    }
+
+    // 5. Cek kode produk (contoh A01, A05, A20, dll.)
+    if (RegExp(r'\b[a-zA-Z]\d{1,4}\b').hasMatch(lower)) {
+      return true;
+    }
+
+    // 6. Cek kecocokan dinamis dengan kata-kata dalam nama produk di katalog
+    // Contoh: user ketik "kalau yang excellent", kata "excellent" cocok dengan nama produk "Excellent OnePiece"!
+    final allProducts = ProductService.instance.products;
+    final words = lower
+        .split(RegExp(r'[\s,\.\?!/\-]+'))
+        .map((w) => w.trim())
+        .where((w) => w.length >= 3 && !_stopWords.contains(w))
+        .toList();
+
+    for (final p in allProducts) {
+      if (p.code != null && p.code!.isNotEmpty && lower.contains(p.code!.toLowerCase())) {
+        return true;
+      }
+      final pNameLower = p.name.toLowerCase();
+      final pDescLower = p.description.toLowerCase();
+      final pCatLower = p.category.toLowerCase();
+      final pTagsLower = (p.hashtags ?? '').toLowerCase();
+
+      for (final w in words) {
+        if (pNameLower.contains(w) ||
+            pCatLower.contains(w) ||
+            pTagsLower.contains(w) ||
+            (pDescLower.contains(w) && w.length >= 4)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /// Memeriksa apakah pengguna sedang menanyakan pendapat / review / evaluasi sangkar
+  bool _isAskingOpinion(String text) {
+    final lower = text.toLowerCase().trim();
+    if (lower.isEmpty) return false;
+
+    // Pola pertanyaan pendapat eksplisit
+    const opinionPatterns = [
+      'menurutmu', 'menurut kamu', 'menurut lu', 'menurut mu', 'menurut anda',
+      'pendapatmu', 'pendapat kamu', 'gimana menurut', 'bagaimana menurut',
+      'bagus ngga', 'bagus gak', 'bagus tidak', 'bagus gk', 'bagus ga', 'baguskah',
+      'cocok ngga', 'cocok gak', 'cocok tidak', 'cocok ga', 'cocokkah',
+      'awet ngga', 'awet gak', 'awet tidak', 'kuat ngga', 'tahan lama ngga',
+      'bagusan mana', 'bagus mana', 'lebih bagus mana', 'mending mana', 'mending yang',
+      'kelebihan', 'kekurangan', 'keunggulan', 'kelemahan',
+      'worth it', 'recomended ngga', 'recommended ngga',
+    ];
+
+    for (final pattern in opinionPatterns) {
+      if (lower.contains(pattern)) return true;
+    }
+
+    // Kombinasi kata evaluasi dengan kata tanya/ragu
+    final hasEvalWord = lower.contains('bagus') ||
+        lower.contains('cocok') ||
+        lower.contains('enak') ||
+        lower.contains('kuat') ||
+        lower.contains('awet') ||
+        lower.contains('layak') ||
+        lower.contains('mending');
+    final hasQuestionDoubt = lower.contains('ngga') ||
+        lower.contains('gak') ||
+        lower.contains('ga') ||
+        lower.contains('tidak') ||
+        lower.contains('apakah') ||
+        lower.contains('gimana') ||
+        lower.contains('bagaimana');
+
+    if (hasEvalWord && hasQuestionDoubt) {
+      if (!lower.contains('pesan') && !lower.contains('beli') && !lower.contains('order')) {
+        return true;
+      }
+    }
+
+    // Evaluasi spesifik harian vs lomba
+    if ((lower.contains('sehari hari') || lower.contains('sehari-hari') || lower.contains('harian')) &&
+        (lower.contains('bagus') || lower.contains('cocok') || lower.contains('bisa') || lower.contains('enak'))) {
+      return true;
+    }
+
+    return false;
+  }
+
   /// Smart Offline / Demo Engine jika API Key belum diisi
-  AiResponse _generateSmartOfflineResponse(String query) {
-    final lower = query.toLowerCase();
+  AiResponse _generateSmartOfflineResponse(
+    String query, {
+    List<AiChatMessage> history = const [],
+  }) {
+    final lower = query.toLowerCase().trim();
     final allProducts = ProductService.instance.products;
     final phone = AppSettingsService.instance.adminWhatsApp;
 
-    // 1. Sapaan / Salam
-    if (lower.contains('halo') ||
-        lower.contains('hai') ||
-        lower.contains('selamat') ||
-        lower.contains('pagi') ||
-        lower.contains('siang') ||
-        lower.contains('malam') ||
+    // 1. Sapaan / Salam santai (hanya jika murni sapaan tanpa konteks produk)
+    if (lower == 'halo' ||
+        lower == 'hai' ||
+        lower == 'hi' ||
+        lower == 'hei' ||
+        lower == 'p' ||
+        lower == 'ping' ||
+        lower == 'permisi' ||
+        lower == 'tes' ||
+        lower == 'test' ||
+        lower.startsWith('halo') ||
+        lower.startsWith('hai ') ||
+        lower.startsWith('selamat') ||
         lower.contains('assalamu')) {
+      if (!_hasProductOrOrderIntent(lower)) {
+        return AiResponse(
+          text:
+              'Halo kak! Selamat datang di JatiMas Sangkar Jepara. Ada yang bisa saya bantu? Kakak bisa tanyakan motif sangkar, cek harga, atau langsung pesan via suara/teks.',
+          suggestedProducts: [],
+        );
+      }
+    }
+
+    // 2. Ucapan terima kasih / konfirmasi santai
+    if (lower.contains('terima kasih') ||
+        lower.contains('makasih') ||
+        lower.contains('thanks') ||
+        lower.contains('suwun') ||
+        lower == 'ok' ||
+        lower == 'oke' ||
+        lower == 'siap' ||
+        lower == 'baik' ||
+        lower == 'sip' ||
+        lower == 'mantap') {
+      if (!_hasProductOrOrderIntent(lower)) {
+        return AiResponse(
+          text:
+              'Sama-sama kak! Senang bisa membantu. Jika butuh informasi sangkar atau ingin memesan produk JatiMas, silakan kabari saya kapan saja ya kak.',
+          suggestedProducts: [],
+        );
+      }
+    }
+
+    // 3. Info Toko / Lokasi / Kontak / Jam Buka
+    if (lower.contains('lokasi') ||
+        lower.contains('alamat') ||
+        lower.contains('dimana') ||
+        lower.contains('buka jam') ||
+        lower.contains('jam buka') ||
+        lower.contains('kontak') ||
+        lower.contains('telepon') ||
+        lower.contains('wa') ||
+        lower.contains('whatsapp')) {
+      if (!_hasProductOrOrderIntent(lower)) {
+        return AiResponse(
+          text:
+              'Toko JatiMas Sangkar berpusat di Jepara, Jawa Tengah (Pusat Pengrajin Ukir Jepara Asli). Kami melayani pemesanan ke seluruh Indonesia. Kakak bisa menghubungi admin kami via WhatsApp di $phone.',
+          suggestedProducts: [],
+        );
+      }
+    }
+
+    // 4. Tanya identitas AI
+    if (lower.contains('kamu siapa') ||
+        lower.contains('siapa kamu') ||
+        lower.contains('nama kamu') ||
+        lower.contains('siapa namamu') ||
+        lower.contains('kamu robot') ||
+        lower.contains('kamu ai')) {
       return AiResponse(
         text:
-            'Halo kak! Selamat datang di JatiMas Sangkar Jepara. Ada yang bisa saya bantu? Kakak bisa tanyakan motif sangkar, cek harga, atau langsung pesan via suara/teks.',
-        suggestedProducts: allProducts.take(2).toList(),
+            'Saya JatiMas AI Asisten, asisten virtual resmi dari JatiMas Sangkar Jepara. Saya siap membantu kakak mencari info sangkar burung, mengecek motif atau harga katalog, hingga memproses pesanan.',
+        suggestedProducts: [],
       );
     }
 
-    // 2. Pertanyaan Custom / Logo Pribadi
-    // 2. Pertanyaan Custom / Logo / Desain Sendiri
+    // 5. Pertanyaan Pendapat / Konsultasi / Evaluasi Sangkar
+    // Contoh: "kalau menurutmu kalau yang ebod bagus untuk sehari hari ngga"
+    if (_isAskingOpinion(lower)) {
+      final relevant = _findRelevantProducts(lower);
+      final prodName = relevant.isNotEmpty
+          ? relevant.first.name
+          : (lower.contains('ebod')
+              ? 'Ebod Diamond Samurai'
+              : (lower.contains('excellent')
+                  ? 'Excellent OnePiece'
+                  : (lower.contains('adidas')
+                      ? 'Adidas Carbon'
+                      : (lower.contains('carbon')
+                          ? 'Serdadu Carbon'
+                          : 'sangkar kayu jati'))));
+
+      if (lower.contains('sehari hari') ||
+          lower.contains('sehari-hari') ||
+          lower.contains('harian')) {
+        return AiResponse(
+          text:
+              'Menurut saya pribadi, sangkar $prodName sangat bagus dan cocok kak untuk harian. Karena dibuat dari kayu jati Jepara pilihan berkualitas tinggi, konstruksinya kokoh, awet, dan tahan cuaca. Rujinya juga presisi sehingga aman untuk burung yang aktif setiap hari, sekaligus motifnya terlihat mewah saat digantung di rumah.',
+          suggestedProducts: [],
+        );
+      }
+
+      if (lower.contains('lomba') || lower.contains('gantangan')) {
+        return AiResponse(
+          text:
+              'Menurut saya, sangkar $prodName sangat recommended kak untuk lomba/gantangan. Ukiran khas Jeparanya detail dan berwibawa, membuat burung kakak tampil lebih menonjol dan percaya diri di arena lomba.',
+          suggestedProducts: [],
+        );
+      }
+
+      return AiResponse(
+        text:
+            'Menurut saya, sangkar $prodName kualitasnya sangat bagus kak. Dibuat langsung oleh pengrajin profesional JatiMas Jepara dari kayu jati asli, sehingga kuat, presisi, dan awet untuk jangka panjang.',
+        suggestedProducts: [],
+      );
+    }
+
+    // 5. Permintaan rekomendasi lain / opsi produk lain ("cari yang lain", "rekomendasi lain", "ada yang lain", dll.)
+    final isAskingAlternative = lower.contains('yang lain') ||
+        lower.contains('yg lain') ||
+        lower.contains('rekomendasi lain') ||
+        lower.contains('pilihan lain') ||
+        lower.contains('opsi lain') ||
+        lower.contains('model lain') ||
+        lower.contains('motif lain') ||
+        lower.contains('ada lagi') ||
+        lower.contains('selain ini') ||
+        lower.contains('selain itu') ||
+        (lower.contains('rekomendasi') && lower.contains('lain')) ||
+        (lower.contains('cari') && lower.contains('lain')) ||
+        (lower.contains('lihat') && lower.contains('lain'));
+
+    if (isAskingAlternative) {
+      final previouslyShownIds = <String>{};
+      for (final msg in history) {
+        if (msg.suggestedProducts != null) {
+          for (final p in msg.suggestedProducts!) {
+            previouslyShownIds.add(p.id);
+            if (p.code != null) previouslyShownIds.add(p.code!);
+          }
+        }
+      }
+
+      var alternatives = allProducts
+          .where((p) => !previouslyShownIds.contains(p.id) &&
+              (p.code == null || !previouslyShownIds.contains(p.code!)))
+          .toList();
+
+      if (alternatives.isEmpty) {
+        alternatives = allProducts;
+      }
+
+      final chosen = alternatives.take(3).map((item) {
+        final explanation = item.description.trim().isNotEmpty
+            ? item.description.trim()
+            : 'Sangkar ukir jati Jepara berkualitas tinggi dengan ukiran khas ${item.name}.';
+        return item.copyWith(customNote: explanation);
+      }).toList();
+
+      return AiResponse(
+        text:
+            'Tentu kak! Berikut beberapa pilihan rekomendasi sangkar lainnya dari katalog JatiMas yang bisa jadi pertimbangan:',
+        suggestedProducts: chosen,
+      );
+    }
+
+    // 6. Cek apakah ada niat mencari / memesan produk
+    if (!_hasProductOrOrderIntent(lower)) {
+      return AiResponse(
+        text:
+            'Saya siap membantu kak. Silakan tanyakan motif sangkar, cek harga katalog, atau beri tahu sangkar apa yang sedang kakak cari.',
+        suggestedProducts: [],
+      );
+    }
+
+    // 7. Pertanyaan Custom / Logo / Desain Sendiri
     if (lower.contains('custom') ||
         lower.contains('logo') ||
         lower.contains('ukir nama') ||
@@ -559,14 +890,12 @@ ${_buildStoreContext()}
       final relevant = _findRelevantProducts(lower);
       return AiResponse(
         text:
-            'Pemesanan di JatiMas dilakukan dengan memilih produk sangkar yang tersedia di katalog kami kak (tidak bisa membuat model/desain baru dari awal). Namun jika kakak ingin sedikit tambahan tulisan pada produk katalog yang dipilih (contoh: di samping karakternya ditambah tulisan "GB" atau inisial nama), kakak bisa menuliskannya di kolom Catatan saat memesan.',
-        suggestedProducts: relevant.isNotEmpty
-            ? relevant.take(3).toList()
-            : allProducts.take(3).toList(),
+            'Pemesanan di JatiMas dilakukan dengan memilih produk sangkar yang tersedia di katalog kami kak (tidak bisa membuat model/desain baru dari awal). Namun jika kakak ingin sedikit tambahan tulisan pada produk katalog yang dipilih (contoh: di samping karakternya ditambah tulisan inisial nama), kakak bisa menuliskannya di kolom Catatan saat memesan.',
+        suggestedProducts: relevant.isNotEmpty ? relevant.take(3).toList() : [],
       );
     }
 
-    // 3. Niat Pemesanan / Order / Masukkan Keranjang
+    // 8. Niat Pemesanan / Order / Masukkan Keranjang
     if (lower.contains('pesan') ||
         lower.contains('beli') ||
         lower.contains('order') ||
@@ -580,7 +909,7 @@ ${_buildStoreContext()}
             (p.code != null && lower.contains(p.code!.toLowerCase())) ||
             lower.contains(p.name.toLowerCase()));
 
-        // Jika ada lebih dari 1 pilihan produk dan belum spesifik, tampilkan opsi produk!
+        // Jika ada lebih dari 1 pilihan produk dan belum spesifik, tampilkan opsi produk
         if (relevant.length > 1 && !isExactSpecific) {
           final productsWithExplanations = relevant.take(4).map((item) {
             final explanation = item.description.trim().isNotEmpty
@@ -618,13 +947,13 @@ ${_buildStoreContext()}
       } else {
         return AiResponse(
           text:
-              'Baik kak! Boleh sebutkan nama sangkar apa yang ingin dimasukkan ke keranjang? Contoh: "Pesan sangkar murai 1 pcs" atau "Beli sangkar ukir naga".',
-          suggestedProducts: allProducts.take(3).toList(),
+              'Baik kak! Boleh sebutkan nama motif sangkar atau jenis burung apa yang ingin dipesan? Contoh: "Pesan sangkar murai" atau "Beli tebok carbon".',
+          suggestedProducts: [],
         );
       }
     }
 
-    // 4. Tanya Harga / Biaya
+    // 9. Tanya Harga / Biaya
     if (lower.contains('harga') ||
         lower.contains('berapa') ||
         lower.contains('biaya') ||
@@ -644,12 +973,12 @@ ${_buildStoreContext()}
         return AiResponse(
           text:
               'Harga sangkar di JatiMas sangat bervariasi tergantung ukuran dan tingkat kerumitan ukiran jati Jepara. Sangkar apa yang ingin kakak cek harganya?',
-          suggestedProducts: allProducts.take(3).toList(),
+          suggestedProducts: [],
         );
       }
     }
 
-    // 5. Pencarian Produk Berdasarkan Kata Kunci
+    // 10. Pencarian Produk Berdasarkan Kata Kunci (contoh: "kalau yang excellent", "motif samurai", dll.)
     final matched = _findRelevantProducts(lower);
     if (matched.isNotEmpty) {
       final productsWithExplanations = matched.take(3).map((item) {
@@ -659,18 +988,39 @@ ${_buildStoreContext()}
         return item.copyWith(customNote: explanation);
       }).toList();
 
+      final firstItem = matched.first;
       return AiResponse(
         text:
-            'Berikut beberapa pilihan sangkar yang cocok dengan pencarian "$query" di katalog JatiMas kak:',
+            'Berikut pilihan sangkar "${firstItem.name}" yang ada di katalog JatiMas kak:',
         suggestedProducts: productsWithExplanations,
       );
     }
 
-    // 6. Default Fallback
+    // 11. Jika meminta rekomendasi umum tanpa kata kunci spesifik
+    if (lower.contains('rekomendasi') ||
+        lower.contains('recomendasi') ||
+        lower.contains('bagus') ||
+        lower.contains('terbaik') ||
+        lower.contains('pilihan')) {
+      final topProducts = allProducts.take(3).map((item) {
+        final explanation = item.description.trim().isNotEmpty
+            ? item.description.trim()
+            : 'Sangkar kayu jati Jepara pilihan dengan ukiran khas ${item.name}.';
+        return item.copyWith(customNote: explanation);
+      }).toList();
+
+      return AiResponse(
+        text:
+            'Berikut rekomendasi sangkar terfavorit di katalog JatiMas yang bisa kakak pilih:',
+        suggestedProducts: topProducts,
+      );
+    }
+
+    // 12. Default Fallback untuk pencarian spesifik yang tidak ditemukan
     return AiResponse(
       text:
-          'Saya siap membantu kak. Kakak bisa tanyakan seperti: "Cari sangkar murai", "Berapa harga sangkar jati?", atau "Saya mau pesan sangkar". Kakak juga bisa hubungi langsung WhatsApp kami di $phone.',
-      suggestedProducts: allProducts.take(2).toList(),
+          'Mohon maaf kak, kami belum menemukan sangkar dengan kata kunci "$query" di katalog. Kakak bisa tanyakan motif lain seperti sangkar murai, Ebod Samurai, Excellent OnePiece, tebok carbon, atau hubungi WhatsApp kami di $phone.',
+      suggestedProducts: [],
     );
   }
 
@@ -678,10 +1028,14 @@ ${_buildStoreContext()}
     final lower = text.toLowerCase();
     final all = ProductService.instance.products;
     final keywords = lower
-        .split(RegExp(r'[\s,\.\?!]+'))
+        .split(RegExp(r'[\s,\.\?!/\-]+'))
         .map((k) => k.trim())
-        .where((k) => k.length >= 3)
+        .where((k) => k.length >= 3 && !_stopWords.contains(k))
         .toList();
+
+    if (keywords.isEmpty && !RegExp(r'\b[a-zA-Z]\d{1,4}\b').hasMatch(lower)) {
+      return [];
+    }
 
     return all.where((p) {
       final name = p.name.toLowerCase();
@@ -690,16 +1044,16 @@ ${_buildStoreContext()}
       final code = (p.code ?? '').toLowerCase();
       final tags = (p.hashtags ?? '').toLowerCase();
 
-      // Cocok langsung seluruh nama atau kode
-      if (lower.contains(name) || name.contains(lower)) return true;
+      // Cocok langsung seluruh kode produk (A05, A17, dll.)
       if (code.isNotEmpty && lower.contains(code)) return true;
+      if (name.length >= 4 && lower.contains(name)) return true;
 
-      // Cocok jika ada kata kunci yang relevan
+      // Cocok jika ada kata kunci yang relevan dalam nama, kategori, tags, atau deskripsi
       for (final kw in keywords) {
         if (name.contains(kw) ||
             cat.contains(kw) ||
-            desc.contains(kw) ||
-            tags.contains(kw)) {
+            tags.contains(kw) ||
+            (desc.contains(kw) && kw.length >= 4)) {
           return true;
         }
       }
@@ -712,8 +1066,8 @@ ${_buildStoreContext()}
       if (lower.contains('lovebird') && (name.contains('lovebird') || cat.contains('lovebird') || name.contains('tebok'))) return true;
       if (lower.contains('tebok') && (name.contains('tebok') || cat.contains('tebok') || desc.contains('tebok'))) return true;
       if (lower.contains('anime') && (name.contains('anime') || desc.contains('anime') || name.contains('onepiece') || name.contains('naruto'))) return true;
-      if (lower.contains('jati') && (desc.contains('jati') || name.contains('jati'))) return true;
-      if (lower.contains('ukir') && (desc.contains('ukir') || name.contains('ukir'))) return true;
+      if (lower.contains('carbon') && (name.contains('carbon') || desc.contains('carbon') || tags.contains('carbon'))) return true;
+      if (lower.contains('adidas') && (name.contains('adidas') || desc.contains('adidas'))) return true;
 
       return false;
     }).toList();

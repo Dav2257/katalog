@@ -223,12 +223,17 @@ class _AdminEditProductPageState extends State<AdminEditProductPage> {
     if (_hashtagInputController.text.trim().isNotEmpty) {
       _addHashtag();
     }
-    final newHashtags = _hashtagsList.isNotEmpty
-        ? _hashtagsList.join(' ')
-        : '#sangkar #jati';
+    final newHashtags = _hashtagsList.join(' ');
 
     if (_hashtagsList.isNotEmpty) {
       HashtagService.instance.addHashtags(_hashtagsList);
+    }
+
+    if (newCode.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Kode produk tidak boleh kosong!')),
+      );
+      return;
     }
 
     if (newName.isEmpty) {
