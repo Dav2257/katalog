@@ -41,8 +41,7 @@ class HeroBanner extends StatelessWidget {
             errorBuilder: (context, error, stackTrace) => defaultAssetBanner,
           );
         } else if (settings.bannerImageUrl != null &&
-            settings.bannerImageUrl!.trim().isNotEmpty &&
-            !settings.bannerImageUrl!.contains('banner_1789710462285')) {
+            settings.bannerImageUrl!.trim().isNotEmpty) {
           bannerWidget = Product.buildImageFromSource(
             settings.bannerImageUrl!,
             width: double.infinity,
