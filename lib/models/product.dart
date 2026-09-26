@@ -307,6 +307,10 @@ class Product {
       height: height,
       fit: fit,
       gaplessPlayback: true,
+      loadingBuilder: (ctx, child, progress) {
+        if (progress == null) return child;
+        return defaultPlaceholder;
+      },
       errorBuilder: (ctx, err, stack) => defaultPlaceholder,
     );
   }

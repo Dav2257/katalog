@@ -54,7 +54,7 @@ class HeroBanner extends StatelessWidget {
             placeholder: defaultAssetBanner,
           );
         } else {
-          // Default: Selalu tampilkan banner lokal resmi 'assets/images/banner.png'
+          // Default: Selalu tampilkan banner lokal resmi 'assets/images/banner.png' secara instan
           bannerWidget = defaultAssetBanner;
         }
 
