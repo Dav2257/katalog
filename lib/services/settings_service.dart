@@ -332,7 +332,12 @@ class AppSettingsService extends ChangeNotifier {
 
       final localBannerUrl = prefs.getString(_prefBannerUrl);
       if (localBannerUrl != null && localBannerUrl.trim().isNotEmpty) {
-        _bannerImageUrl = localBannerUrl.trim();
+        if (!localBannerUrl.contains('banner_1789710462285')) {
+          _bannerImageUrl = localBannerUrl.trim();
+        } else {
+          _bannerImageUrl = null;
+          await prefs.remove(_prefBannerUrl);
+        }
       }
       final localBannerB64 = prefs.getString(_prefBannerBase64);
       if (localBannerB64 != null && localBannerB64.trim().isNotEmpty) {
@@ -438,11 +443,14 @@ class AppSettingsService extends ChangeNotifier {
     }
     if (jsonMap.containsKey('bannerImageUrl')) {
       final val = jsonMap['bannerImageUrl']?.toString();
-      if (val != null && val.trim().isNotEmpty) {
+      if (val != null && val.trim().isNotEmpty && !val.contains('banner_1789710462285')) {
         _bannerImageUrl = val.trim();
         if (_bannerImageUrl!.startsWith('data:image')) {
           _bannerImageBytes = _decodeBase64Safe(_bannerImageUrl);
         }
+      } else {
+        _bannerImageUrl = null;
+        _bannerImageBytes = null;
       }
     }
     if (jsonMap.containsKey('logoImageUrl')) {

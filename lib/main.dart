@@ -185,6 +185,28 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
+  /// Memperbarui seluruh data katalog, pengaturan toko, dan akun saat user menarik layar ke bawah (Pull-to-Refresh)
+  Future<void> _handleRefresh() async {
+    try {
+      await Future.wait([
+        ProductService.instance.fetchProducts(),
+        UserService.instance.fetchUsers(),
+        OrderService.instance.fetchOrders(),
+        CageService.instance.fetchCages(),
+        HashtagService.instance.fetchHashtags(),
+        AppSettingsService.instance.loadSettings(),
+      ]);
+    } catch (e) {
+      debugPrint('Pull-to-refresh error: $e');
+    }
+
+    if (mounted) {
+      setState(() {
+        _publicProductLimit = 10;
+      });
+    }
+  }
+
   void _handleAuthUpdate() {
     if (!mounted) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -841,9 +863,16 @@ class _MyHomePageState extends State<MyHomePage> {
             )
           : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      body: SingleChildScrollView(
-        controller: _scrollController,
-        child: Column(
+      body: RefreshIndicator(
+        onRefresh: _handleRefresh,
+        color: const Color(0xFFD4AF37),
+        backgroundColor: const Color(0xFF1E281E),
+        displacement: 40,
+        strokeWidth: 3.0,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          controller: _scrollController,
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Jika User Sudah Login (bukan admin) dan tidak sedang beralih ke katalog umum:
@@ -1138,7 +1167,8 @@ class _MyHomePageState extends State<MyHomePage> {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildProductCard(Product product) {

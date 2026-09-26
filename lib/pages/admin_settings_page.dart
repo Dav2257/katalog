@@ -1504,11 +1504,17 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                     ),
                   )
                 else
-                  const Center(
-                    child: Icon(
-                      Icons.add_photo_alternate_rounded,
-                      size: 54,
-                      color: Colors.white,
+                  Positioned.fill(
+                    child: Image.asset(
+                      'assets/images/banner.png',
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => const Center(
+                        child: Icon(
+                          Icons.add_photo_alternate_rounded,
+                          size: 54,
+                          color: Colors.white,
+                        ),
+                      ),
                     ),
                   ),
 

@@ -21,34 +21,44 @@ class HeroBanner extends StatelessWidget {
         final settings = AppSettingsService.instance;
         Widget bannerWidget;
 
+        // Banner aset lokal resmi Jatimas Sangkar (cepat, offline-ready, anti-gagal di semua mode)
+        final Widget defaultAssetBanner = Image.asset(
+          assetPath,
+          width: double.infinity,
+          fit: BoxFit.fitWidth,
+          gaplessPlayback: true,
+          filterQuality: FilterQuality.medium,
+          errorBuilder: (context, error, stackTrace) => _buildEmergencyFallbackBanner(context),
+        );
+
         if (settings.bannerImageBytes != null && settings.bannerImageBytes!.isNotEmpty) {
           bannerWidget = Image.memory(
             settings.bannerImageBytes!,
             width: double.infinity,
             fit: BoxFit.fitWidth,
             gaplessPlayback: true,
-            errorBuilder: (context, error, stackTrace) => _buildFallbackBanner(context),
+            filterQuality: FilterQuality.medium,
+            errorBuilder: (context, error, stackTrace) => defaultAssetBanner,
           );
-        } else if (settings.bannerImageUrl != null && settings.bannerImageUrl!.isNotEmpty) {
+        } else if (settings.bannerImageUrl != null &&
+            settings.bannerImageUrl!.trim().isNotEmpty &&
+            !settings.bannerImageUrl!.contains('banner_1789710462285')) {
           bannerWidget = Product.buildImageFromSource(
             settings.bannerImageUrl!,
             width: double.infinity,
             fit: BoxFit.fitWidth,
-            placeholder: _buildFallbackBanner(context),
+            placeholder: defaultAssetBanner,
           );
         } else {
-          bannerWidget = Image.asset(
-            assetPath,
-            width: double.infinity,
-            fit: BoxFit.fitWidth,
-            errorBuilder: (context, error, stackTrace) => _buildFallbackBanner(context),
-          );
+          // Default: Selalu tampilkan banner lokal 'assets/images/banner.png'
+          bannerWidget = defaultAssetBanner;
         }
 
         return InkWell(
           onTap: onTap,
           child: Container(
             width: double.infinity,
+            constraints: const BoxConstraints(minHeight: 80),
             color: const Color(0xFF1E281E),
             child: bannerWidget,
           ),
@@ -57,7 +67,8 @@ class HeroBanner extends StatelessWidget {
     );
   }
 
-  Widget _buildFallbackBanner(BuildContext context) {
+  /// Cadangan darurat hanya jika file aset lokal mengalami kegagalan sistem
+  Widget _buildEmergencyFallbackBanner(BuildContext context) {
     return Container(
       width: double.infinity,
       height: 140,
@@ -112,3 +123,4 @@ class HeroBanner extends StatelessWidget {
     );
   }
 }
+
