@@ -936,65 +936,71 @@ class _CartPageState extends State<CartPage> {
                               const SizedBox(height: 8),
 
                               // Baris Catatan (Note) dengan Tombol Edit Catatan
-                              Row(
+                              Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    'Catatan :   ',
+                                  Wrap(
+                                    alignment: WrapAlignment.spaceBetween,
+                                    crossAxisAlignment: WrapCrossAlignment.center,
+                                    spacing: 6,
+                                    runSpacing: 4,
+                                    children: [
+                                      const Text(
+                                        'Catatan :',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF555555),
+                                        ),
+                                      ),
+                                      // Tombol Edit Catatan
+                                      InkWell(
+                                        onTap: () => _showEditNoteDialog(item),
+                                        borderRadius: BorderRadius.circular(4),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.circular(4),
+                                            border: Border.all(
+                                                color: const Color(0xFFBDBDBD), width: 0.8),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: const [
+                                              Icon(Icons.edit_note_rounded,
+                                                  size: 14, color: Colors.black87),
+                                              SizedBox(width: 3),
+                                              Text(
+                                                'Edit Catatan',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.black87,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    item.note != null && item.note!.trim().isNotEmpty
+                                        ? item.note!
+                                        : 'Belum ada catatan...',
                                     style: TextStyle(
                                       fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF555555),
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: Text(
-                                      item.note != null && item.note!.trim().isNotEmpty
-                                          ? item.note!
-                                          : 'Belum ada catatan...',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: item.note != null &&
-                                                item.note!.trim().isNotEmpty
-                                            ? const Color(0xFF424242)
-                                            : Colors.grey.shade500,
-                                        fontStyle: item.note != null &&
-                                                item.note!.trim().isNotEmpty
-                                            ? FontStyle.normal
-                                            : FontStyle.italic,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  // Tombol Edit Catatan
-                                  InkWell(
-                                    onTap: () => _showEditNoteDialog(item),
-                                    borderRadius: BorderRadius.circular(4),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(4),
-                                        border: Border.all(
-                                            color: const Color(0xFFBDBDBD), width: 0.8),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: const [
-                                          Icon(Icons.edit_note_rounded,
-                                              size: 14, color: Colors.black87),
-                                          SizedBox(width: 3),
-                                          Text(
-                                            'Edit Catatan',
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w600,
-                                              color: Colors.black87,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
+                                      color: item.note != null &&
+                                              item.note!.trim().isNotEmpty
+                                          ? const Color(0xFF424242)
+                                          : Colors.grey.shade500,
+                                      fontStyle: item.note != null &&
+                                              item.note!.trim().isNotEmpty
+                                          ? FontStyle.normal
+                                          : FontStyle.italic,
                                     ),
                                   ),
                                 ],

@@ -496,15 +496,22 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'JATIMAS SANGKAR - ADMIN',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.1,
+                  const Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'JATIMAS SANGKAR - ADMIN',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.1,
+                        ),
+                      ),
                     ),
                   ),
+                  const SizedBox(width: 8),
                   Container(
                     width: 38,
                     height: 38,
@@ -525,16 +532,22 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+        padding: EdgeInsets.symmetric(
+          horizontal: MediaQuery.of(context).size.width < 600 ? 16 : 32,
+          vertical: 24,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Breadcrumb Navigasi: Kembali / Detail Pesanan dan Tombol Tutup
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 8,
               children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     InkWell(
                       onTap: () => Navigator.pop(context),
@@ -583,36 +596,32 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
             const SizedBox(height: 24),
 
             // Baris Info Pemesan & Tombol Hubungi WhatsApp
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.start,
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.start,
+              spacing: 16,
+              runSpacing: 12,
               children: [
                 // Info Pemesan & Tanggal Pemesanan
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text(
-                          'Pemesanan: ',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF2E2E2E),
-                          ),
+                    Text.rich(
+                      TextSpan(
+                        text: 'Pemesanan: ',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2E2E2E),
                         ),
-                        Text(
-                          widget.order.customerName.trim().isNotEmpty
-                              ? '${widget.order.customerName} (${widget.order.phone})'
-                              : widget.order.phone,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF2E2E2E),
+                        children: [
+                          TextSpan(
+                            text: widget.order.customerName.trim().isNotEmpty
+                                ? '${widget.order.customerName} (${widget.order.phone})'
+                                : widget.order.phone,
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -884,8 +893,10 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
             const SizedBox(height: 24),
 
             // Tombol Selesaikan Pesanan & Simpan di Kanan Bawah
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 14,
+              runSpacing: 10,
               children: [
                 // Tombol Selesaikan Pesanan (Langsung ke Riwayat)
                 ElevatedButton.icon(
@@ -906,7 +917,6 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 14),
 
                 // Tombol Simpan (Merah persis seperti di gambar 2)
                 ElevatedButton(

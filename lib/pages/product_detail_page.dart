@@ -621,7 +621,8 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
 
   /// 1. Breadcrumb "Kembali / Detail Produk"
   Widget _buildBreadcrumb(BuildContext context) {
-    return Row(
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         InkWell(
           onTap: () => Navigator.pop(context),

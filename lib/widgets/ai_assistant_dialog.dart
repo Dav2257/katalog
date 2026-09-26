@@ -1153,13 +1153,17 @@ class _AiAssistantDialogState extends State<AiAssistantDialog>
                         ),
                       ),
                       const SizedBox(width: 6),
-                      Text(
-                        _isListening
-                            ? 'Mendengarkan suara...'
-                            : 'Online & siap membantu',
-                        style: const TextStyle(
-                          color: Color(0xFFEDE4D3),
-                          fontSize: 12,
+                      Flexible(
+                        child: Text(
+                          _isListening
+                              ? 'Mendengarkan suara...'
+                              : 'Online & siap membantu',
+                          style: const TextStyle(
+                            color: Color(0xFFEDE4D3),
+                            fontSize: 12,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],

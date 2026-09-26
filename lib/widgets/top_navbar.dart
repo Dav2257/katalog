@@ -52,6 +52,8 @@ class TopNavbar extends StatelessWidget implements PreferredSizeWidget {
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < 650;
         final showActions = !hideActionsOnMobile || !isMobile;
+        final hasSearch = searchController != null || onSearchChanged != null || onSearchSubmitted != null;
+        final showBrandText = !isMobile || constraints.maxWidth >= 420 || !showActions || !hasSearch;
 
         return Container(
           decoration: BoxDecoration(
@@ -124,33 +126,35 @@ class TopNavbar extends StatelessWidget implements PreferredSizeWidget {
                                   ),
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: const [
-                              Text(
-                                'JatiMas',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 0.8,
-                                  height: 1.1,
+                          if (showBrandText) ...[
+                            const SizedBox(width: 8),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: const [
+                                Text(
+                                  'JatiMas',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 0.8,
+                                    height: 1.1,
+                                  ),
                                 ),
-                              ),
-                              Text(
-                                'SANGKAR',
-                                style: TextStyle(
-                                  color: Color(0xFFD4AF37),
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 0.6,
-                                  height: 1.1,
+                                Text(
+                                  'SANGKAR',
+                                  style: TextStyle(
+                                    color: Color(0xFFD4AF37),
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.6,
+                                    height: 1.1,
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
+                              ],
+                            ),
+                          ],
                         ],
                       );
                     },
@@ -158,11 +162,11 @@ class TopNavbar extends StatelessWidget implements PreferredSizeWidget {
                 ),
               ),
 
-              const SizedBox(width: 12),
-
               // 2. Search bar putih kapsul sesuai referensi gambar
-              Expanded(
-                child: Align(
+              if (hasSearch) ...[
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Align(
                   alignment: showActions ? Alignment.centerRight : Alignment.centerLeft,
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
@@ -223,6 +227,9 @@ class TopNavbar extends StatelessWidget implements PreferredSizeWidget {
                   ),
                 ),
               ),
+            ] else ...[
+              const Spacer(),
+            ],
 
               if (showActions) ...[
                 const SizedBox(width: 10),

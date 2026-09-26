@@ -724,24 +724,28 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                       ),
                     );
                   },
-                  child: const Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.settings_rounded,
-                        color: Color(0xFFF5ECD7),
-                        size: 24,
-                      ),
-                      SizedBox(height: 3),
-                      Text(
-                        'Setting',
-                        style: TextStyle(
+                  child: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.settings_rounded,
                           color: Color(0xFFF5ECD7),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
+                          size: 22,
                         ),
-                      ),
-                    ],
+                        SizedBox(height: 2),
+                        Text(
+                          'Setting',
+                          style: TextStyle(
+                            color: Color(0xFFF5ECD7),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -750,45 +754,49 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               Expanded(
                 child: InkWell(
                   onTap: widget.onPreviewUmum,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 42,
-                        height: 42,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFFFFDF00), Color(0xFFD4AF37)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFFFFD900).withValues(alpha: 0.45),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFFFDF00), Color(0xFFD4AF37)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
                             ),
-                          ],
-                        ),
-                        child: const Center(
-                          child: Icon(
-                            Icons.storefront_rounded,
-                            color: Color(0xFF382314),
-                            size: 24,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFFFD900).withValues(alpha: 0.45),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Center(
+                            child: Icon(
+                              Icons.storefront_rounded,
+                              color: Color(0xFF382314),
+                              size: 20,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 2),
-                      const Text(
-                        'Preview Umum',
-                        style: TextStyle(
-                          color: Color(0xFFFFD900),
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+                        const SizedBox(height: 2),
+                        const Text(
+                          'Preview Umum',
+                          style: TextStyle(
+                            color: Color(0xFFFFD900),
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -797,24 +805,28 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               Expanded(
                 child: InkWell(
                   onTap: _showProfileMenu,
-                  child: const Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.account_circle_rounded,
-                        color: Color(0xFFFFD900),
-                        size: 24,
-                      ),
-                      SizedBox(height: 3),
-                      Text(
-                        'Profil',
-                        style: TextStyle(
+                  child: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.account_circle_rounded,
                           color: Color(0xFFFFD900),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
+                          size: 22,
                         ),
-                      ),
-                    ],
+                        SizedBox(height: 2),
+                        Text(
+                          'Profil',
+                          style: TextStyle(
+                            color: Color(0xFFFFD900),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -1365,28 +1377,37 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Row(
-          children: [
-            Container(
-              width: 5,
-              height: 22,
-              decoration: BoxDecoration(
-                color: const Color(0xFF8B5328),
-                borderRadius: BorderRadius.circular(2),
+        Flexible(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 5,
+                height: 22,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF8B5328),
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF5F5F5F),
+              const SizedBox(width: 10),
+              Flexible(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF5F5F5F),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-        ?trailing,
+        if (trailing != null) ...[
+          const SizedBox(width: 8),
+          trailing,
+        ],
       ],
     );
   }

@@ -273,12 +273,16 @@ class _AdminCompletedOrderDetailPageState
       ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 40.0, vertical: 24.0),
+          padding: EdgeInsets.symmetric(
+            horizontal: MediaQuery.of(context).size.width < 600 ? 16.0 : 40.0,
+            vertical: 24.0,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // 1. Breadcrumb: Kembali / Detail Pesanan
-              Row(
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   InkWell(
                     onTap: () => Navigator.pop(context),
@@ -317,9 +321,11 @@ class _AdminCompletedOrderDetailPageState
               const SizedBox(height: 24),
 
               // 2. Baris Info Pemesan & Tombol Hubungi WhatsApp
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.start,
+                spacing: 16,
+                runSpacing: 12,
                 children: [
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -471,7 +477,10 @@ class _AdminCompletedOrderDetailPageState
               const SizedBox(height: 28),
 
               // 4. Status : [ Diterima ]   Tanggal Diterima: 11-09-2026
-              Row(
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 16,
+                runSpacing: 10,
                 children: [
                   const Text(
                     'Status :',
@@ -481,7 +490,6 @@ class _AdminCompletedOrderDetailPageState
                       color: Color(0xFF444444),
                     ),
                   ),
-                  const SizedBox(width: 16),
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 26,
@@ -506,7 +514,6 @@ class _AdminCompletedOrderDetailPageState
                       ),
                     ),
                   ),
-                  const SizedBox(width: 16),
                   Text(
                     'Tanggal Diterima: $_completedDate',
                     style: const TextStyle(

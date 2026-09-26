@@ -818,30 +818,37 @@ class _AdminEditProductPageState extends State<AdminEditProductPage> {
           ),
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   // Logo / Text Header Brand
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.admin_panel_settings_rounded,
-                        color: Colors.white,
-                        size: 22,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'JATIMAS SANGKAR - ADMIN',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.95),
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.5,
+                  Flexible(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.admin_panel_settings_rounded,
+                          color: Colors.white,
+                          size: 22,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            'JATIMAS SANGKAR - ADMIN',
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.95),
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 12),
                   // Profil Icon di sudut kanan atas seperti pada gambar
                   InkWell(
                     key: const Key('admin_edit_profile_button'),
@@ -869,12 +876,13 @@ class _AdminEditProductPageState extends State<AdminEditProductPage> {
       ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 28.0, vertical: 20.0),
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // 1. Breadcrumb: Kembali / Detail Produk
-              Row(
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   InkWell(
                     onTap: () => Navigator.pop(context),
@@ -906,7 +914,7 @@ class _AdminEditProductPageState extends State<AdminEditProductPage> {
               // 2. Konten Utama: Responsif (Kiri: Foto & Sangkar, Kanan: Form Kode, Nama & Simpan)
               LayoutBuilder(
                 builder: (context, constraints) {
-                  final isWide = constraints.maxWidth >= 720;
+                  final isWide = constraints.maxWidth >= 800;
                   if (isWide) {
                     return Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1600,7 +1608,9 @@ class _AdminEditProductPageState extends State<AdminEditProductPage> {
         const SizedBox(height: 18),
 
         // Tombol Simpan & Hapus
-        Row(
+        Wrap(
+          spacing: 14,
+          runSpacing: 10,
           children: [
             OutlinedButton(
               key: const Key('admin_save_button'),
@@ -1630,7 +1640,6 @@ class _AdminEditProductPageState extends State<AdminEditProductPage> {
                       ),
                     ),
             ),
-            const SizedBox(width: 14),
             OutlinedButton.icon(
               key: const Key('admin_delete_button'),
               onPressed: _isLoading ? null : _deleteProduct,
