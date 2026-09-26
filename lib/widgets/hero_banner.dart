@@ -31,6 +31,12 @@ class HeroBanner extends StatelessWidget {
           errorBuilder: (context, error, stackTrace) => _buildEmergencyFallbackBanner(context),
         );
 
+        final customUrl = settings.bannerImageUrl?.trim();
+        final hasCustomCloudBanner = customUrl != null &&
+            customUrl.isNotEmpty &&
+            !customUrl.contains('banner_official.png') &&
+            !customUrl.contains('banner_1789710462285');
+
         if (settings.bannerImageBytes != null && settings.bannerImageBytes!.isNotEmpty) {
           bannerWidget = Image.memory(
             settings.bannerImageBytes!,
@@ -40,25 +46,22 @@ class HeroBanner extends StatelessWidget {
             filterQuality: FilterQuality.medium,
             errorBuilder: (context, error, stackTrace) => defaultAssetBanner,
           );
-        } else if (settings.bannerImageUrl != null &&
-            settings.bannerImageUrl!.trim().isNotEmpty) {
+        } else if (hasCustomCloudBanner) {
           bannerWidget = Product.buildImageFromSource(
-            settings.bannerImageUrl!,
+            customUrl,
             width: double.infinity,
             fit: BoxFit.fitWidth,
             placeholder: defaultAssetBanner,
           );
         } else {
-          // Default: Selalu tampilkan banner lokal 'assets/images/banner.png'
+          // Default: Selalu tampilkan banner lokal resmi 'assets/images/banner.png'
           bannerWidget = defaultAssetBanner;
         }
 
         return InkWell(
           onTap: onTap,
-          child: Container(
+          child: SizedBox(
             width: double.infinity,
-            constraints: const BoxConstraints(minHeight: 80),
-            color: const Color(0xFF1E281E),
             child: bannerWidget,
           ),
         );
