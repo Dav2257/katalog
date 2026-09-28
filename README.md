@@ -2,15 +2,18 @@
 
 Aplikasi web & mobile katalog produk kerajinan sangkar burung kayu jati Jepara (**Jatimas Sangkar**) yang dilengkapi fitur pemesanan WhatsApp otomatis berfoto, asisten kecerdasan buatan (AI) suara & teks dengan kartu visual interaktif, pelacakan progres pengerjaan pesanan 4 tahap, katalog kustom member private, serta dashboard administrator terpadu.
 
-🌐 **Akses Web Live**: [https://katalog-jatimas-2257.web.app](https://katalog-jatimas-2257.web.app)
+🌐 **Akses Web Live**:
+- **Domain Resmi (Cloudflare Pages)**: [https://jatimas.derylandri.my.id](https://jatimas.derylandri.my.id)
+- **Mirror (Firebase Hosting)**: [https://katalog-jatimas-2257.web.app](https://katalog-jatimas-2257.web.app)
 
 ---
 
 ## ✨ Fitur Unggulan
-- **🤖 Asisten AI Percakapan Teks & Visual Cerdas**: Dialog interaktif ditenagai LLM Nous Hermes 3 Llama-3.1 8B & Groq Llama 3.3 dengan kartu visual interaktif, penyaringan sapaan kasual & pertanyaan opini murni, serta pelacakan rekomendasi alternatif tanpa suara audio TTS yang mengganggu.
+- **🤖 Asisten AI Percakapan Teks & Visual Cerdas**: Dialog interaktif ditenagai LLM Nous Hermes 3 Llama-3.1 8B & Groq Llama 3.3 dengan kartu visual interaktif, penyaringan sapaan kasual & pertanyaan opini murni, serta pelacakan rekomendasi alternatif tanpa audio TTS yang mengganggu.
 - **🖼️ Kartu Rekomendasi Visual Produk**: Kartu visual produk dengan foto asli dari katalog, kode produk, harga Rupiah, dan tombol aksi langsung: `[Pesan]`, `[+ Keranjang]`, dan `[Detail]`.
 - **⚡ Quick Order Form AI**: BottomSheet pemesanan cepat dengan aturan khusus: pesanan hanya untuk produk katalog (tidak buat baru dari awal) dan catatan khusus inisial/teks kecil pada model yang dipilih, langsung terhubung ke WhatsApp.
-- **📱 Responsif & Anti-Overflow**: Dioptimalkan bebas error pixel overflow (`FittedBox`, `Flexible`, `Wrap`) pada mobile (< 400px) dan desktop (> 700px).
+- **📱 Gestur Pull-to-Refresh & Banner Tepi-ke-Tepi (Edge-to-Edge)**: Dukungan gestur usap ke bawah (`RefreshIndicator`) untuk menyegarkan data produk secara instan, serta banner promosi membentang penuh dengan optimasi tekstur ramah GPU WebGL seluler.
+- **🛡️ 100% Anti-Overflow Multi-Layar**: Dioptimalkan bebas error visual `RenderFlex overflowed` di seluruh perangkat (smartphone 320px, tablet 600px, hingga desktop 1200px), diverifikasi oleh automated widget test suite `test/overflow_test.dart`.
 - **🪵 Dashboard Administrator & Jadwal Produksi**: Analisis metrik real-time, manajemen bentuk sangkar relasional Supabase, jadwal produksi 5-view Notion-style, auto-complete tagar terpusat, dan formulir tambah produk bersih tanpa auto-fill kode bawaan.
 
 ---
@@ -28,11 +31,17 @@ Seluruh dokumentasi perencanaan, arsitektur antarmuka, service layer, dan skema 
 # Instalasi dependensi
 flutter pub get
 
+# Jalankan pengujian otomatis anti-overflow
+flutter test test/overflow_test.dart
+
 # Jalankan di Chrome (Web)
 flutter run -d chrome
 
 # Build rilis Web
 flutter build web --release
+
+# Deploy ke Cloudflare Pages (jatimas.derylandri.my.id)
+npx wrangler pages deploy build/web --project-name jatimas
 
 # Deploy ke Firebase Hosting
 firebase deploy --only hosting

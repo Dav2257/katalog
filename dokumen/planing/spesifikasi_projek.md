@@ -50,6 +50,11 @@ Dokumen ini mendefinisikan kebutuhan fungsional, non-fungsional, use case, dan b
 | **FR-40** | Proteksi Anti-Overflow Responsif Multi-Perangkat | Dialog Asisten AI dan kartu rekomendasi visual menerapkan pembungkus `FittedBox(fit: BoxFit.scaleDown)` pada seluruh tombol aksi, `Flexible` pada judul, dan `Wrap` pada baris harga sehingga antarmuka tetap rapi, proporsional, dan 100% bebas dari error `RenderFlex overflowed` baik di layar smartphone sempit (< 400px) maupun layar desktop lebar (> 700px). |
 | **FR-41** | Formulir Tambah Produk Baru Mandiri & Bersih (No Auto-Fill) | Kolom input "Kode" pada formulir tambah produk (`AdminAddProductPage`) dimulai dalam keadaan kosong tanpa ada auto-increment otomatis (seperti `A20`), mewajibkan admin mengisi kode produk secara sadar dengan validasi SnackBar jika dikosongkan. Daftar tagar (#) juga dimulai bersih/kosong tanpa chip dummy default (`#sangkar`, `#jati`). |
 | **FR-42** | Toleransi Skema & Validasi Status Profil User Private | `UserService` mendukung pembacaan dan pembaruan fleksibel untuk alias kolom `name` maupun `nama` dari tabel Supabase `user_private`. Halaman Detail User Private Admin (`AdminUserDetailPage`) secara transparan menampilkan status validasi cloud dan memberi peringatan edukatif jika kolom database belum dimigrasikan via SQL Editor. |
+| **FR-43** | Pull-to-Refresh Gestur Seluler (Mobile Pull-to-Refresh) | Pengguna smartphone dapat melakukan gestur usap/tarik ke bawah (*pull-to-refresh*) menggunakan `RefreshIndicator` pada halaman katalog umum (`MyHomePage` di `main.dart`) dan halaman beranda member (`UserHomePage`). Tindakan ini secara instan memuat ulang data produk dari `ProductService`, sinkronisasi bentuk sangkar dari `CageService`, serta pengaturan toko dan banner dari `AppSettingsService` tanpa perlu me-reload seluruh peramban web. |
+| **FR-44** | Hero Banner Tepi-ke-Tepi (Edge-to-Edge) & Optimasi WebGL | Banner promosi utama (`HeroBanner`) disajikan membentang penuh dari sisi kiri ke sisi kanan layar (*edge-to-edge*) tanpa margin atau padding horizontal canggung pada desktop maupun perangkat seluler. Resolusi aset banner dioptimalkan agar berada di bawah batas tekstur WebGL perangkat mobile (mencegah glitch layar hitam pada WebGL Safari & Chrome seluler), menghilangkan letterbox bar hitam, dan dilengkapi placeholder loading halus saat aset dimuat pertama kali. |
+| **FR-45** | Arsitektur Universal Anti-Overflow & Suite Uji Otomatis | Seluruh halaman aplikasi (`AdminDashboardPage`, `AdminOrderDetailPage`, `AdminCompletedOrderDetailPage`, `AdminUserDetailPage`, `AdminAddProductPage`, `AdminEditProductPage`, `AdminSettingsPage`, `CartPage`, `ProductDetailPage`, `AiAssistantDialog`, `TopNavbar`) menerapkan rancangan responsif bebas overflow (`Flexible`, `Expanded`, `SingleChildScrollView`, `FittedBox`, `Wrap`, dan `LayoutBuilder`). Dilengkapi suite pengujian otomatis (`test/overflow_test.dart`) yang memvalidasi integritas rendering tanpa pixel overflow pada berbagai resolusi ekstrem: 320px (smartphone sempit), 600px (tablet), hingga 1200px (desktop lebar). |
+| **FR-46** | Dual Deployment Cloudflare Pages dengan Custom Domain & Integrasi Wrangler | Aplikasi web didukung arsitektur *dual-hosting* berkinerja tinggi melalui [Firebase Hosting](https://katalog-jatimas-2257.web.app) dan [Cloudflare Pages](https://jatimas.derylandri.my.id). Konfigurasi `wrangler.json` mengelola deployment ke edge network Cloudflare dengan routing Single Page Application (`not_found_handling: "single-page-application"`), custom domain terikat (`jatimas.derylandri.my.id`), serta pembersihan *stale service worker* otomatis pada `web/index.html` untuk menjamin pengunjung selalu memperoleh rilis web teranyar. |
+| **FR-47** | Kesiapan Arsitektur Hibrida Penyimpanan Media Eksternal (Cloudinary) | Mempersiapkan strategi *decoupling* penyimpanan berkas biner media foto produk dari kuota bawaan Supabase Storage (50 MB free tier) ke CDN media eksternal (Cloudinary free tier 25 GB) melalui abstraksi `StorageService`. Basis data relasional dan otentikasi tetap ditangani oleh Supabase, sementara foto produk disimpan sebagai URL CDN ringkas berkinerja tinggi dengan auto-compression dan resize on-the-fly. |
 
 ---
 
@@ -57,11 +62,13 @@ Dokumen ini mendefinisikan kebutuhan fungsional, non-fungsional, use case, dan b
 
 | Aspek | Spesifikasi |
 | :--- | :--- |
-| **Performa** | Aplikasi dapat melakukan rendering UI pada 60 fps secara halus di perangkat mobile maupun desktop, dengan transisi instan antar layar. |
-| **Keandalan Aset (Reliability)** | Aset brand penting seperti logo WhatsApp di-embed langsung ke memori (Base64) sehingga 100% bebas dari risiko kegagalan muat (asset load/cache error). Pemuatan gambar jadwal produksi didukung universal renderer `buildScheduleImage` yang tangguh memuat URL Supabase, Web HTTPS, Base64 URI, dan Asset lokal. |
-| **Interaksi Scrolling Desktop & Web** | Komponen horizontal scrolling (seperti baris bentuk sangkar) mendukung scroll mouse-wheel vertikal yang dikonversikan menjadi pergeseran horizontal, tombol panah `<` dan `>`, serta mouse drag (`PointerDeviceKind.mouse`) agar tidak macet di layar desktop. |
+| **Performa & Rendering WebGL** | Aplikasi merender UI pada 60 fps secara halus di perangkat mobile maupun desktop dengan transisi instan antar layar. Aset grafis berukuran besar dikompresi agar ramah memori GPU seluler dan tidak memicu overflow tekstur WebGL. |
+| **Keandalan Aset (Reliability)** | Aset brand penting seperti logo WhatsApp di-embed langsung ke memori (Base64) sehingga 100% bebas dari risiko kegagalan muat. Pemuatan gambar jadwal produksi dan foto produk didukung universal renderer yang tangguh menangani URL HTTPS CDN (Cloudinary/Supabase), Base64 URI, dan aset lokal dengan fallback placeholder loading. |
+| **Imunitas Layout (Anti-Overflow)** | 100% bebas dari galat visual `RenderFlex overflowed` di semua breakpoint layar (320px, 600px, 1200px) yang diverifikasi oleh automated widget test suite `test/overflow_test.dart`. |
+| **Interaksi Scrolling Desktop & Web** | Komponen horizontal scrolling mendukung scroll mouse-wheel vertikal yang dikonversikan menjadi pergeseran horizontal, tombol panah `<` dan `>`, serta mouse drag (`PointerDeviceKind.mouse`). Pada mobile didukung pull-to-refresh (`RefreshIndicator`). |
+| **Ketersediaan & Dual Hosting Global** | Didistribusikan melalui jaringan global CDN Firebase Hosting dan Cloudflare Pages (`jatimas.derylandri.my.id`) dengan penanganan rute SPA 404 fallback dan pembaruan berkas instan tanpa hambatan stale cache. |
 | **Kompatibilitas** | Mendukung multiplatform: Android (API 21+), iOS, Web (Chrome, Firefox, Safari, Edge), Windows Desktop. |
-| **Desain Antarmuka (UI/UX)** | Menggunakan Material Design 3 bernuansa kayu jati Jepara (*Teakwood* `#382314`, `#7A4B29`, `#8B5328`), latar belakang krem hangat (*Warm Cream* `#F8F4EA`), kartu proporsional seragam, pill-shaped button, dan responsif terhadap variasi ukuran layar. |
+| **Desain Antarmuka (UI/UX)** | Menggunakan Material Design 3 bernuansa kayu jati Jepara (*Teakwood* `#382314`, `#7A4B29`, `#8B5328`), latar belakang krem hangat (*Warm Cream* `#F8F4EA`), kartu proporsional seragam, hero banner tepi-ke-tepi, dan footer navigasi mobile terintegrasi. |
 | **Keamanan & Otorisasi** | Pemisahan hak akses antara akun tamu (guest), member (`UserHomePage`), dan administrator (`AdminDashboardPage`). Token JWT melalui Supabase Auth serta penerapan Row Level Security (RLS) pada database. |
 
 ---
@@ -75,7 +82,7 @@ flowchart LR
     Admin([Administrator])
 
     subgraph Aplikasi Katalog Pengguna
-        UC1(Melihat Katalog Seragam)
+        UC1(Melihat Katalog Seragam & Banner Edge-to-Edge)
         UC2(Mencari Produk)
         UC3(Detail & Navigasi Bentuk < >)
         UC4(Kelola Keranjang & Checkout WA Berfoto)
@@ -85,6 +92,8 @@ flowchart LR
         UC8(Tracking Status Pesanan Anda)
         UC19(Konsultasi Asisten AI Suara & Teks)
         UC20(Pesan Cepat via Formulir AI Assistant)
+        UC21(Pull-to-Refresh Gesur Mobile)
+        UC22(Fullscreen Image & Zoom Viewer)
     end
 
     subgraph Dashboard Administrator
@@ -95,7 +104,7 @@ flowchart LR
         UC13(Tambah & Kelola Bentuk Sangkar)
         UC14(Preview Mode Publik)
         UC15(Pantau Riwayat Pesanan Selesai)
-        UC16(Pengaturan Toko, Nomor WA & Tampilan)
+        UC16(Pengaturan Toko, Nomor WA, Banner & Tampilan)
         UC17(Kelola Jadwal Produksi 5-View Notion Style)
         UC18(Auto-Complete Tagar Produk Terpusat)
     end
@@ -107,6 +116,8 @@ flowchart LR
     User --> UC5
     User --> UC19
     User --> UC20
+    User --> UC21
+    User --> UC22
 
     Member --> UC1
     Member --> UC3
@@ -117,6 +128,8 @@ flowchart LR
     Member --> UC8
     Member --> UC19
     Member --> UC20
+    Member --> UC21
+    Member --> UC22
 
     Admin --> UC5
     Admin --> UC9
@@ -143,8 +156,11 @@ stateDiagram-v2
     BukaAplikasi --> DashboardAdmin : Login sebagai Admin
     
     state HalamanUtamaTamu {
+        KatalogUmum --> TarikKeBawah : Gestur Pull-to-Refresh
+        TarikKeBawah --> KatalogUmum : Muat Ulang Produk & Banner
         KatalogUmum --> CariProduk
         KatalogUmum --> DetailProduk : Klik Card
+        DetailProduk --> FullscreenImageViewer : Ketuk Foto / Zoom
         KatalogUmum --> AsistenAISuaraTeks : Tombol Floating Coba AI
         AsistenAISuaraTeks --> KartuVisualRekomendasi : Deteksi Warna & Motif
         KartuVisualRekomendasi --> FormPesananCepatAI : Tombol Pesan
@@ -155,6 +171,8 @@ stateDiagram-v2
     }
 
     state HalamanMember {
+        KatalogLogoCustomSaya --> TarikKeBawahMember : Gestur Pull-to-Refresh
+        TarikKeBawahMember --> KatalogLogoCustomSaya : Muat Ulang Data
         KatalogLogoCustomSaya --> RequestLogoCustom : Tombol Request
         RequestLogoCustom --> UnggahGambarDesain : Fitur Insert Gambar
         KatalogLogoCustomSaya --> DetailLogoCustom : Klik Card

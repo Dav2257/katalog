@@ -70,13 +70,24 @@ Pastikan telah menginstal:
    flutter run
    ```
 
-3. **Build Aplikasi (Produksi):**
+3. **Uji Otomatis Anti-Overflow (Responsive Test Suite):**
+   ```bash
+   flutter test test/overflow_test.dart
+   ```
+
+4. **Build Aplikasi (Produksi) & Deployment:**
    ```bash
    # Build APK Android
    flutter build apk --release
 
-   # Build Web
+   # Build Web Production
    flutter build web --release
+
+   # Deploy ke Firebase Hosting
+   firebase deploy --only hosting
+
+   # Deploy ke Cloudflare Pages (Custom Domain jatimas.derylandri.my.id)
+   npx wrangler pages deploy build/web --project-name jatimas
    ```
 
 ---
@@ -88,6 +99,15 @@ Pastikan telah menginstal:
   - *Teakwood Brown*: `#382314` (sidebar admin & aksen gelap) dan `#7A4B29` / `#8B5328` (indikator metrik & tombol utama).
   - *WhatsApp Green*: `#25D366` (tombol pesan WA & badge selesai).
   - *Latar Belakang*: **Warna Krem Hangat (*Warm Cream / Ivory* - `#F8F4EA`)** pada katalog umum, katalog khusus, dan `web/index.html` yang berpadu serasi dengan nuansa kayu jati.
+- **Hero Banner Tepi-ke-Tepi (Edge-to-Edge) & Safe WebGL Rendering**:
+  - `HeroBanner` tampil membentang penuh (*edge-to-edge*) tanpa margin atau padding horizontal yang canggung di desktop maupun mobile.
+  - Resolusi aset gambar banner (`assets/images/banner.png`) dikompresi proporsional (di bawah 2048×2048 px) guna mencegah kegagalan alokasi tekstur memori WebGL pada peramban seluler (Safari iOS & Chrome Android).
+  - Dilengkapi placeholder loading beranimasi halus saat aset banner sedang dimuat dari memori/jaringan.
+- **Pull-to-Refresh Gestur Seluler (`RefreshIndicator`)**:
+  - Tersedia di halaman katalog publik (`main.dart`) dan beranda member (`user_home_page.dart`), memungkinkan pengguna menyegarkan katalog produk, bentuk sangkar, dan banner toko cukup dengan mengusap layar ke bawah.
+- **Arsitektur Universal Anti-Overflow**:
+  - Menghilangkan potensi galat `RenderFlex overflowed` di seluruh antarmuka dengan penggunaan kombinasi `Flexible`, `Expanded`, `FittedBox(fit: BoxFit.scaleDown)`, `Wrap`, dan `LayoutBuilder`.
+  - Teruji secara ketat melalui rangkaian pengujian widget `test/overflow_test.dart` pada 3 skenario ukuran ekstrem: 320×640 px (smartphone kecil), 600×900 px (tablet), dan 1200×800 px (desktop monitor).
 - **Page Transitions**: Dikonfigurasi tanpa animasi transisi (*instant transition*) via custom `PageTransitionsTheme` untuk navigasi cepat dan responsif.
 - **Navigasi Footer Mobile & Clean Header**:
   - Pada layar smartphone (< 768px), antarmuka menampilkan footer navigasi terintegrasi di bagian bawah layar (`bottomNavigationBar`):
@@ -130,10 +150,11 @@ Aplikasi menggunakan arsitektur modular yang rapi dengan kombinasi **StatefulWid
   - Menyimpan cache lokal instan di `SharedPreferences` (`cached_hashtags_list_v1`), tersinkronisasi dengan tabel `public.hashtags` di Supabase, dan auto-harvesting seluruh tag unik dari produk eksisting.
   - Mendukung pencarian instan (`getSuggestions`), pencegahan duplikasi, dan pembuatan tagar baru secara otomatis.
 - **`StorageService`**:
-  - Layanan unggah media gambar ke Supabase Storage bucket (`products` / `katalog`).
-  - Mendukung konversi upload file lokal perangkat (laptop/HP) menjadi URL publik permanen dengan fallback data URI Base64.
+  - Layanan unggah media gambar ke cloud storage bucket (`products` / `katalog` / `schedules`).
+  - Menghasilkan tautan publik HTTPS permanen untuk efisiensi penyimpanan database Supabase (mencegah pembengkakan kuota oleh teks Base64).
+  - Mendukung fleksibilitas decoupling ke provider media eksternal (seperti Cloudinary free tier 25 GB) untuk kebutuhan katalog produk berskala besar.
 - **`AppSettingsService`**:
-  - Mengelola konfigurasi nomor WhatsApp admin untuk checkout (`wa.me`), banner kustom, navbar style, font katalog, dan pembentukan link WhatsApp berfoto.
+  - Mengelola konfigurasi nomor WhatsApp admin untuk checkout (`wa.me`), banner kustom edge-to-edge, navbar style, font katalog, dan pembentukan link WhatsApp berfoto.
 - **`AiAssistantService`**:
   - Layanan state manager berbasis `ChangeNotifier` untuk asisten AI interaktif (suara & teks).
   - Terintegrasi dengan model LLM canggih via OpenRouter (`NousResearch/Hermes-3-Llama-3.1-8B`, fallback Groq `llama-3.3-70b-versatile`).

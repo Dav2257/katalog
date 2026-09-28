@@ -202,12 +202,65 @@ await supabase.from('production_schedules').delete().eq('id', id);
 
 ### H. Unggah Berkas & Storage (`StorageService`)
 ```dart
-// Unggah file foto langsung dari memori/perangkat pengguna
+// Unggah file foto langsung dari memori/perangkat pengguna ke Supabase Storage
 final String path = 'schedules/${DateTime.now().millisecondsSinceEpoch}_$fileName';
 await supabase.storage.from('schedules').uploadBinary(path, fileBytes);
 
 // Dapatkan Public URL instan
 final publicUrl = supabase.storage.from('schedules').getPublicUrl(path);
+```
+
+### I. Strategi Arsitektur Decoupling Media (Supabase + Cloudinary 25 GB)
+Untuk mengantisipasi batasan kuota gratis Supabase Storage (50 MB free tier) saat katalog memuat ratusan foto produk resolusi tinggi, sistem dirancang dengan pola *Decoupling Media*:
+
+```text
+[Admin / Pengguna Upload Foto]
+            │
+            ▼
+[Upload ke Cloudinary CDN]  ──> Menghasilkan URL ringkas (https://res.cloudinary.com/...)
+            │
+            ▼
+[Simpan URL ke Database Supabase] ──> Supabase hanya menyimpan teks URL (ringan & cepat)
+```
+
+- **Keuntungan Decoupling**:
+  1. **Hemat Kuota Database Supabase**: Database PostgreSQL (kuota 500 MB) tidak dibebani data base64 biner besar dan dapat menampung puluhan ribu record produk.
+  2. **Kapasitas Penyimpanan Melimpah**: Beban berkas foto ditangani oleh kuota gratis Cloudinary sebesar 25 GB.
+  3. **Kecepatan Akses Global**: Foto di-deliver melalui CDN Cloudinary dengan auto-format (WebP/AVIF) dan kompresi on-the-fly.
+
+---
+
+## 5. 🌐 Deployment Cloudflare Pages & Wrangler (`wrangler.json`)
+
+Aplikasi didukung deployment global ke jaringan edge Cloudflare Pages menggunakan konfigurasi [wrangler.json](file:///d:/Tugas/katalog/wrangler.json):
+
+```json
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "jatimas",
+  "compatibility_date": "2026-09-17",
+  "assets": {
+    "directory": "./build/web",
+    "not_found_handling": "single-page-application"
+  },
+  "routes": [
+    {
+      "pattern": "jatimas.derylandri.my.id/*",
+      "zone_name": "derylandri.my.id"
+    }
+  ]
+}
+```
+
+### Karakteristik Deployment Edge:
+1. **Single Page Application (SPA) Routing**: Opsi `"not_found_handling": "single-page-application"` memastikan bahwa seluruh rute peramban (seperti `/cart`, `/admin`, `/login`) dialihkan kembali ke `index.html` tanpa memicu error HTTP 404 dari web server.
+2. **Custom Domain Binding**: Terhubung langsung ke custom domain [jatimas.derylandri.my.id](https://jatimas.derylandri.my.id).
+3. **Pencegahan Cache Stale**: Script di `web/index.html` secara proaktif mencabut (*unregister*) service worker lama yang berpotensi menyimpan cache rilis usang, menjamin pengguna selalu menerima pembaruan aplikasi secara instan.
+
+Perintah deploy:
+```bash
+flutter build web --release
+npx wrangler pages deploy build/web --project-name jatimas
 ```
 
 ---

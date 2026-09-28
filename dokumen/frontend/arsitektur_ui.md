@@ -10,6 +10,13 @@ Dokumen ini mendokumentasikan secara rinci komponen-komponen antarmuka pengguna 
 - **Tanggung Jawab**: Menampilkan katalog utama produk untuk publik/tamu, search bar dinamis, grid produk sangkar, dan routing cerdas berdasarkan role autentikasi.
 - **Fitur Utama**:
   - **Latar Belakang Warna Krem Hangat (*Warm Cream / Ivory* - `#F8F4EA`)**: Warna background resmi aplikasi yang menyatukan katalog umum dan katalog khusus dalam nuansa hangat, elegan, dan harmonis dengan kerajinan kayu jati (*teak wood*).
+  - **Pull-to-Refresh Gestur Seluler (`RefreshIndicator`)**:
+    - Tersedia di halaman katalog umum maupun beranda member.
+    - Menarik/mengusap layar ke bawah pada smartphone memicu pemanggilan ulang `_loadData()` yang secara simultan menyegarkan `ProductService`, `CageService`, dan `AppSettingsService` tanpa reload browser penuh.
+  - **Hero Banner Universal Tepi-ke-Tepi (Edge-to-Edge)**:
+    - Banner visual utama (`HeroBanner`) disajikan membentang penuh dari ujung ke ujung layar (*edge-to-edge*) tanpa margin atau padding horizontal yang memotong tampilan.
+    - **Optimasi Tekstur WebGL**: File gambar `banner.png` dikompresi agar dimensi tekstur berada dalam batas aman GPU perangkat mobile (< 2048×2048 px), mengeliminasi resiko glitch layar hitam pada WebGL Safari iOS dan Chrome Android.
+    - **Placeholder Loading**: Menggunakan wadah shimmer berasio tetap untuk mencegah pergeseran layout (*layout shift*) saat gambar sedang diunduh.
   - **Top Navigation Bar Responsif & Penyesuaian Mobile**:
     - *Desktop / Tablet*: Dilengkapi emblem logo Jatimas Sangkar, pencarian instan, tombol badge angka belanjaan pada ikon keranjang, dan tombol profil/login.
     - *Mobile (< 768px)*: Ikon keranjang dan tombol profil di Top Navbar disembunyikan agar search bar dapat melebar secara penuh dan nyaman digunakan tanpa memicu overflow.
@@ -18,7 +25,6 @@ Dokumen ini mendokumentasikan secara rinci komponen-komponen antarmuka pengguna 
     - **Keranjang (Kiri)**: Ikon keranjang belanja dilengkapi badge merah jumlah item belanjaan aktif (`Badge.count`).
     - **Beranda (Tengah)**: Tombol lingkaran kuning emas (`#FFDF00` - `#D4AF37`) dengan ikon rumah cokelat (`Icons.home_rounded`) yang membawa pengguna kembali ke katalog beranda.
     - **Profil (Kanan)**: Ikon profil yang menampilkan avatar pengguna/admin dan membuka modal sheet login/profil secara instan.
-  - **Hero Banner Universal**: Banner visual utama (`HeroBanner`) kini selalu tampil penuh di bagian atas katalog bagi seluruh tipe pengunjung (pengguna umum, member private, maupun admin yang sedang melakukan pratinjau katalog standar).
   - **Tombol Navigasi Kembali di Bawah Banner (Sebelah Kanan)**: Saat admin atau member beralih melihat katalog standar, tombol navigasi kembali (*"Kembali ke Dashboard Admin"* atau *"Kembali ke Katalog Custom Saya"*) ditempatkan rapi di bawah banner dan di atas katalog di sebelah kanan dengan tombol cokelat kayu jati berikon panah emas.
   - **Grid Katalog Produk Seragam**: Ukuran kartu produk (katalog 1 s/d 5) diseragamkan tinggi dan rasio gambarnya dengan kartu berwarna putih di atas kanvas krem.
   - **Search Filter Dinamis**: Menyaring produk berdasarkan kecocokan nama dan kategori secara instan.
@@ -297,3 +303,30 @@ graph TD
     AIC -->|Tombol Pesan| OF[Order Form BottomSheet: Nama, WA, Catatan Tambahan]
     OF -->|Kirim Pesanan Langsung| E
 ```
+
+---
+
+## 5. 🛡️ Arsitektur Universal Anti-Overflow & Suite Uji Otomatis
+
+Aplikasi mengimplementasikan strategi anti-overflow menyeluruh yang diuji dengan rangkaian tes widget otomatis pada [test/overflow_test.dart](file:///d:/Tugas/katalog/test/overflow_test.dart).
+
+### A. Strategi Penanganan Layout Responsif:
+1. **`LayoutBuilder` & Dynamic Column Spacing**: Digunakan pada tabel admin (`AdminDashboardPage`) untuk mendistribusikan ruang kosong secara merata pada monitor lebar tanpa menyisakan ruang kosong atau memotong tombol aksi.
+2. **`Flexible` & `Expanded` Boundary**: Menjamin teks panjang pada judul produk, deskripsi, dan baris detail tidak memicu error `RenderFlex overflowed`.
+3. **`FittedBox(fit: BoxFit.scaleDown)`**: Diterapkan pada tombol aksi kartu AI (`[Pesan]`, `[+ Keranjang]`, `[Detail]`) agar tombol mengecil secara proporsional di layar sempit (< 360px).
+4. **`Wrap` dengan Run & Spacing**: Digunakan untuk baris chip harga, badge status, dan tagar produk agar secara otomatis turun ke baris berikutnya jika layar menyempit.
+5. **Horizontal Scroll Containment**: Elemen yang memiliki lebar tetap dibungkus rapi dalam `SingleChildScrollView(scrollDirection: Axis.horizontal)` dengan interaksi drag dan mouse wheel aktif.
+
+### B. Matriks Pengujian Breakpoint (`test/overflow_test.dart`):
+
+| Target Layar | Dimensi Pixel | Halaman / Komponen yang Diuji | Status Kelulusan |
+| :--- | :--- | :--- | :--- |
+| **Mobile Sempit** | 320 × 640 px | `AdminDashboardPage`, `AdminOrderDetailPage`, `AdminCompletedOrderDetailPage`, `AdminUserDetailPage`, `AdminAddProductPage`, `AdminEditProductPage`, `AdminSettingsPage`, `CartPage`, `ProductDetailPage`, `AiAssistantDialog`, `TopNavbar` | ✅ 100% Pass (No Overflow) |
+| **Tablet Portabel** | 600 × 900 px | Seluruh 11 halaman & komponen di atas | ✅ 100% Pass (No Overflow) |
+| **Desktop Monitor** | 1200 × 800 px | Seluruh 11 halaman & komponen di atas | ✅ 100% Pass (No Overflow) |
+
+Perintah menjalankan verifikasi:
+```bash
+flutter test test/overflow_test.dart
+```
+

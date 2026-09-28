@@ -67,8 +67,14 @@ gantt
     Kartu Rekomendasi Visual Produk         :done,    ai2,  2026-09-25, 2026-09-25
     Quick Order Form Sheet & WhatsApp Direct:done,    ai3,  2026-09-25, 2026-09-25
     Proteksi Anti-Overflow Multi-Perangkat  :done,    ai4,  2026-09-25, 2026-09-25
-    section Fase 9: Rencana Lanjutan
-    Payment Gateway Otomatis                :         be3,  2026-09-29, 2026-10-15
+    section Fase 9: Responsif Total, Gestur & Cloudflare Edge
+    Pull-to-Refresh Gestur Mobile           :done,    fe12, 2026-09-26, 2026-09-26
+    Hero Banner Edge-to-Edge & WebGL Fix    :done,    fe13, 2026-09-26, 2026-09-26
+    Universal Anti-Overflow & Test Suite    :done,    fe14, 2026-09-26, 2026-09-26
+    Cloudflare Pages & Custom Domain Router :done,    be3,  2026-09-27, 2026-09-28
+    section Fase 10: Rencana Lanjutan
+    Decoupling Media Storage (Cloudinary)   :         be4,  2026-09-29, 2026-10-05
+    Payment Gateway Otomatis                :         be5,  2026-10-06, 2026-10-20
 ```
 
 ---
@@ -117,11 +123,16 @@ gantt
 - [x] **Proteksi Anti-Overflow Multi-Perangkat**: Implementasi pembungkus responsif `FittedBox(fit: BoxFit.scaleDown)` pada tombol aksi kartu AI, `Flexible` pada judul, dan `Wrap` pada baris harga menjamin antarmuka bebas error `RenderFlex overflowed` di semua resolusi (layar HP < 400px hingga desktop > 700px).
 - [x] **Formulir Tambah Produk Baru Mandiri & Bersih (No Auto-Fill / No Flow Following)**: Kolom input "Kode" produk (`AdminAddProductPage`) dimulai dalam keadaan kosong tanpa auto-increment bawaan (seperti `A20`), mewajibkan admin mengisi kode produk secara sadar dengan validasi SnackBar jika dikosongkan. Daftar tagar (#) juga dimulai bersih tanpa chip dummy bawaan (`#sangkar`, `#jati`).
 - [x] **Toleransi Skema & Notifikasi Status Profil User Private**: `UserService` mendukung fleksibilitas kolom alias `name` dan `nama` dari tabel Supabase `user_private`. Halaman Detail User Private Admin (`AdminUserDetailPage`) secara transparan menampilkan status validasi cloud dan memberi peringatan jelas jika kolom database belum dimigrasikan via SQL Editor.
+- [x] **Pull-to-Refresh Gestur Seluler (`RefreshIndicator`)**: Mengusap ke bawah pada layar smartphone di katalog umum (`main.dart`) maupun beranda member (`user_home_page.dart`) secara instan me-refresh data produk, bentuk sangkar, dan pengaturan toko.
+- [x] **Hero Banner Tepi-ke-Tepi (Edge-to-Edge) & Optimasi WebGL**: Menghilangkan margin samping canggung pada hero banner di mobile dan desktop, mengoptimalkan resolusi tekstur gambar di bawah 2048px untuk stabilitas GPU WebGL mobile, dan menyertakan placeholder loading elegan.
+- [x] **Arsitektur Universal Anti-Overflow & Suite Uji Otomatis**: Penataan ulang 11 file antarmuka dengan `Expanded`, `Flexible`, `FittedBox`, dan `Wrap`, serta diverifikasi lulus 100% oleh rangkaian automated widget test `test/overflow_test.dart` pada resolusi 320px, 600px, dan 1200px.
+- [x] **Dual Deployment Cloudflare Pages (`jatimas.derylandri.my.id`)**: Integrasi edge router Cloudflare Pages via `wrangler.json` dengan custom domain production dan penghapusan *stale service worker* pada `web/index.html`.
 
 ### B. Fitur Prioritas Menengah (Medium Priority)
 - [x] Sinkronisasi otomatis daftar produk langsung dari database Supabase (`produk` table).
 - [x] Integrasi pemesanan WhatsApp lengkap dengan format rincian produk, tautan foto produk, bentuk sangkar, dan catatan pemesan.
 - [x] Manajemen state terpusat via Service Layer (`AuthService`, `CageService`, `OrderService`, `ProductService`, `AppSettingsService`, `AiAssistantService`, `HashtagService`, `StorageService`).
+- [ ] Decoupling Media Storage ke Cloudinary (25 GB gratis) untuk foto produk resolusi tinggi.
 - [ ] Integrasi Supabase Auth penuh (Register akun mandiri, Forgot Password, OAuth Google).
 
 ### C. Fitur Prioritas Rendah (Future Enhancements)
