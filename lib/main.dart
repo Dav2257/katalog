@@ -78,7 +78,7 @@ class MyApp extends StatelessWidget {
       animation: AppSettingsService.instance,
       builder: (context, _) {
         return MaterialApp(
-          title: 'JatiMas',
+          title: 'Jatimas Sangkar',
           debugShowCheckedModeBanner: false,
           theme: ThemeData(
             fontFamily: AppSettingsService.instance.fontFamily,

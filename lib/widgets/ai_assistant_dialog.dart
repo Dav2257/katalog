@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:url_launcher/url_launcher.dart';
@@ -5,8 +6,25 @@ import '../models/product.dart';
 import '../pages/product_detail_page.dart';
 import '../services/ai_assistant_service.dart';
 import '../services/auth_service.dart';
+import '../services/cage_service.dart';
+import '../services/order_service.dart';
 import '../services/product_service.dart';
 import '../services/settings_service.dart';
+import '../services/storage_service.dart';
+
+class _AiCageChoice {
+  final String id;
+  final String name;
+  final String? imageUrl;
+  final Uint8List? imageBytes;
+
+  const _AiCageChoice({
+    required this.id,
+    required this.name,
+    this.imageUrl,
+    this.imageBytes,
+  });
+}
 
 typedef AddToCartHandler =
     void Function(
@@ -34,14 +52,10 @@ class AiAssistantDialog extends StatefulWidget {
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
-        builder: (ctx) => Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(ctx).viewInsets.bottom,
-          ),
-          child: AiAssistantDialog(
-            onAddToCart: onAddToCart,
-            onOpenCart: onOpenCart,
-          ),
+        builder: (ctx) => AiAssistantDialog(
+          key: const ValueKey('ai_assistant_dialog_mobile_sheet'),
+          onAddToCart: onAddToCart,
+          onOpenCart: onOpenCart,
         ),
       );
     } else {
@@ -58,6 +72,7 @@ class AiAssistantDialog extends StatefulWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(24),
               child: AiAssistantDialog(
+                key: const ValueKey('ai_assistant_dialog_desktop_modal'),
                 onAddToCart: onAddToCart,
                 onOpenCart: onOpenCart,
               ),
@@ -74,7 +89,13 @@ class AiAssistantDialog extends StatefulWidget {
 
 class _AiAssistantDialogState extends State<AiAssistantDialog>
     with SingleTickerProviderStateMixin {
-  final TextEditingController _textController = TextEditingController();
+  // Static draft persistence agar tulisan tidak hilang saat keyboard virtual HP buka/tutup
+  static String _savedChatDraft = '';
+  static String _lastOrderNameDraft = '';
+  static String _lastOrderPhoneDraft = '';
+  static String _lastOrderNoteDraft = '';
+
+  late final TextEditingController _textController;
   final ScrollController _scrollController = ScrollController();
   final List<AiChatMessage> _messages = [];
 
@@ -94,6 +115,10 @@ class _AiAssistantDialogState extends State<AiAssistantDialog>
   @override
   void initState() {
     super.initState();
+    _textController = TextEditingController(text: _savedChatDraft);
+    _textController.addListener(() {
+      _savedChatDraft = _textController.text;
+    });
     _initPulseAnimation();
     _initVoiceEngines();
 
@@ -220,6 +245,7 @@ class _AiAssistantDialogState extends State<AiAssistantDialog>
     if (query.isEmpty) return;
 
     _textController.clear();
+    _savedChatDraft = '';
 
     setState(() {
       _messages.add(
@@ -335,11 +361,69 @@ class _AiAssistantDialogState extends State<AiAssistantDialog>
 
     if (matchedProduct != null) {
       final actualQty = qty > 0 ? qty : 1;
-      widget.onAddToCart!(matchedProduct, quantity: actualQty, note: note);
+      final cageType = orderData['cageType']?.toString() ??
+          orderData['cage']?.toString() ??
+          orderData['_selectedCage']?.toString();
+      widget.onAddToCart!(
+        matchedProduct,
+        quantity: actualQty,
+        note: note,
+        cageType: cageType,
+      );
       // Simpan referensi produk untuk tampilan kartu di chat
       orderData['_resolvedProduct'] = matchedProduct;
       orderData['_isAddedToCart'] = true;
     }
+  }
+
+  List<_AiCageChoice> _resolveAvailableCages(Product prod) {
+    final serviceCages = CageService.instance.cages;
+    final productVariations = prod.cageVariations ?? [];
+    final List<_AiCageChoice> choices = [];
+
+    if (serviceCages.isNotEmpty) {
+      for (final sc in serviceCages) {
+        final matchCustom = productVariations.where(
+          (cv) =>
+              cv.name.toLowerCase() == sc.name.toLowerCase() ||
+              cv.id == sc.id,
+        ).firstOrNull;
+
+        choices.add(
+          _AiCageChoice(
+            id: sc.id,
+            name: sc.name,
+            imageUrl: (matchCustom != null && matchCustom.imageUrl.isNotEmpty)
+                ? matchCustom.imageUrl
+                : sc.imageUrl,
+            imageBytes: matchCustom?.imageBytes ?? sc.imageBytes,
+          ),
+        );
+      }
+    } else if (productVariations.isNotEmpty) {
+      for (final cv in productVariations) {
+        choices.add(
+          _AiCageChoice(
+            id: cv.id,
+            name: cv.name,
+            imageUrl: cv.imageUrl,
+            imageBytes: cv.imageBytes,
+          ),
+        );
+      }
+    }
+
+    if (choices.isEmpty) {
+      choices.add(
+        _AiCageChoice(
+          id: 'standard',
+          name: 'Standar',
+          imageUrl: prod.imageUrl,
+        ),
+      );
+    }
+
+    return choices;
   }
 
   void _scrollToBottom() {
@@ -380,12 +464,16 @@ class _AiAssistantDialogState extends State<AiAssistantDialog>
         ? rawQty
         : (int.tryParse(rawQty?.toString() ?? '1') ?? 1);
     final note = orderData['note']?.toString();
+    final cageType = orderData['cageType']?.toString() ??
+        orderData['cage']?.toString() ??
+        orderData['_selectedCage']?.toString();
 
     if (resolvedProduct != null) {
       _showOrderFormBottomSheet(
         product: resolvedProduct,
         initialQty: qty,
         initialNote: note,
+        initialCageType: cageType,
         alternativeProducts: alternativeProducts,
       );
     } else {
@@ -394,6 +482,8 @@ class _AiAssistantDialogState extends State<AiAssistantDialog>
         productName: orderData['productName'] ?? 'Sangkar JatiMas',
         qty: qty,
         note: note ?? '-',
+        cageType: cageType,
+        imageUrl: orderData['imageUrl']?.toString() ?? resolvedProduct?.imageUrl,
         name: AuthService.instance.userName,
         phone: AuthService.instance.userPhone,
       );
@@ -404,11 +494,13 @@ class _AiAssistantDialogState extends State<AiAssistantDialog>
     required String productName,
     required int qty,
     required String note,
+    String? cageType,
+    String? imageUrl,
     String? name,
     String? phone,
     int? totalPrice,
   }) async {
-    final targetWa = AppSettingsService.instance.adminWhatsApp;
+    final targetWa = AppSettingsService.instance.formattedWhatsAppDestination;
     final customerName = (name != null && name.trim().isNotEmpty)
         ? name.trim()
         : (AuthService.instance.userName.isNotEmpty
@@ -418,13 +510,65 @@ class _AiAssistantDialogState extends State<AiAssistantDialog>
         ? phone.trim()
         : AuthService.instance.userPhone;
 
+    // Pastikan foto berformat URL publik agar link preview WhatsApp menampilkan foto sangkar
+    String imgUrl = (imageUrl ?? '').trim();
+    if (imgUrl.isNotEmpty) {
+      try {
+        final uploaded =
+            await StorageService.instance.uploadImageIfPossible(imgUrl);
+        if (uploaded != null && uploaded.isNotEmpty) {
+          imgUrl = uploaded;
+        }
+      } catch (_) {}
+    }
+
+    final orderCode =
+        'JM-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+
+    final effectiveCage = (cageType != null && cageType.isNotEmpty)
+        ? cageType
+        : 'Standar';
+
+    // Simpan data pesanan ke sistem database Supabase
+    try {
+      OrderService.instance.addOrder(
+        UserOrder(
+          id: orderCode,
+          productName: productName,
+          quantity: qty,
+          cageTypeOrDesign: effectiveCage,
+          note: note.isNotEmpty ? note : 'Dipesan via AI Asisten JatiMas',
+          status: 'Tahap 1',
+          currentStep: 1,
+          imageUrl: imgUrl.isNotEmpty ? imgUrl : null,
+          phone: customerPhone.isNotEmpty
+              ? customerPhone
+              : AuthService.instance.userPhone,
+          email: AuthService.instance.userEmail,
+          customerName: customerName,
+        ),
+      );
+    } catch (e) {
+      debugPrint('OrderService addOrder error: $e');
+    }
+
+    final photoSection = (imgUrl.isNotEmpty &&
+            (imgUrl.startsWith('http://') || imgUrl.startsWith('https://')))
+        ? '📸 Foto Produk:\n$imgUrl\n\n'
+        : '';
+
+    final cageLine = effectiveCage.isNotEmpty ? '• Bentuk/Varian: $effectiveCage\n' : '';
+
     final text =
         'Halo Admin JatiMas Sangkar Jepara,\n\n'
         'Saya ingin memesan sangkar:\n'
+        '📦 No. Pesanan: #$orderCode\n'
         '• Produk: $productName\n'
         '• Jumlah: $qty pcs\n'
+        '$cageLine'
         '${totalPrice != null && totalPrice > 0 ? "• Estimasi Harga: Rp $totalPrice\n" : ""}'
         '• Catatan Khusus: ${note.isNotEmpty ? note : "-"}\n\n'
+        '$photoSection'
         'Data Pemesan:\n'
         '• Nama: $customerName\n'
         '${customerPhone.isNotEmpty ? "• No. WA/HP: $customerPhone\n" : ""}'
@@ -433,8 +577,14 @@ class _AiAssistantDialogState extends State<AiAssistantDialog>
     final uri = Uri.parse(
       'https://wa.me/$targetWa?text=${Uri.encodeComponent(text)}',
     );
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        await launchUrl(uri);
+      }
+    } catch (e) {
+      debugPrint('Error launching WhatsApp: $e');
     }
   }
 
@@ -442,25 +592,53 @@ class _AiAssistantDialogState extends State<AiAssistantDialog>
     required Product product,
     int initialQty = 1,
     String? initialNote,
+    String? initialCageType,
     List<Product>? alternativeProducts,
   }) {
+    Product currentProduct = product;
+    int qty = initialQty > 0 ? initialQty : 1;
+
+    // Persiapkan pilihan bentuk sangkar
+    List<_AiCageChoice> availableCages = _resolveAvailableCages(currentProduct);
+    String selectedCage = (initialCageType != null &&
+            availableCages.any((c) =>
+                c.name.toLowerCase() == initialCageType.toLowerCase()))
+        ? availableCages
+            .firstWhere((c) =>
+                c.name.toLowerCase() == initialCageType.toLowerCase())
+            .name
+        : (availableCages.isNotEmpty ? availableCages.first.name : 'Standar');
+
+    final initialNameText = _lastOrderNameDraft.isNotEmpty
+        ? _lastOrderNameDraft
+        : AuthService.instance.userName;
+    final initialPhoneText = _lastOrderPhoneDraft.isNotEmpty
+        ? _lastOrderPhoneDraft
+        : AuthService.instance.userPhone;
+    final initialNoteText = _lastOrderNoteDraft.isNotEmpty
+        ? _lastOrderNoteDraft
+        : (initialNote != null && initialNote != '-' ? initialNote : '');
+
+    // Inisialisasi controller di LUAR builder agar tidak ter-reset saat keyboard HP buka/tutup
+    final nameController = TextEditingController(text: initialNameText);
+    final phoneController = TextEditingController(text: initialPhoneText);
+    final noteController = TextEditingController(text: initialNoteText);
+
+    nameController.addListener(() {
+      _lastOrderNameDraft = nameController.text;
+    });
+    phoneController.addListener(() {
+      _lastOrderPhoneDraft = phoneController.text;
+    });
+    noteController.addListener(() {
+      _lastOrderNoteDraft = noteController.text;
+    });
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (bottomSheetContext) {
-        Product currentProduct = product;
-        int qty = initialQty > 0 ? initialQty : 1;
-        final nameController = TextEditingController(
-          text: AuthService.instance.userName,
-        );
-        final phoneController = TextEditingController(
-          text: AuthService.instance.userPhone,
-        );
-        final noteController = TextEditingController(
-          text: initialNote != null && initialNote != '-' ? initialNote : '',
-        );
-
         return StatefulBuilder(
           builder: (ctx, setModalState) {
             final candidates = <Product>[];
@@ -472,6 +650,16 @@ class _AiAssistantDialogState extends State<AiAssistantDialog>
                 }
               }
             }
+
+            final selectedChoice = availableCages.firstWhere(
+              (c) => c.name.toLowerCase() == selectedCage.toLowerCase(),
+              orElse: () => availableCages.first,
+            );
+            final displayImageUrl = (selectedChoice.imageUrl != null &&
+                    selectedChoice.imageUrl!.isNotEmpty)
+                ? selectedChoice.imageUrl!
+                : currentProduct.imageUrl;
+            final displayImageBytes = selectedChoice.imageBytes;
 
             return Container(
               margin: EdgeInsets.only(
@@ -569,6 +757,13 @@ class _AiAssistantDialogState extends State<AiAssistantDialog>
                               onTap: () {
                                 setModalState(() {
                                   currentProduct = alt;
+                                  availableCages = _resolveAvailableCages(currentProduct);
+                                  if (!availableCages.any((c) =>
+                                      c.name.toLowerCase() == selectedCage.toLowerCase())) {
+                                    selectedCage = availableCages.isNotEmpty
+                                        ? availableCages.first.name
+                                        : 'Standar';
+                                  }
                                 });
                               },
                               child: AnimatedContainer(
@@ -660,20 +855,33 @@ class _AiAssistantDialogState extends State<AiAssistantDialog>
                       ),
                       child: Row(
                         children: [
-                          if (currentProduct.imageUrl.isNotEmpty)
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
-                                currentProduct.imageUrl,
-                                width: 50,
-                                height: 50,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) => const Icon(
-                                  Icons.inventory_2_outlined,
-                                  size: 28,
-                                ),
-                              ),
-                            ),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: displayImageBytes != null
+                                ? Image.memory(
+                                    displayImageBytes,
+                                    width: 50,
+                                    height: 50,
+                                    fit: BoxFit.cover,
+                                  )
+                                : (displayImageUrl.isNotEmpty
+                                    ? Image.network(
+                                        displayImageUrl,
+                                        width: 50,
+                                        height: 50,
+                                        fit: BoxFit.cover,
+                                        errorBuilder:
+                                            (context, error, stackTrace) =>
+                                                const Icon(
+                                          Icons.inventory_2_outlined,
+                                          size: 28,
+                                        ),
+                                      )
+                                    : const Icon(
+                                        Icons.inventory_2_outlined,
+                                        size: 28,
+                                      )),
+                          ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Column(
@@ -750,6 +958,148 @@ class _AiAssistantDialogState extends State<AiAssistantDialog>
                         ],
                       ),
                     ),
+                    const SizedBox(height: 12),
+
+                    // Pilihan Bentuk Sangkar
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.view_in_ar_rounded,
+                          size: 16,
+                          color: Color(0xFF8C6D37),
+                        ),
+                        const SizedBox(width: 6),
+                        const Text(
+                          'Pilih Bentuk Sangkar:',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF5A4A38),
+                          ),
+                        ),
+                        const Spacer(),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2C1A0E),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            selectedCage,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFFFD900),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 42,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: availableCages.length,
+                        itemBuilder: (_, cIdx) {
+                          final cageChoice = availableCages[cIdx];
+                          final isSel = selectedCage.toLowerCase() ==
+                              cageChoice.name.toLowerCase();
+
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: InkWell(
+                              onTap: () {
+                                setModalState(() {
+                                  selectedCage = cageChoice.name;
+                                });
+                              },
+                              borderRadius: BorderRadius.circular(10),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 7,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isSel
+                                      ? const Color(0xFF2C1A0E)
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: isSel
+                                        ? const Color(0xFFD4AF37)
+                                        : const Color(0xFFDDD2C0),
+                                    width: isSel ? 1.6 : 1.0,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (isSel)
+                                      const Icon(
+                                        Icons.check_circle_rounded,
+                                        size: 15,
+                                        color: Color(0xFFFFD900),
+                                      )
+                                    else if (cageChoice.imageBytes != null)
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(4),
+                                        child: Image.memory(
+                                          cageChoice.imageBytes!,
+                                          width: 18,
+                                          height: 18,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      )
+                                    else if (cageChoice.imageUrl != null &&
+                                        cageChoice.imageUrl!.isNotEmpty)
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(4),
+                                        child: Image.network(
+                                          cageChoice.imageUrl!,
+                                          width: 18,
+                                          height: 18,
+                                          fit: BoxFit.cover,
+                                          errorBuilder:
+                                              (context, error, stackTrace) =>
+                                                  const Icon(
+                                            Icons.view_in_ar_rounded,
+                                            size: 15,
+                                            color: Colors.black54,
+                                          ),
+                                        ),
+                                      )
+                                    else
+                                      const Icon(
+                                        Icons.view_in_ar_rounded,
+                                        size: 15,
+                                        color: Colors.black54,
+                                      ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      cageChoice.name,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: isSel
+                                            ? FontWeight.bold
+                                            : FontWeight.w600,
+                                        color: isSel
+                                            ? const Color(0xFFF5ECD7)
+                                            : const Color(0xFF2C1A0E),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
                     const SizedBox(height: 14),
 
                     // Input Nama Pemesan
@@ -763,7 +1113,10 @@ class _AiAssistantDialogState extends State<AiAssistantDialog>
                     ),
                     const SizedBox(height: 4),
                     TextField(
+                      key: const ValueKey('ai_order_name_field'),
                       controller: nameController,
+                      textInputAction: TextInputAction.next,
+                      onChanged: (val) => _lastOrderNameDraft = val,
                       decoration: InputDecoration(
                         hintText: 'Nama pemesan (cth: Budi Jepara)...',
                         hintStyle: const TextStyle(
@@ -807,8 +1160,11 @@ class _AiAssistantDialogState extends State<AiAssistantDialog>
                     ),
                     const SizedBox(height: 4),
                     TextField(
+                      key: const ValueKey('ai_order_phone_field'),
                       controller: phoneController,
                       keyboardType: TextInputType.phone,
+                      textInputAction: TextInputAction.next,
+                      onChanged: (val) => _lastOrderPhoneDraft = val,
                       decoration: InputDecoration(
                         hintText: '08123456789 (untuk konfirmasi pengrajin)',
                         hintStyle: const TextStyle(
@@ -861,8 +1217,11 @@ class _AiAssistantDialogState extends State<AiAssistantDialog>
                     ),
                     const SizedBox(height: 4),
                     TextField(
+                      key: const ValueKey('ai_order_note_field'),
                       controller: noteController,
                       maxLines: 2,
+                      textInputAction: TextInputAction.done,
+                      onChanged: (val) => _lastOrderNoteDraft = val,
                       decoration: InputDecoration(
                         hintText:
                             'Contoh: "di samping karakternya di tambah tulisan GB" atau inisial nama...',
@@ -922,14 +1281,16 @@ class _AiAssistantDialogState extends State<AiAssistantDialog>
                                 note: noteWithCustomer.isNotEmpty
                                     ? noteWithCustomer
                                     : 'Pesanan via AI Asisten',
+                                cageType: selectedCage,
                               );
 
+                              _lastOrderNoteDraft = '';
                               Navigator.pop(ctx);
 
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(
-                                    '$qty' 'x "${currentProduct.name}" berhasil dimasukkan ke keranjang!',
+                                    '$qty' 'x "${currentProduct.name}" ($selectedCage) berhasil dimasukkan ke keranjang!',
                                   ),
                                   backgroundColor: const Color(0xFF2C1A0E),
                                   duration: const Duration(seconds: 3),
@@ -974,6 +1335,7 @@ class _AiAssistantDialogState extends State<AiAssistantDialog>
                               final name = nameController.text.trim();
                               final phone = phoneController.text.trim();
 
+                              _lastOrderNoteDraft = '';
                               Navigator.pop(ctx);
 
                               await _sendDirectWhatsAppMessage(
@@ -981,6 +1343,8 @@ class _AiAssistantDialogState extends State<AiAssistantDialog>
                                     '${currentProduct.name} ${currentProduct.code != null ? '(${currentProduct.code})' : ''}',
                                 qty: qty,
                                 note: finalNote,
+                                cageType: selectedCage,
+                                imageUrl: displayImageUrl,
                                 name: name,
                                 phone: phone,
                                 totalPrice: currentProduct.price > 0
@@ -1012,21 +1376,42 @@ class _AiAssistantDialogState extends State<AiAssistantDialog>
           },
         );
       },
-    );
+    ).whenComplete(() {
+      nameController.dispose();
+      phoneController.dispose();
+      noteController.dispose();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.85,
-      decoration: const BoxDecoration(
-        color: Color(0xFFF9F6F0),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      child: Column(
-        children: [
-          // 1. Header Bar
-          _buildHeader(),
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isMobile = MediaQuery.of(context).size.width < 700;
+
+    final double dialogHeight;
+    if (isMobile) {
+      if (bottomInset > 0) {
+        dialogHeight = (screenHeight - bottomInset).clamp(280.0, screenHeight * 0.88);
+      } else {
+        dialogHeight = screenHeight * 0.85;
+      }
+    } else {
+      dialogHeight = 720.0;
+    }
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: Container(
+        height: dialogHeight,
+        decoration: const BoxDecoration(
+          color: Color(0xFFF9F6F0),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: Column(
+          children: [
+            // 1. Header Bar
+            _buildHeader(),
 
           // 2. Chat Conversation Stream
           Expanded(
@@ -1051,8 +1436,9 @@ class _AiAssistantDialogState extends State<AiAssistantDialog>
           _buildInputBar(),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildHeader() {
     return Container(
@@ -1326,6 +1712,8 @@ class _AiAssistantDialogState extends State<AiAssistantDialog>
     final note = orderData['note'] ?? '-';
     final Product? resolvedProduct = orderData['_resolvedProduct'] as Product?;
     final isAdded = orderData['_isAddedToCart'] == true;
+    final cage = orderData['cageType']?.toString() ??
+        orderData['cage']?.toString();
 
     return Container(
       margin: const EdgeInsets.only(top: 10),
@@ -1451,6 +1839,18 @@ class _AiAssistantDialogState extends State<AiAssistantDialog>
                           color: Color(0xFF2E7D32),
                         ),
                       ),
+                    if (cage != null && cage.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          'Bentuk: $cage',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF8C6D37),
+                          ),
+                        ),
+                      ),
                     if (note != '-' && note.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: 2),
@@ -1562,6 +1962,7 @@ class _AiAssistantDialogState extends State<AiAssistantDialog>
                         product: currentProd,
                         initialQty: qty,
                         initialNote: note != '-' ? note : '',
+                        initialCageType: cage,
                         alternativeProducts: alternativeProducts,
                       );
                     }
@@ -1872,15 +2273,19 @@ class _AiAssistantDialogState extends State<AiAssistantDialog>
                 flex: 6,
                 child: InkWell(
                   onTap: () {
+                    final defaultCage = CageService.instance.cages.isNotEmpty
+                        ? CageService.instance.cages.first.name
+                        : 'Standar';
                     widget.onAddToCart?.call(
                       product,
                       quantity: 1,
                       note: 'Dipilih dari rekomendasi AI',
+                      cageType: defaultCage,
                     );
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
-                          '1x "${product.name}" dimasukkan ke keranjang!',
+                          '1x "${product.name}" ($defaultCage) dimasukkan ke keranjang!',
                         ),
                         duration: const Duration(seconds: 2),
                         backgroundColor: const Color(0xFF2C1A0E),
@@ -2069,8 +2474,13 @@ class _AiAssistantDialogState extends State<AiAssistantDialog>
                   border: Border.all(color: const Color(0xFFDDD2C0)),
                 ),
                 child: TextField(
+                  key: const ValueKey('ai_assistant_chat_input_field'),
                   controller: _textController,
+                  textInputAction: TextInputAction.send,
                   onSubmitted: _handleSendMessage,
+                  onChanged: (val) {
+                    _savedChatDraft = val;
+                  },
                   decoration: const InputDecoration(
                     hintText: 'Ketik pesan atau tekan mic...',
                     hintStyle: TextStyle(fontSize: 13, color: Colors.black45),

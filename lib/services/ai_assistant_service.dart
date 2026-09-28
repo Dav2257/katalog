@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/product.dart';
+import 'cage_service.dart';
 import 'product_service.dart';
 import 'settings_service.dart';
 
@@ -119,6 +120,17 @@ class AiAssistantService extends ChangeNotifier {
       }
     }
 
+    final cages = CageService.instance.cages;
+    if (cages.isNotEmpty) {
+      buffer.writeln('\nPILIHAN BENTUK/MODEL SANGKAR YANG TERSEDIA:');
+      for (var i = 0; i < cages.length; i++) {
+        buffer.writeln('${i + 1}. ${cages[i].name}');
+      }
+      buffer.writeln(
+        'Setiap produk sangkar di katalog JatiMas dapat dipilih salah satu bentuk sangkar di atas saat melakukan pemesanan (Bentuk 1, Bentuk 2, Bentuk 3, dll.). Pelanggan dapat memilih bentuk sangkar ini langsung di formulir pemesanan AI Asisten.',
+      );
+    }
+
     return buffer.toString();
   }
 
@@ -201,6 +213,9 @@ ATURAN PILIHAN PRODUK & PEMESANAN (SANGAT KETAT):
    - Sistem aplikasi kami akan secara otomatis mengubah daftar tersebut menjadi KARTU PRODUK INTERAKTIF LENGKAP DENGAN FOTO ASLI KATALOG DAN PENJELASAN TERSEBUT.
 2. HANYA keluarkan tag <<<ORDER_JSON...>>> JIKA DAN HANYA JIKA pelanggan SUDAH SECARA EKSPLISIT DAN TEGAS menyebut nama atau kode produk spesifik yang sudah pasti ingin dibeli (misal: "Saya mau beli yang [A05] Excellent OnePiece", "Pesan [A01] Sangkar Murai 1 pcs"). Jika masih eksplorasi atau belum memilih produk pasti, JANGAN gunakan ORDER_JSON!
 <<<ORDER_JSON{"action":"add_to_cart","productName":"Nama Lengkap Sangkar Sesuai Katalog","quantity":1,"note":"Pemesanan via AI"}ORDER_JSON>>>
+3. PEMILIHAN BENTUK/MODEL SANGKAR:
+   - Pelanggan dapat memilih variasi bentuk sangkar (seperti Bentuk 1, Bentuk 2, Bentuk 3, dll.) untuk setiap produk katalog JatiMas.
+   - Pembeli dapat memilih bentuk sangkar ini secara langsung di formulir pemesanan interaktif (tombol "Pesan" atau "Catatan & Data").
 
 ${_buildStoreContext()}
 ''';
@@ -600,7 +615,7 @@ ${_buildStoreContext()}
 
     // 4. Kata kunci kategori burung / sangkar / motif umum
     const productKeywords = [
-      'sangkar', 'kandang', 'tebok', 'burung',
+      'sangkar', 'kandang', 'tebok', 'burung', 'bentuk', 'variasi',
       'murai', 'kacer', 'cucak', 'pleci', 'lovebird', 'anis', 'kenari', 'branjangan', 'cendet', 'gelatik',
       'motif', 'ukir', 'ukiran', 'carbon', 'adidas', 'onepiece', 'one piece', 'naruto', 'anime', 'serdadu', 'naga', 'wayang', 'batik',
     ];
@@ -748,7 +763,31 @@ ${_buildStoreContext()}
       }
     }
 
-    // 3. Info Toko / Lokasi / Kontak / Jam Buka
+    // 3. Tanya Pilihan Bentuk Sangkar / Variasi Sangkar
+    if (lower.contains('pemilihan sangkar') ||
+        lower.contains('pilihan sangkar') ||
+        lower.contains('bentuk sangkar') ||
+        lower.contains('model sangkar') ||
+        lower.contains('variasi sangkar') ||
+        lower.contains('pilih bentuk') ||
+        lower.contains('bentuk apa') ||
+        lower == 'bentuk' ||
+        (lower.contains('bentuk') &&
+            (lower.contains('pilih') ||
+                lower.contains('ada') ||
+                lower.contains('apa')))) {
+      final cages = CageService.instance.cages;
+      final cageNames = cages.isNotEmpty
+          ? cages.map((c) => c.name).join(', ')
+          : 'Standar, Bentuk 1, Bentuk 2, Bentuk 3';
+      return AiResponse(
+        text:
+            'Di JatiMas Sangkar, setiap produk sangkar bisa dipilih bentuk/modelnya kak! Pilihan bentuk yang tersedia saat ini: $cageNames.\n\nSaat kakak menekan tombol "Pesan" atau "Catatan & Data" pada produk pilihan kakak, form pemesanan akan otomatis menampilkan pilihan bentuk sangkar yang bisa langsung kakak pilih sesuai selera sebelum checkout atau kirim ke WhatsApp.',
+        suggestedProducts: allProducts.take(3).toList(),
+      );
+    }
+
+    // 4. Info Toko / Lokasi / Kontak / Jam Buka
     if (lower.contains('lokasi') ||
         lower.contains('alamat') ||
         lower.contains('dimana') ||
