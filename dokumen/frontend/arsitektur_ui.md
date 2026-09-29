@@ -27,7 +27,7 @@ Dokumen ini mendokumentasikan secara rinci komponen-komponen antarmuka pengguna 
     - **Profil (Kanan)**: Ikon profil yang menampilkan avatar pengguna/admin dan membuka modal sheet login/profil secara instan.
   - **Tombol Navigasi Kembali di Bawah Banner (Sebelah Kanan)**: Saat admin atau member beralih melihat katalog standar, tombol navigasi kembali (*"Kembali ke Dashboard Admin"* atau *"Kembali ke Katalog Custom Saya"*) ditempatkan rapi di bawah banner dan di atas katalog di sebelah kanan dengan tombol cokelat kayu jati berikon panah emas.
   - **Grid Katalog Produk Seragam**: Ukuran kartu produk (katalog 1 s/d 5) diseragamkan tinggi dan rasio gambarnya dengan kartu berwarna putih di atas kanvas krem.
-  - **Search Filter Dinamis**: Menyaring produk berdasarkan kecocokan nama dan kategori secara instan.
+  - **Search Filter Dinamis**: Menyaring produk berdasarkan kecocokan nama, kode, dan tagar (hashtags) secara instan.
   - **Transisi Halaman Instan**: Seluruh perpindahan halaman diatur tanpa animasi transisi (instant transition) untuk pengalaman navigasi yang cepat dan responsif.
 
 ### B. `lib/pages/admin_dashboard_page.dart` (`AdminDashboardPage`)

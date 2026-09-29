@@ -82,7 +82,7 @@ gantt
 ## 4. 📊 Kebutuhan Fitur (Feature Backlog)
 
 ### A. Fitur Prioritas Tinggi (High Priority) — *Selesai*
-- [x] Katalog produk dengan ukuran thumbnail, nama, kategori, dan harga berformat Rupiah yang seragam.
+- [x] Katalog produk dengan ukuran thumbnail, nama, tagar (hashtags), dan kode produk yang seragam dan bersih.
 - [x] Fitur pencarian produk berbasis query teks secara real-time.
 - [x] Detail produk interaktif dengan varian bentuk sangkar, tombol navigasi panah `<` dan `>`, serta kolom catatan independen per bentuk.
 - [x] Keranjang belanja responsif (pemisahan per bentuk sangkar, checkbox item, pilih semua, hapus dinamis, reset jejak state).
