@@ -148,13 +148,9 @@ class ProductService extends ChangeNotifier {
     final Map<String, dynamic> insertData = {
       'kode': cleanCode,
       'nama': cleanName,
-      'harga': price,
       'deskripsi': finalDescription,
       'gambar_url': finalImage,
-      'kategori': formattedHashtags,
       'hashtags': formattedHashtags,
-      'rating': 4.8,
-      'stok': 10,
       'last_edited_date': editDate,
       if (cageVariations != null && cageVariations.isNotEmpty)
         'variasi': cageVariations.map((v) => v.toMap()).toList(),
@@ -255,7 +251,6 @@ class ProductService extends ChangeNotifier {
         'last_edited_date': editDate,
         if (imageUrl != null && imageUrl.trim().isNotEmpty) 'gambar_url': imageUrl.trim(),
         if (cleanHashtags != null) ...{
-          'kategori': cleanHashtags,
           'hashtags': cleanHashtags,
         },
         if (cageVariations != null)

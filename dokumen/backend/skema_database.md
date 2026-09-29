@@ -30,11 +30,9 @@ erDiagram
         uuid id PK
         string kode
         string nama
-        bigint harga
         text deskripsi
         text gambar_url
-        string tagar
-        int stok
+        string hashtags
         string last_edited_date
         jsonb variasi "Daftar bentuk sangkar [id, name, imageUrl]"
         timestamp created_at
@@ -130,11 +128,9 @@ CREATE TABLE IF NOT EXISTS public.produk (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     kode VARCHAR(50) DEFAULT 'A01',
     nama VARCHAR(255) NOT NULL,
-    harga BIGINT NOT NULL DEFAULT 0,
     deskripsi TEXT,
     gambar_url TEXT,
-    tagar VARCHAR(255),
-    stok INT NOT NULL DEFAULT 10,
+    hashtags TEXT,
     last_edited_date VARCHAR(50),
     variasi JSONB DEFAULT '[]'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL

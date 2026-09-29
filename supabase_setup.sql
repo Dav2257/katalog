@@ -14,13 +14,9 @@ CREATE TABLE IF NOT EXISTS public.produk (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     kode VARCHAR(50),
     nama VARCHAR(255) NOT NULL,
-    harga BIGINT NOT NULL DEFAULT 0,
     deskripsi TEXT,
     gambar_url TEXT,
-    kategori VARCHAR(255),
     hashtags TEXT,
-    rating NUMERIC(3, 2) DEFAULT 4.8,
-    stok INT NOT NULL DEFAULT 10,
     variasi JSONB,
     last_edited_date VARCHAR(50),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
