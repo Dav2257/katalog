@@ -37,7 +37,7 @@ lib/
 └── widgets/                              # Komponen UI yang dapat digunakan kembali (reusable)
     ├── hero_banner.dart                  # Komponen visual header dinamis Jatimas Sangkar
     ├── top_navbar.dart                   # Bilah navigasi atas responsif (auto-hide keranjang & profil pada mobile)
-    ├── hashtag_autocomplete_field.dart   # Input hashtag pintar dengan dropdown auto-complete & quick chips
+    ├── hashtag_autocomplete_field.dart   # Input hashtag pintar dengan dropdown auto-complete berbasis TapRegion & quick chips
     ├── product_fullscreen_viewer.dart    # Viewer gambar fullscreen interaktif (pinch-to-zoom, pan, slide < >)
     └── ai_assistant_dialog.dart          # Dialog asisten AI teks & visual, kartu rekomendasi visual, & quick order sheet
 ```
@@ -145,10 +145,10 @@ Aplikasi menggunakan arsitektur modular yang rapi dengan kombinasi **StatefulWid
 - **`ProductService`**:
   - State manager reaktif untuk katalog produk publik (`ChangeNotifier`).
   - Menyediakan fungsi penambahan produk baru (`addProduct`), pengeditan produk (`updateProduct`), serta penghapusan produk secara langsung disinkronkan dengan tampilan katalog umum.
-- **`HashtagService`**:
+- **`HashtagService` & `HashtagAutocompleteField`**:
   - Arsitektur hybrid untuk auto-complete tagar produk.
   - Menyimpan cache lokal instan di `SharedPreferences` (`cached_hashtags_list_v1`), tersinkronisasi dengan tabel `public.hashtags` di Supabase, dan auto-harvesting seluruh tag unik dari produk eksisting.
-  - Mendukung pencarian instan (`getSuggestions`), pencegahan duplikasi, dan pembuatan tagar baru secara otomatis.
+  - Mendukung pencarian instan (`getSuggestions`), pencegahan duplikasi, pembuatan tagar baru secara otomatis, pengelompokan gesture aman via `TapRegion`, serta perlindungan dari pemutusan klik akibat event unfocus/blur di Web & Desktop.
 - **`StorageService`**:
   - Layanan unggah media gambar ke cloud storage bucket (`products` / `katalog` / `schedules`).
   - Menghasilkan tautan publik HTTPS permanen untuk efisiensi penyimpanan database Supabase (mencegah pembengkakan kuota oleh teks Base64).

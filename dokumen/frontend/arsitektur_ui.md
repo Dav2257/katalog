@@ -157,7 +157,7 @@ Dokumen ini mendokumentasikan secara rinci komponen-komponen antarmuka pengguna 
 - **Fitur Utama**:
   - **Input Kode Produk Bersih & Mandiri (No Auto-Fill / No Flow Following)**: Kolom input "Kode" produk kini dimulai dalam keadaan kosong tanpa ada auto-increment otomatis (seperti `A20`, `A01`), mewajibkan admin mengisi kode produk secara sadar dengan validasi SnackBar jika dikosongkan.
   - **Hashtag Bebas Data Dummy**: Daftar chip hashtag dimulai bersih/kosong tanpa chip bawaan dummy (`#sangkar`, `#jati`), serta tanpa fallback rahasia saat disimpan.
-  - **Auto-Complete Tagar Terpusat**: Menggunakan `HashtagAutocompleteField` yang terhubung dengan `HashtagService`. Saat admin mengetik tanda pagar `#` atau kata kunci tagar, sistem menampilkan daftar rekomendasi tagar dari database terpusat (`public.hashtags`), memanen tagar baru secara otomatis, dan menghindarkan pengetikan berulang.
+  - **Auto-Complete Tagar Terpusat & Anti-Blur Dismissal**: Menggunakan `HashtagAutocompleteField` yang terhubung dengan `HashtagService`. Dilengkapi arsitektur `TapRegion` terpadu dan penanganan `canRequestFocus: false` pada item saran agar gesture klik/tap pada menu dropdown (baik di Web maupun Desktop) tidak terputus akibat event unfocus/blur mendadak. Setelah memilih tagar atau opsi tagar baru, sistem secara otomatis membersihkan input, menambahkan tagar ke daftar chip, menutup overlay, dan mengembalikan fokus input (`_focusNode.requestFocus()`) untuk entri tagar berikutnya.
   - **Sinkronisasi Bentuk Sangkar**: Mengintegrasikan pilihan variasi bentuk sangkar (`ProductCageVariation`) dengan foto kustom yang tersinkronisasi dua arah ke `CageService`.
 
 ### K. `lib/pages/admin_settings_page.dart` (`AdminSettingsPage`)
@@ -242,7 +242,7 @@ Dokumen ini mendokumentasikan secara rinci komponen-komponen antarmuka pengguna 
 | `MobileFooterNav` (`_buildMobileFooterNavigation`) | `main.dart` | Footer navigasi bawah layar khusus mobile untuk Katalog Umum & Member: Keranjang (kiri dengan badge), Beranda (tengah dengan tombol emas melingkar), dan Profil (kanan). |
 | `AdminMobileFooterNav` (`_buildMobileAdminFooterNavigation`) | `pages/admin_dashboard_page.dart` | Footer navigasi bawah layar khusus mobile untuk Dashboard Admin: Setting Toko (kiri), Preview Umum (tengah dengan tombol emas marketplace), dan Profil Admin (kanan). |
 | `HeroBanner` | `widgets/hero_banner.dart` | Banner visual di bagian atas halaman katalog untuk memperkuat identitas brand Jatimas Sangkar, mendukung gambar bawaan maupun banner kustom admin. |
-| `HashtagAutocompleteField` | `widgets/hashtag_autocomplete_field.dart` | Input textfield cerdas dengan dropdown overlay dinamis untuk rekomendasi tagar otomatis (#kayujati, #sangkar, dll.) dengan sinkronisasi database terpusat. |
+| `HashtagAutocompleteField` | `widgets/hashtag_autocomplete_field.dart` | Input textfield cerdas dengan dropdown overlay dinamis berbasis `TapRegion` terpadu untuk rekomendasi tagar otomatis (#kayujati, #sangkar, dll.) dengan sinkronisasi database terpusat dan pencegahan pembatalan klik akibat blur/unfocus. |
 | `WhatsAppLogo` | `pages/cart_page.dart` | Komponen logo resmi WhatsApp berbasis Base64 memory image untuk tombol Pesan. |
 | `WhatsAppIcon` | `pages/admin_order_detail_page.dart` | Komponen ikon WhatsApp presisi berbasis CustomPainter untuk tombol hubungi pembeli di halaman admin. |
 

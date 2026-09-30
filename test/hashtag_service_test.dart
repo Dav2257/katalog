@@ -84,5 +84,75 @@ void main() {
         expect(addedTags.contains('#jati'), isTrue);
       }
     });
+
+    testWidgets('Tapping overlay suggestion selects hashtag', (tester) async {
+      final controller = TextEditingController();
+      final addedTags = <String>[];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: HashtagAutocompleteField(
+              controller: controller,
+              currentHashtags: const [],
+              onHashtagSelected: (tag) => addedTags.add(tag),
+            ),
+          ),
+        ),
+      );
+
+      // Focus and enter 'ja'
+      await tester.tap(find.byType(TextField));
+      await tester.pump();
+      await tester.enterText(find.byType(TextField), 'ja');
+      await tester.pump();
+
+      // Verify '#jati' suggestion is shown in overlay
+      final suggestionFinder = find.text('#jati');
+      expect(suggestionFinder, findsWidgets);
+
+      // Tap the suggestion
+      await tester.tap(suggestionFinder.last);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(addedTags.contains('#jati'), isTrue);
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pump();
+    });
+
+    testWidgets('Tapping create new hashtag option in overlay selects new hashtag', (tester) async {
+      final controller = TextEditingController();
+      final addedTags = <String>[];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: HashtagAutocompleteField(
+              controller: controller,
+              currentHashtags: const [],
+              onHashtagSelected: (tag) => addedTags.add(tag),
+            ),
+          ),
+        ),
+      );
+
+      // Focus and enter 'unikbanget'
+      await tester.tap(find.byType(TextField));
+      await tester.pump();
+      await tester.enterText(find.byType(TextField), 'unikbanget');
+      await tester.pump();
+
+      final createFinder = find.byIcon(Icons.add_circle);
+      expect(createFinder, findsOneWidget);
+
+      await tester.tap(createFinder);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(addedTags.contains('#unikbanget'), isTrue);
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pump();
+    });
   });
 }

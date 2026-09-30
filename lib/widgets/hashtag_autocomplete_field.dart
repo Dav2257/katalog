@@ -33,6 +33,7 @@ class HashtagAutocompleteField extends StatefulWidget {
 class _HashtagAutocompleteFieldState extends State<HashtagAutocompleteField> {
   final FocusNode _focusNode = FocusNode();
   final LayerLink _layerLink = LayerLink();
+  final Object _tapRegionGroupId = Object();
   OverlayEntry? _overlayEntry;
 
   List<String> _suggestions = [];
@@ -71,17 +72,19 @@ class _HashtagAutocompleteFieldState extends State<HashtagAutocompleteField> {
 
   void _onTextChanged() {
     _updateSuggestions();
-    if (_focusNode.hasFocus) {
+    final query = widget.controller.text.trim();
+    if (_focusNode.hasFocus && query.isNotEmpty) {
       _showOverlay();
+    } else {
+      _removeOverlay();
     }
   }
 
   void _onFocusChanged() {
-    if (_focusNode.hasFocus) {
+    final query = widget.controller.text.trim();
+    if (_focusNode.hasFocus && query.isNotEmpty) {
       _updateSuggestions();
       _showOverlay();
-    } else {
-      _removeOverlay();
     }
   }
 
@@ -101,6 +104,12 @@ class _HashtagAutocompleteFieldState extends State<HashtagAutocompleteField> {
   }
 
   void _showOverlay() {
+    final query = widget.controller.text.trim();
+    if (query.isEmpty) {
+      _removeOverlay();
+      return;
+    }
+
     _removeOverlay();
 
     final overlay = Overlay.of(context, debugRequiredFor: widget);
@@ -131,110 +140,119 @@ class _HashtagAutocompleteFieldState extends State<HashtagAutocompleteField> {
             link: _layerLink,
             showWhenUnlinked: false,
             offset: const Offset(0.0, 42.0),
-            child: Material(
-              elevation: 8,
-              borderRadius: BorderRadius.circular(8),
-              color: Colors.white,
-              shadowColor: Colors.black26,
-              child: Container(
-                constraints: const BoxConstraints(maxHeight: 220),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFDCC8B4), width: 1),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(7),
-                  child: ListView(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    shrinkWrap: true,
-                    children: [
-                      // Opsi buat hashtag baru jika belum ada
-                      if (showCreateOption)
-                        InkWell(
-                          onTap: () {
-                            _selectTag(formattedQuery);
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            color: const Color(0xFFF5ECD7).withValues(alpha: 0.6),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.add_circle,
-                                  size: 16,
-                                  color: Color(0xFF7A4B29),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: RichText(
-                                    text: TextSpan(
-                                      text: 'Gunakan ',
+            child: TapRegion(
+              groupId: _tapRegionGroupId,
+              onTapOutside: (_) {
+                _removeOverlay();
+              },
+              child: Material(
+                elevation: 8,
+                borderRadius: BorderRadius.circular(8),
+                color: Colors.white,
+                shadowColor: Colors.black26,
+                child: Container(
+                  constraints: const BoxConstraints(maxHeight: 220),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFDCC8B4), width: 1),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(7),
+                    child: ListView(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      shrinkWrap: true,
+                      children: [
+                        // Opsi buat hashtag baru jika belum ada
+                        if (showCreateOption)
+                          InkWell(
+                            key: const Key('hashtag_create_new_option'),
+                            canRequestFocus: false,
+                            onTap: () {
+                              _selectTag(formattedQuery);
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              color: const Color(0xFFF5ECD7).withValues(alpha: 0.6),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.add_circle,
+                                    size: 16,
+                                    color: Color(0xFF7A4B29),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: RichText(
+                                      text: TextSpan(
+                                        text: 'Gunakan ',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Color(0xFF4A4A4A),
+                                        ),
+                                        children: [
+                                          TextSpan(
+                                            text: formattedQuery,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF7A4B29),
+                                            ),
+                                          ),
+                                          const TextSpan(
+                                            text: ' (Hashtag Baru)',
+                                            style: TextStyle(
+                                              fontStyle: FontStyle.italic,
+                                              color: Color(0xFF888888),
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+
+                        // Daftar saran dari database
+                        ..._suggestions.map((tag) {
+                          return InkWell(
+                            canRequestFocus: false,
+                            onTap: () => _selectTag(tag),
+                            hoverColor: const Color(0xFFF5ECD7).withValues(alpha: 0.4),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.tag_rounded,
+                                    size: 15,
+                                    color: Color(0xFF7A4B29),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      tag,
                                       style: const TextStyle(
                                         fontSize: 12,
-                                        color: Color(0xFF4A4A4A),
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF333333),
                                       ),
-                                      children: [
-                                        TextSpan(
-                                          text: formattedQuery,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            color: Color(0xFF7A4B29),
-                                          ),
-                                        ),
-                                        const TextSpan(
-                                          text: ' (Hashtag Baru)',
-                                          style: TextStyle(
-                                            fontStyle: FontStyle.italic,
-                                            color: Color(0xFF888888),
-                                            fontSize: 11,
-                                          ),
-                                        ),
-                                      ],
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                      // Daftar saran dari database
-                      ..._suggestions.map((tag) {
-                        return InkWell(
-                          onTap: () => _selectTag(tag),
-                          hoverColor: const Color(0xFFF5ECD7).withValues(alpha: 0.4),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.tag_rounded,
-                                  size: 15,
-                                  color: Color(0xFF7A4B29),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    tag,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF333333),
-                                    ),
+                                  const Icon(
+                                    Icons.arrow_forward_ios_rounded,
+                                    size: 11,
+                                    color: Color(0xFFAAAAAA),
                                   ),
-                                ),
-                                const Icon(
-                                  Icons.arrow_forward_ios_rounded,
-                                  size: 11,
-                                  color: Color(0xFFAAAAAA),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                        );
-                      }),
-                    ],
+                          );
+                        }),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -248,8 +266,12 @@ class _HashtagAutocompleteFieldState extends State<HashtagAutocompleteField> {
   }
 
   void _removeOverlay() {
-    _overlayEntry?.remove();
-    _overlayEntry = null;
+    if (_overlayEntry != null) {
+      if (_overlayEntry!.mounted) {
+        _overlayEntry?.remove();
+      }
+      _overlayEntry = null;
+    }
   }
 
   void _selectTag(String tag) {
@@ -257,6 +279,7 @@ class _HashtagAutocompleteFieldState extends State<HashtagAutocompleteField> {
     widget.controller.clear();
     _updateSuggestions();
     _removeOverlay();
+    _focusNode.requestFocus();
   }
 
   void _submitCurrent() {
@@ -284,10 +307,12 @@ class _HashtagAutocompleteFieldState extends State<HashtagAutocompleteField> {
         .take(5)
         .toList();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        CompositedTransformTarget(
+    return TapRegion(
+      groupId: _tapRegionGroupId,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CompositedTransformTarget(
           link: _layerLink,
           child: SizedBox(
             width: double.infinity,
@@ -394,6 +419,7 @@ class _HashtagAutocompleteFieldState extends State<HashtagAutocompleteField> {
           ),
         ],
       ],
-    );
-  }
+    ),
+  );
+}
 }
