@@ -134,14 +134,18 @@ class _HashtagAutocompleteFieldState extends State<HashtagAutocompleteField> {
           return const SizedBox.shrink();
         }
 
+        final currentRenderBox = context.findRenderObject() as RenderBox?;
+        final currentWidth = currentRenderBox?.size.width ?? renderBox.size.width;
+
         return Positioned(
-          width: renderBox.size.width,
+          width: currentWidth,
           child: CompositedTransformFollower(
             link: _layerLink,
             showWhenUnlinked: false,
             offset: const Offset(0.0, 42.0),
             child: TapRegion(
               groupId: _tapRegionGroupId,
+              behavior: HitTestBehavior.opaque,
               onTapOutside: (_) {
                 _removeOverlay();
               },
@@ -168,6 +172,7 @@ class _HashtagAutocompleteFieldState extends State<HashtagAutocompleteField> {
                           InkWell(
                             key: const Key('hashtag_create_new_option'),
                             canRequestFocus: false,
+                            mouseCursor: SystemMouseCursors.click,
                             onTap: () {
                               _selectTag(formattedQuery);
                             },
@@ -219,6 +224,7 @@ class _HashtagAutocompleteFieldState extends State<HashtagAutocompleteField> {
                         ..._suggestions.map((tag) {
                           return InkWell(
                             canRequestFocus: false,
+                            mouseCursor: SystemMouseCursors.click,
                             onTap: () => _selectTag(tag),
                             hoverColor: const Color(0xFFF5ECD7).withValues(alpha: 0.4),
                             child: Padding(
