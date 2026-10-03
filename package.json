@@ -1,0 +1,25 @@
+{
+  "name": "katalog",
+  "version": "1.0.0",
+  "description": "Aplikasi web & mobile katalog produk kerajinan sangkar burung kayu jati Jepara (**Jatimas Sangkar**) yang dilengkapi fitur pemesanan WhatsApp otomatis berfoto, asisten kecerdasan buatan (AI) suara & teks dengan kartu visual interaktif, pelacakan progres pengerjaan pesanan 4 tahap, katalog kustom member private, serta dashboard administrator terpadu.",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Dav2257/katalog.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Dav2257/katalog/issues"
+  },
+  "homepage": "https://github.com/Dav2257/katalog#readme"
+}

@@ -52,3 +52,5 @@ app.*.map.json
 # CLI Cache (Firebase & Cloudflare Wrangler)
 .firebase/
 .wrangler/
+node_modules/
+**/node_modules/
